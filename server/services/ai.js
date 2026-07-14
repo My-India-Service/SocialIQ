@@ -1,0 +1,329 @@
+const CATEGORIES = [
+  'sales_opportunity',
+  'complaint',
+  'feature_request',
+  'positive_feedback',
+  'spam',
+  'competitor_mention',
+  'refund_request',
+  'shipping_issue',
+  'influencer',
+  'other',
+];
+
+const CATEGORY_RULES = [
+  {
+    category: 'spam',
+    patterns: [/dm me for/i, /follow for follow/i, /check (my|our) bio/i, /crypto giveaway/i, /bit\.ly/i],
+    sentiment: 'neutral',
+  },
+  {
+    category: 'refund_request',
+    patterns: [/refund/i, /money back/i, /want my money/i],
+    sentiment: 'negative',
+  },
+  {
+    category: 'shipping_issue',
+    patterns: [/ship(ping)?/i, /delivery/i, /haven't received/i, /where is my order/i, /courier/i],
+    sentiment: 'neutral',
+  },
+  {
+    category: 'complaint',
+    patterns: [
+      /broke|broken|stopped working|defective|worst|scam|terrible|disappointed|drains too/i,
+      /not working|faulty|poor quality|after two weeks/i,
+    ],
+    sentiment: 'negative',
+  },
+  {
+    category: 'feature_request',
+    patterns: [/please (launch|add|make)/i, /wish (it|you)/i, /need (this )?in/i, /come in (blue|black|xl|usb)/i, /dark mode/i, /vegan option/i],
+    sentiment: 'neutral',
+  },
+  {
+    category: 'competitor_mention',
+    patterns: [/samsung|nothing|google pixel|apple|sony|oneplus|xiaomi|buying .+ instead/i],
+    sentiment: 'neutral',
+  },
+  {
+    category: 'sales_opportunity',
+    patterns: [
+      /how much/i,
+      /price/i,
+      /where can i buy/i,
+      /available in/i,
+      /in stock/i,
+      /do you ship/i,
+      /need this/i,
+      /want this/i,
+      /link\??$/i,
+      /buy/i,
+    ],
+    sentiment: 'positive',
+  },
+  {
+    category: 'positive_feedback',
+    patterns: [/love|amazing|awesome|best|perfect|glad|thank you|thanks|🔥|❤️|great product/i],
+    sentiment: 'positive',
+  },
+];
+
+const TONE_REPLIES = {
+  friendly: {
+    sales_opportunity: "Hey! Thanks for asking — I'd love to help you grab this. Dropping the details in your DMs!",
+    complaint: "So sorry about this — that shouldn't happen. Send us a DM with your order details and we'll make it right.",
+    feature_request: "Love this idea! We're always listening — noted and shared with the product team.",
+    positive_feedback: "Appreciate it! Glad you're loving it 🔥",
+    spam: '',
+    competitor_mention: "Thanks for the shout — happy to show you why customers stick with us. DM us anytime!",
+    refund_request: "Sorry this didn't work out. DM us your order ID and we'll sort a refund ASAP.",
+    shipping_issue: "Ugh, shipping delays are the worst. Share your order ID in DM and we'll track it down.",
+    influencer: "Huge thanks for jumping in — we'd love to connect. Check your DMs!",
+    other: "Thanks for commenting! How can we help?",
+  },
+  professional: {
+    sales_opportunity: "Thank you for your interest. We'd be happy to share pricing and availability — please check your DMs.",
+    complaint: "We're sorry for the inconvenience. Please message us with your order details so we can assist promptly.",
+    feature_request: "Thank you for the suggestion. We've shared this feedback with our product team.",
+    positive_feedback: "Thanks for your feedback. We're glad you're enjoying the product.",
+    spam: '',
+    competitor_mention: "Thank you for considering us. We're happy to answer any comparison questions via DM.",
+    refund_request: "We're sorry to hear that. Please send your order ID via DM and we'll process your request.",
+    shipping_issue: "We apologize for the delay. Please share your order ID so we can investigate immediately.",
+    influencer: "Thank you for engaging with us. We'll reach out via DM shortly.",
+    other: "Thank you for your comment. How may we assist you?",
+  },
+  playful: {
+    sales_opportunity: "Say less — this one's calling your name 👀 Link + deets incoming in your DMs!",
+    complaint: "Yikes, that's not the vibe. Hit us in DMs with your order info — we'll fix it fast.",
+    feature_request: "Plot twist: you just wrote our next roadmap item. Logged!",
+    positive_feedback: "You're making our day rn 🔥 Keep that energy!",
+    spam: '',
+    competitor_mention: "Bold of them to enter the chat 😏 We've got receipts — DM us.",
+    refund_request: "Not the ending we wanted. Slide your order ID in DMs and we'll sort it.",
+    shipping_issue: "Package playing hide and seek? Send the order ID — we'll find it.",
+    influencer: "Main character energy spotted. DMing you!",
+    other: "We're listening — what's up?",
+  },
+  luxury: {
+    sales_opportunity: "Thank you for your interest. A member of our concierge team will assist you privately.",
+    complaint: "We sincerely regret this experience. Please message us so we may resolve this with care.",
+    feature_request: "We appreciate your refined suggestion and have noted it for consideration.",
+    positive_feedback: "We're honored by your kind words. Thank you for choosing us.",
+    spam: '',
+    competitor_mention: "We welcome thoughtful comparison. Our team is available should you wish to learn more.",
+    refund_request: "We understand. Please share your order details and we shall arrange a resolution.",
+    shipping_issue: "We apologize for any delay. Kindly share your order reference for priority assistance.",
+    influencer: "A pleasure to have you here. We shall be in touch shortly.",
+    other: "Thank you for writing. How may we be of service?",
+  },
+};
+
+const TONE_LABELS = {
+  friendly: 'warm, human, lightly casual',
+  professional: 'clear, formal, polite',
+  playful: 'witty, casual, Gen-Z friendly',
+  luxury: 'refined, calm, concierge-like',
+};
+
+function scorePurchaseProbability(text, category) {
+  const lower = text.toLowerCase();
+  if (/where can i buy|how (do i|to) buy|link to buy|need this now/i.test(lower)) return 98;
+  if (/how much|price|available in|in stock|do you ship/i.test(lower)) return 92;
+  if (/need this|want this|taking this/i.test(lower)) return 88;
+  if (/looks nice|interested|maybe/i.test(lower)) return 22;
+  if (category === 'sales_opportunity') return 80;
+  if (category === 'positive_feedback') return 28;
+  if (category === 'feature_request') return 35;
+  return 10;
+}
+
+export function categorizeComment(text) {
+  for (const rule of CATEGORY_RULES) {
+    if (rule.patterns.some((p) => p.test(text))) {
+      return {
+        category: rule.category,
+        purchaseProbability: scorePurchaseProbability(text, rule.category),
+        sentiment: rule.sentiment,
+      };
+    }
+  }
+
+  return {
+    category: 'other',
+    purchaseProbability: scorePurchaseProbability(text, 'other'),
+    sentiment: 'neutral',
+  };
+}
+
+export function suggestReply(text, category, brandTone = 'friendly') {
+  const tone = TONE_REPLIES[brandTone] || TONE_REPLIES.friendly;
+  return tone[category] || tone.other;
+}
+
+export function analyzeCommentRules(text, brandTone = 'friendly') {
+  const result = categorizeComment(text);
+  return {
+    ...result,
+    suggestedReply: suggestReply(text, result.category, brandTone),
+    analysisSource: 'rules',
+  };
+}
+
+function normalizeCategory(value) {
+  if (!value) return 'other';
+  const cleaned = String(value).toLowerCase().trim().replace(/\s+/g, '_');
+  return CATEGORIES.includes(cleaned) ? cleaned : 'other';
+}
+
+function normalizeSentiment(value) {
+  const s = String(value || '').toLowerCase();
+  if (s === 'positive' || s === 'negative' || s === 'neutral') return s;
+  return 'neutral';
+}
+
+function clampProbability(n) {
+  const num = Number(n);
+  if (Number.isNaN(num)) return 0;
+  return Math.max(0, Math.min(100, Math.round(num)));
+}
+
+async function analyzeWithLLM(text, brandTone = 'friendly') {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const toneDesc = TONE_LABELS[brandTone] || TONE_LABELS.friendly;
+
+  const system = `You are Voxa, an AI revenue intelligence engine for social media comments.
+Classify each comment and draft a short reply in the brand's tone (${toneDesc}).
+Return ONLY valid JSON with keys:
+category (one of: ${CATEGORIES.join(', ')}),
+purchaseProbability (0-100 integer; how likely they will buy / need sales help),
+sentiment (positive|neutral|negative),
+suggestedReply (string; empty string for spam; max 2 sentences; brand-tone).`;
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: `Comment:\n"""${text.slice(0, 2000)}"""` },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`OpenAI error ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  const raw = data.choices?.[0]?.message?.content || '{}';
+  const parsed = JSON.parse(raw);
+
+  return {
+    category: normalizeCategory(parsed.category),
+    purchaseProbability: clampProbability(parsed.purchaseProbability),
+    sentiment: normalizeSentiment(parsed.sentiment),
+    suggestedReply:
+      typeof parsed.suggestedReply === 'string'
+        ? parsed.suggestedReply.trim()
+        : suggestReply(text, normalizeCategory(parsed.category), brandTone),
+    analysisSource: 'llm',
+  };
+}
+
+/**
+ * Prefer OpenAI LLM when OPENAI_API_KEY is set; otherwise rule-based fallback.
+ */
+export async function analyzeComment(text, brandTone = 'friendly') {
+  if (!text?.trim()) {
+    return analyzeCommentRules(text || '', brandTone);
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const llm = await analyzeWithLLM(text, brandTone);
+      if (llm) return llm;
+    } catch (err) {
+      console.warn('LLM analysis failed, using rules:', err.message);
+    }
+  }
+
+  return analyzeCommentRules(text, brandTone);
+}
+
+export function buildDailyReport(comments) {
+  const total = comments.length;
+  const byCategory = comments.reduce((acc, c) => {
+    acc[c.category] = (acc[c.category] || 0) + 1;
+    return acc;
+  }, {});
+
+  const sales = comments.filter((c) => c.category === 'sales_opportunity');
+  const complaints = comments.filter(
+    (c) => c.category === 'complaint' || c.category === 'shipping_issue' || c.category === 'refund_request'
+  );
+  const estimatedMissedRevenue = sales.length * 2499;
+
+  const sentimentCounts = comments.reduce(
+    (acc, c) => {
+      acc[c.sentiment] = (acc[c.sentiment] || 0) + 1;
+      return acc;
+    },
+    { positive: 0, neutral: 0, negative: 0 }
+  );
+
+  const sentimentTotal = Math.max(total, 1);
+  const topComplaint = [...complaints].sort((a, b) => b.likes - a.likes)[0]?.text || null;
+  const viral = [...comments].sort((a, b) => b.likes + b.replies - (a.likes + a.replies))[0] || null;
+  const influencers = comments.filter((c) => c.isVip || c.category === 'influencer').slice(0, 5);
+
+  const featureRequests = comments.filter((c) => c.category === 'feature_request');
+  const trendingFeature = featureRequests[0]?.text || null;
+
+  const competitors = comments
+    .filter((c) => c.category === 'competitor_mention')
+    .map((c) => {
+      const match = c.text.match(/samsung|nothing|google pixel|apple|sony|oneplus|xiaomi/i);
+      return match ? match[0] : 'Unknown';
+    });
+
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    totalComments: total,
+    byCategory,
+    salesOpportunities: sales.length,
+    estimatedMissedRevenue,
+    currency: 'INR',
+    complaints: complaints.length,
+    topComplaint,
+    trendingFeatureRequest: trendingFeature,
+    competitorMentions: [...new Set(competitors)],
+    mostViralComment: viral
+      ? { text: viral.text, author: viral.author, likes: viral.likes, replies: viral.replies }
+      : null,
+    sentiment: {
+      positive: Math.round((sentimentCounts.positive / sentimentTotal) * 100),
+      neutral: Math.round((sentimentCounts.neutral / sentimentTotal) * 100),
+      negative: Math.round((sentimentCounts.negative / sentimentTotal) * 100),
+    },
+    topInfluencers: influencers.map((c) => ({
+      author: c.author,
+      handle: c.authorHandle,
+      text: c.text,
+    })),
+  };
+}
+
+export function isLLMConfigured() {
+  return Boolean(process.env.OPENAI_API_KEY);
+}
