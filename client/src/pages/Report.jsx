@@ -7,6 +7,8 @@ export default function Report() {
   const [payload, setPayload] = useState(null);
   const [email, setEmail] = useState(null);
   const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -21,6 +23,7 @@ export default function Report() {
   }, [token]);
 
   async function previewEmail() {
+    setError('');
     try {
       const data = await api('/api/reports/email-preview', { method: 'POST', token });
       setEmail(data);
@@ -29,21 +32,62 @@ export default function Report() {
     }
   }
 
+  async function sendNow() {
+    setError('');
+    setSent('');
+    setSending(true);
+    try {
+      const data = await api('/api/reports/send', { method: 'POST', token, body: {} });
+      setSent(data.message || 'Report sent');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
   const report = payload?.report;
+  const emailConfigured = payload?.emailConfigured;
 
   return (
     <div className="report-page">
       <div className="page-head">
         <div>
           <h1>Daily CEO report</h1>
-          <p>Morning snapshot of sales opportunities, complaints, and sentiment.</p>
+          <p>Morning snapshot of sales, complaints, product signals, and crises.</p>
         </div>
-        <button type="button" className="btn btn-citrus" onClick={previewEmail}>
-          Preview daily email
-        </button>
+        <div className="reply-actions">
+          <button type="button" className="btn btn-ghost" onClick={previewEmail}>
+            Preview email
+          </button>
+          <button
+            type="button"
+            className="btn btn-citrus"
+            onClick={sendNow}
+            disabled={sending || !emailConfigured}
+            title={emailConfigured ? '' : 'Add SMTP keys in server/.env'}
+          >
+            {sending ? 'Sending…' : 'Send now'}
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
+      {sent && (
+        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>{sent}</div>
+      )}
+      {!emailConfigured && (
+        <p className="prob" style={{ marginTop: '-0.5rem' }}>
+          Email sending off — add <code>SMTP_HOST</code>, <code>SMTP_USER</code>,{' '}
+          <code>SMTP_PASS</code> to <code>server/.env</code> to enable “Send now”.
+        </p>
+      )}
+
+      {report?.crisis?.active && (
+        <div className="error-banner" style={{ marginBottom: '1rem' }}>
+          ⚠ Crisis alert: {report.crisis.reason}
+        </div>
+      )}
 
       {report && (
         <div className="report-preview">
@@ -92,12 +136,62 @@ export default function Report() {
                 {report.mostViralComment.author} ({report.mostViralComment.likes} likes)
               </p>
             )}
-            {report.topInfluencers?.length > 0 && (
-              <p style={{ margin: 0 }}>
-                <strong>Top influencers / VIPs:</strong>{' '}
-                {report.topInfluencers.map((i) => i.author).join(', ')}
-              </p>
+          </div>
+        </div>
+      )}
+
+      {report && (
+        <div className="stat-row" style={{ marginTop: '1rem' }}>
+          <div className="panel">
+            <h2>Complaint intelligence</h2>
+            {report.complaintThemes?.length ? (
+              <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                {report.complaintThemes.map((t) => (
+                  <li key={t.label}>
+                    {t.label} — <b>{t.count}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="prob" style={{ margin: 0 }}>No complaint themes detected.</p>
             )}
+          </div>
+
+          <div className="panel">
+            <h2>Product roadmap signals</h2>
+            {report.productRoadmap?.length ? (
+              <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                {report.productRoadmap.map((t) => (
+                  <li key={t.label}>
+                    {t.label} — <b>{t.count}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="prob" style={{ margin: 0 }}>No product signals yet.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {report?.hotLeads?.length > 0 && (
+        <div className="panel" style={{ marginTop: '1rem' }}>
+          <h2>Hottest buying-intent leads</h2>
+          <div className="comment-list">
+            {report.hotLeads.map((l, i) => (
+              <div className="comment-item" key={i}>
+                <div className="comment-top">
+                  <div>
+                    <div className="comment-meta">
+                      <span className="pill sales_opportunity">{l.purchaseProbability}% intent</span>
+                      <span className="pill">{l.platform}</span>
+                      <span className="prob">{l.author}</span>
+                    </div>
+                    <p className="comment-text">{l.text}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

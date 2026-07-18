@@ -261,6 +261,37 @@ export async function analyzeComment(text, brandTone = 'friendly') {
   return analyzeCommentRules(text, brandTone);
 }
 
+const COMPLAINT_THEMES = {
+  Battery: /battery|charge|drain|backup/i,
+  Shipping: /ship|deliver|courier|dispatch|late|delay/i,
+  Quality: /broke|broken|defective|faulty|poor quality|stopped working|zipper|tear|crack/i,
+  Support: /support|response|reply|customer care|helpline|no one/i,
+  Size: /size|small|large|tight|loose|fit/i,
+  Price: /expensive|costly|price|overpriced|refund|money back/i,
+};
+
+const PRODUCT_THEMES = {
+  'USB-C': /usb-?c/i,
+  'Dark mode': /dark mode/i,
+  'Blue color': /\bblue\b/i,
+  'Black color': /\bblack\b/i,
+  'XL / large size': /\b(xl|extra large|large size)\b/i,
+  'Vegan option': /vegan/i,
+  'Budget under ₹999': /under ?₹?999|cheaper|budget/i,
+};
+
+function bucketThemes(comments, themes) {
+  const counts = {};
+  for (const c of comments) {
+    for (const [label, re] of Object.entries(themes)) {
+      if (re.test(c.text)) counts[label] = (counts[label] || 0) + 1;
+    }
+  }
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export function buildDailyReport(comments) {
   const total = comments.length;
   const byCategory = comments.reduce((acc, c) => {
@@ -297,6 +328,43 @@ export function buildDailyReport(comments) {
       return match ? match[0] : 'Unknown';
     });
 
+  // Complaint intelligence — themes + where the pain is concentrated
+  const complaintThemes = bucketThemes(complaints, COMPLAINT_THEMES);
+
+  // Product intelligence — roadmap signals from feature requests + sales questions
+  const productSignalPool = comments.filter(
+    (c) => c.category === 'feature_request' || c.category === 'sales_opportunity'
+  );
+  const productRoadmap = bucketThemes(productSignalPool, PRODUCT_THEMES);
+
+  // Buying intent — hottest leads first
+  const hotLeads = [...comments]
+    .filter((c) => c.purchaseProbability >= 60)
+    .sort((a, b) => b.purchaseProbability - a.purchaseProbability)
+    .slice(0, 8)
+    .map((c) => ({
+      author: c.author,
+      handle: c.authorHandle,
+      text: c.text,
+      platform: c.platform,
+      purchaseProbability: c.purchaseProbability,
+    }));
+
+  // Crisis detection — sudden negativity / scam spike
+  const scamMentions = comments.filter((c) => /scam|fraud|fake|cheat|thief|report/i.test(c.text));
+  const negativePct = Math.round((sentimentCounts.negative / sentimentTotal) * 100);
+  const crisis = {
+    active: scamMentions.length >= 5 || (negativePct >= 40 && total >= 10),
+    scamMentions: scamMentions.length,
+    negativePct,
+    reason:
+      scamMentions.length >= 5
+        ? `${scamMentions.length} comments mention scam/fraud`
+        : negativePct >= 40
+          ? `Negative sentiment at ${negativePct}%`
+          : null,
+  };
+
   return {
     date: new Date().toISOString().slice(0, 10),
     totalComments: total,
@@ -306,6 +374,10 @@ export function buildDailyReport(comments) {
     currency: 'INR',
     complaints: complaints.length,
     topComplaint,
+    complaintThemes,
+    productRoadmap,
+    hotLeads,
+    crisis,
     trendingFeatureRequest: trendingFeature,
     competitorMentions: [...new Set(competitors)],
     mostViralComment: viral
@@ -314,7 +386,7 @@ export function buildDailyReport(comments) {
     sentiment: {
       positive: Math.round((sentimentCounts.positive / sentimentTotal) * 100),
       neutral: Math.round((sentimentCounts.neutral / sentimentTotal) * 100),
-      negative: Math.round((sentimentCounts.negative / sentimentTotal) * 100),
+      negative: negativePct,
     },
     topInfluencers: influencers.map((c) => ({
       author: c.author,
@@ -322,6 +394,83 @@ export function buildDailyReport(comments) {
       text: c.text,
     })),
   };
+}
+
+export function renderReportEmail(brandName, report) {
+  const line = (label, value) => `${label}: ${value}`;
+  const text = [
+    `${brandName} — Daily CEO Report (${report.date})`,
+    '',
+    `${report.totalComments.toLocaleString()} comments analyzed`,
+    '',
+    line('Sales opportunities', report.salesOpportunities),
+    line('Estimated missed revenue', `₹${report.estimatedMissedRevenue.toLocaleString('en-IN')}`),
+    '',
+    line('Complaints', report.complaints),
+    line('Top complaint', report.topComplaint || '—'),
+    report.complaintThemes.length
+      ? line('Complaint themes', report.complaintThemes.map((t) => `${t.label} (${t.count})`).join(', '))
+      : '',
+    '',
+    line('Trending feature request', report.trendingFeatureRequest || '—'),
+    report.productRoadmap.length
+      ? line('Product roadmap signals', report.productRoadmap.map((t) => `${t.label} (${t.count})`).join(', '))
+      : '',
+    line('Competitor mentions', report.competitorMentions.join(', ') || '—'),
+    '',
+    report.crisis.active ? `⚠ CRISIS ALERT: ${report.crisis.reason}` : '',
+    '',
+    `Sentiment — 😊 ${report.sentiment.positive}%  😐 ${report.sentiment.neutral}%  😡 ${report.sentiment.negative}%`,
+    '',
+    report.hotLeads.length ? 'Hottest leads:' : '',
+    ...report.hotLeads.map((l) => `  • ${l.author} (${l.purchaseProbability}%) — "${l.text}"`),
+  ]
+    .filter((l) => l !== '')
+    .join('\n');
+
+  const html = `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#0f1c24">
+    <h2 style="margin:0 0 4px">${brandName} — Daily CEO Report</h2>
+    <p style="color:#5c6b75;margin:0 0 16px">${report.date}</p>
+    ${
+      report.crisis.active
+        ? `<div style="background:#ffe8e2;color:#9a2f18;padding:10px 14px;border-radius:10px;margin-bottom:16px">⚠ <b>Crisis alert:</b> ${report.crisis.reason}</div>`
+        : ''
+    }
+    <table style="width:100%;border-collapse:collapse">
+      <tr>
+        <td style="padding:8px;border:1px solid #eee"><b>${report.totalComments}</b><br>comments</td>
+        <td style="padding:8px;border:1px solid #eee"><b>${report.salesOpportunities}</b><br>sales leads</td>
+        <td style="padding:8px;border:1px solid #eee"><b>₹${report.estimatedMissedRevenue.toLocaleString('en-IN')}</b><br>missed revenue</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;border:1px solid #eee"><b>${report.complaints}</b><br>complaints</td>
+        <td style="padding:8px;border:1px solid #eee"><b>${report.sentiment.positive}%</b><br>positive</td>
+        <td style="padding:8px;border:1px solid #eee"><b>${report.sentiment.negative}%</b><br>negative</td>
+      </tr>
+    </table>
+    <p><b>Top complaint:</b> ${report.topComplaint || '—'}</p>
+    ${
+      report.complaintThemes.length
+        ? `<p><b>Complaint themes:</b> ${report.complaintThemes.map((t) => `${t.label} (${t.count})`).join(', ')}</p>`
+        : ''
+    }
+    ${
+      report.productRoadmap.length
+        ? `<p><b>Product roadmap signals:</b> ${report.productRoadmap.map((t) => `${t.label} (${t.count})`).join(', ')}</p>`
+        : ''
+    }
+    <p><b>Competitors:</b> ${report.competitorMentions.join(', ') || '—'}</p>
+    ${
+      report.hotLeads.length
+        ? `<h3>Hottest leads</h3><ul>${report.hotLeads
+            .map((l) => `<li><b>${l.author}</b> (${l.purchaseProbability}%) — “${l.text}”</li>`)
+            .join('')}</ul>`
+        : ''
+    }
+  </div>`;
+
+  return { text, html };
 }
 
 export function isLLMConfigured() {

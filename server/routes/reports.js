@@ -2,32 +2,34 @@ import express from 'express';
 import Comment from '../models/Comment.js';
 import User from '../models/User.js';
 import { authRequired } from '../middleware/auth.js';
-import { buildDailyReport } from '../services/ai.js';
+import { buildDailyReport, renderReportEmail } from '../services/ai.js';
+import { isEmailConfigured, sendEmail } from '../services/mailer.js';
 
 const router = express.Router();
 
 router.use(authRequired);
 
+async function loadReport(userId) {
+  const since = new Date();
+  since.setDate(since.getDate() - 1);
+
+  let comments = await Comment.find({ user: userId, postedAt: { $gte: since } });
+  // Fallback: if no "yesterday" comments, use all for demo value
+  if (comments.length === 0) {
+    comments = await Comment.find({ user: userId });
+  }
+
+  const user = await User.findById(userId).select('-password');
+  const report = buildDailyReport(comments);
+  return { user, report };
+}
+
 router.get('/daily', async (req, res) => {
   try {
-    const since = new Date();
-    since.setDate(since.getDate() - 1);
-
-    let comments = await Comment.find({
-      user: req.userId,
-      postedAt: { $gte: since },
-    });
-
-    // Fallback: if no "yesterday" comments, use all for demo value
-    if (comments.length === 0) {
-      comments = await Comment.find({ user: req.userId });
-    }
-
-    const user = await User.findById(req.userId).select('-password');
-    const report = buildDailyReport(comments);
-
+    const { user, report } = await loadReport(req.userId);
     res.json({
       brandName: user.brandName,
+      emailConfigured: isEmailConfigured(),
       report,
     });
   } catch (err) {
@@ -37,43 +39,46 @@ router.get('/daily', async (req, res) => {
 
 router.post('/email-preview', async (req, res) => {
   try {
-    const since = new Date();
-    since.setDate(since.getDate() - 1);
-    let comments = await Comment.find({ user: req.userId, postedAt: { $gte: since } });
-    if (comments.length === 0) {
-      comments = await Comment.find({ user: req.userId });
-    }
-
-    const user = await User.findById(req.userId);
-    const report = buildDailyReport(comments);
-
+    const { user, report } = await loadReport(req.userId);
     const subject = `${user.brandName} — Daily CEO Report`;
-    const body = [
-      `Yesterday's Summary`,
-      `${report.totalComments.toLocaleString()} comments analyzed`,
-      ``,
-      `Sales opportunities: ${report.salesOpportunities}`,
-      `Estimated missed revenue: ₹${report.estimatedMissedRevenue.toLocaleString('en-IN')}`,
-      ``,
-      `Complaints: ${report.complaints}`,
-      `Top complaint: ${report.topComplaint || '—'}`,
-      ``,
-      `Trending feature request: ${report.trendingFeatureRequest || '—'}`,
-      `Competitor mentions: ${report.competitorMentions.join(', ') || '—'}`,
-      ``,
-      `Sentiment — 😊 ${report.sentiment.positive}%  😐 ${report.sentiment.neutral}%  😡 ${report.sentiment.negative}%`,
-    ].join('\n');
+    const { text } = renderReportEmail(user.brandName, report);
 
-    // SMTP is optional in MVP; always return preview payload
     res.json({
       to: user.email,
       from: process.env.REPORT_FROM || 'reports@voxa.app',
       subject,
-      body,
+      body: text,
       delivered: false,
-      note: process.env.SMTP_HOST
-        ? 'SMTP configured — wire nodemailer send in production.'
-        : 'Add SMTP_* env vars to enable real email delivery.',
+      emailConfigured: isEmailConfigured(),
+      note: isEmailConfigured()
+        ? 'SMTP configured — click “Send now” to deliver.'
+        : 'Add SMTP_HOST / SMTP_USER / SMTP_PASS to server/.env to send real email.',
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/send', async (req, res) => {
+  try {
+    const { user, report } = await loadReport(req.userId);
+    if (!isEmailConfigured()) {
+      return res.status(400).json({
+        message: 'Email not configured. Add SMTP_HOST, SMTP_USER, SMTP_PASS to server/.env.',
+      });
+    }
+
+    const subject = `${user.brandName} — Daily CEO Report (${report.date})`;
+    const { text, html } = renderReportEmail(user.brandName, report);
+    const to = req.body?.to || user.email;
+
+    const result = await sendEmail({ to, subject, text, html });
+    res.json({
+      delivered: result.delivered,
+      to,
+      subject,
+      messageId: result.messageId || null,
+      message: result.delivered ? `Report emailed to ${to}` : 'Email not sent',
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
