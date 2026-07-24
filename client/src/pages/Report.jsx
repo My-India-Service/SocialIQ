@@ -2,13 +2,19 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
+function formatMoney(n, currency = 'INR') {
+  if (currency === 'INR') return `₹${Number(n || 0).toLocaleString('en-IN')}`;
+  return `${currency} ${Number(n || 0).toLocaleString()}`;
+}
+
 export default function Report() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [payload, setPayload] = useState(null);
   const [email, setEmail] = useState(null);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState('');
+  const currency = user?.currency || 'INR';
 
   useEffect(() => {
     async function load() {
@@ -53,8 +59,11 @@ export default function Report() {
     <div className="report-page">
       <div className="page-head">
         <div>
-          <h1>Daily CEO report</h1>
-          <p>Morning snapshot of sales, complaints, product signals, and crises.</p>
+          <h1>CEO dashboard</h1>
+          <p>
+            Every morning: lost revenue, missed comments, competitors, product requests, complaints,
+            viral posts.
+          </p>
         </div>
         <div className="reply-actions">
           <button type="button" className="btn btn-ghost" onClick={previewEmail}>
@@ -74,7 +83,9 @@ export default function Report() {
 
       {error && <div className="error-banner">{error}</div>}
       {sent && (
-        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>{sent}</div>
+        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>
+          {sent}
+        </div>
       )}
       {!emailConfigured && (
         <p className="prob" style={{ marginTop: '-0.5rem' }}>
@@ -102,8 +113,12 @@ export default function Report() {
               <span>sales opportunities</span>
             </div>
             <div className="report-metric">
-              <strong>₹{report.estimatedMissedRevenue.toLocaleString('en-IN')}</strong>
-              <span>estimated missed revenue</span>
+              <strong>{formatMoney(report.estimatedMissedRevenue, currency)}</strong>
+              <span>lost revenue yesterday</span>
+            </div>
+            <div className="report-metric">
+              <strong>{report.missedComments}</strong>
+              <span>missed / unreplied leads</span>
             </div>
             <div className="report-metric">
               <strong>{report.complaints}</strong>
@@ -113,10 +128,6 @@ export default function Report() {
               <strong>{report.sentiment.positive}%</strong>
               <span>positive sentiment</span>
             </div>
-            <div className="report-metric">
-              <strong>{report.sentiment.negative}%</strong>
-              <span>negative sentiment</span>
-            </div>
           </div>
 
           <div style={{ marginTop: '1.5rem', display: 'grid', gap: '0.75rem' }}>
@@ -124,16 +135,24 @@ export default function Report() {
               <strong>Top complaint:</strong> {report.topComplaint || '—'}
             </p>
             <p style={{ margin: 0 }}>
-              <strong>Trending feature request:</strong> {report.trendingFeatureRequest || '—'}
+              <strong>Products people requested:</strong>{' '}
+              {report.trendingFeatureRequest || '—'}
             </p>
             <p style={{ margin: 0 }}>
-              <strong>Competitors mentioned:</strong>{' '}
+              <strong>Competitor mentions:</strong>{' '}
               {report.competitorMentions.join(', ') || '—'}
             </p>
             {report.mostViralComment && (
               <p style={{ margin: 0 }}>
-                <strong>Most viral:</strong> “{report.mostViralComment.text}” —{' '}
+                <strong>Viral comment:</strong> “{report.mostViralComment.text}” —{' '}
                 {report.mostViralComment.author} ({report.mostViralComment.likes} likes)
+              </p>
+            )}
+            {report.roi && (
+              <p style={{ margin: 0 }}>
+                <strong>Revenue attributed:</strong>{' '}
+                {formatMoney(report.roi.revenueGenerated, currency)} ·{' '}
+                {report.roi.leadsConverted} converted
               </p>
             )}
           </div>
@@ -143,7 +162,7 @@ export default function Report() {
       {report && (
         <div className="stat-row" style={{ marginTop: '1rem' }}>
           <div className="panel">
-            <h2>Complaint intelligence</h2>
+            <h2>Most common complaints</h2>
             {report.complaintThemes?.length ? (
               <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
                 {report.complaintThemes.map((t) => (
@@ -153,22 +172,26 @@ export default function Report() {
                 ))}
               </ul>
             ) : (
-              <p className="prob" style={{ margin: 0 }}>No complaint themes detected.</p>
+              <p className="prob" style={{ margin: 0 }}>
+                No complaint themes detected.
+              </p>
             )}
           </div>
 
           <div className="panel">
-            <h2>Product roadmap signals</h2>
-            {report.productRoadmap?.length ? (
+            <h2>Feature requests (aggregated)</h2>
+            {report.featureRequestGroups?.length ? (
               <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
-                {report.productRoadmap.map((t) => (
+                {report.featureRequestGroups.map((t) => (
                   <li key={t.label}>
-                    {t.label} — <b>{t.count}</b>
+                    {t.label} — <b>{t.count} users</b>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="prob" style={{ margin: 0 }}>No product signals yet.</p>
+              <p className="prob" style={{ margin: 0 }}>
+                No feature requests yet.
+              </p>
             )}
           </div>
         </div>
@@ -183,11 +206,20 @@ export default function Report() {
                 <div className="comment-top">
                   <div>
                     <div className="comment-meta">
-                      <span className="pill sales_opportunity">{l.purchaseProbability}% intent</span>
+                      <span className={`pill temp-${l.leadTemperature || 'hot'}`}>
+                        {l.leadTemperature === 'hot' ? '🔥 Hot lead' : `${l.purchaseProbability}% intent`}
+                      </span>
                       <span className="pill">{l.platform}</span>
-                      <span className="prob">{l.author}</span>
+                      <span className="prob">
+                        {l.author} · {formatMoney(l.expectedOrderValue, currency)}
+                      </span>
                     </div>
                     <p className="comment-text">{l.text}</p>
+                    {l.suggestedReply && (
+                      <p className="prob" style={{ marginTop: '0.35rem' }}>
+                        Suggested: {l.suggestedReply}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

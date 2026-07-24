@@ -11,6 +11,23 @@ const CATEGORIES = [
   'other',
 ];
 
+const COMPETITORS = [
+  'adidas',
+  'nike',
+  'puma',
+  'samsung',
+  'nothing',
+  'google pixel',
+  'apple',
+  'sony',
+  'oneplus',
+  'xiaomi',
+  'boat',
+  'noise',
+  'jbl',
+  'bose',
+];
+
 const CATEGORY_RULES = [
   {
     category: 'spam',
@@ -23,8 +40,31 @@ const CATEGORY_RULES = [
     sentiment: 'negative',
   },
   {
+    category: 'sales_opportunity',
+    patterns: [
+      /how much/i,
+      /price\??$/i,
+      /\bprice\b/i,
+      /where can i buy/i,
+      /available in/i,
+      /in stock/i,
+      /do you (ship|deliver)/i,
+      /deliver in/i,
+      /need this/i,
+      /want this/i,
+      /link\??$/i,
+      /when is this back/i,
+    ],
+    sentiment: 'positive',
+  },
+  {
     category: 'shipping_issue',
-    patterns: [/ship(ping)?/i, /delivery/i, /haven't received/i, /where is my order/i, /courier/i],
+    patterns: [
+      /shipping .+took|took forever|still waiting|haven't received/i,
+      /where is my order/i,
+      /courier/i,
+      /late delivery|delayed dispatch/i,
+    ],
     sentiment: 'neutral',
   },
   {
@@ -37,29 +77,26 @@ const CATEGORY_RULES = [
   },
   {
     category: 'feature_request',
-    patterns: [/please (launch|add|make)/i, /wish (it|you)/i, /need (this )?in/i, /come in (blue|black|xl|usb)/i, /dark mode/i, /vegan option/i],
+    patterns: [
+      /please (launch|add|make)/i,
+      /wish (it|you)/i,
+      /need (this )?in/i,
+      /come in (blue|black|xl|usb)/i,
+      /dark mode/i,
+      /vegan option/i,
+      /blue variant/i,
+    ],
     sentiment: 'neutral',
   },
   {
     category: 'competitor_mention',
-    patterns: [/samsung|nothing|google pixel|apple|sony|oneplus|xiaomi|buying .+ instead/i],
-    sentiment: 'neutral',
-  },
-  {
-    category: 'sales_opportunity',
     patterns: [
-      /how much/i,
-      /price/i,
-      /where can i buy/i,
-      /available in/i,
-      /in stock/i,
-      /do you ship/i,
-      /need this/i,
-      /want this/i,
-      /link\??$/i,
-      /buy/i,
+      new RegExp(`\\b(${COMPETITORS.join('|')})\\b`, 'i'),
+      /switched from/i,
+      /buying .+ instead/i,
+      /quality is better/i,
     ],
-    sentiment: 'positive',
+    sentiment: 'neutral',
   },
   {
     category: 'positive_feedback',
@@ -126,16 +163,88 @@ const TONE_LABELS = {
   luxury: 'refined, calm, concierge-like',
 };
 
-function scorePurchaseProbability(text, category) {
+const COMPLAINT_THEMES = {
+  Battery: /battery|charge|drain|backup/i,
+  Shipping: /ship|deliver|courier|dispatch|late|delay/i,
+  Quality: /broke|broken|defective|faulty|poor quality|stopped working|zipper|tear|crack/i,
+  Support: /support|response|reply|customer care|helpline|no one/i,
+  Size: /size|small|large|tight|loose|fit/i,
+  Price: /expensive|costly|price|overpriced|refund|money back/i,
+};
+
+const PRODUCT_THEMES = {
+  'USB-C': /usb-?c/i,
+  'Dark mode': /dark mode/i,
+  'Blue color': /\bblue\b/i,
+  'Black color': /\bblack\b/i,
+  'XL / large size': /\b(xl|extra large|large size)\b/i,
+  'Vegan option': /vegan/i,
+  'Budget under ₹999': /under ?₹?999|cheaper|budget/i,
+  Delhi: /delhi/i,
+  Bangalore: /bangalore|bengaluru/i,
+  Mumbai: /mumbai/i,
+};
+
+export function scorePurchaseProbability(text, category) {
   const lower = text.toLowerCase();
   if (/where can i buy|how (do i|to) buy|link to buy|need this now/i.test(lower)) return 98;
-  if (/how much|price|available in|in stock|do you ship/i.test(lower)) return 92;
-  if (/need this|want this|taking this/i.test(lower)) return 88;
+  if (/how much|price|available in|in stock|do you (ship|deliver)|deliver in/i.test(lower)) return 92;
+  if (/need this|want this|taking this|when is this back/i.test(lower)) return 88;
   if (/looks nice|interested|maybe/i.test(lower)) return 22;
   if (category === 'sales_opportunity') return 80;
   if (category === 'positive_feedback') return 28;
   if (category === 'feature_request') return 35;
   return 10;
+}
+
+export function leadTemperatureFromProbability(prob) {
+  if (prob >= 80) return 'hot';
+  if (prob >= 50) return 'warm';
+  if (prob >= 20) return 'cold';
+  return 'none';
+}
+
+export function estimateExpectedOrderValue(purchaseProbability, avgOrderValue = 2499) {
+  const aov = Math.max(0, Number(avgOrderValue) || 2499);
+  const prob = Math.max(0, Math.min(100, Number(purchaseProbability) || 0));
+  return Math.round((prob / 100) * aov);
+}
+
+export function detectCompetitor(text) {
+  const lower = text.toLowerCase();
+  for (const name of COMPETITORS) {
+    if (lower.includes(name)) {
+      return name
+        .split(' ')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+  }
+  if (/switched from|instead of|better than/i.test(text)) return 'Unknown';
+  return '';
+}
+
+export function detectFeatureTheme(text) {
+  for (const [label, re] of Object.entries(PRODUCT_THEMES)) {
+    if (re.test(text)) return label;
+  }
+  const color = text.match(/\b(blue|black|red|green|pink|white|purple)\b/i);
+  if (color) return `${color[1].charAt(0).toUpperCase()}${color[1].slice(1).toLowerCase()} color`;
+  return '';
+}
+
+export function buildAutoDmPreview(user, commentText) {
+  const dm = user?.autoDm || {};
+  const parts = [
+    `Thanks for your comment${commentText ? ` about “${String(commentText).slice(0, 40)}…”` : ''}!`,
+  ];
+  if (dm.catalogueUrl) parts.push(`Catalogue: ${dm.catalogueUrl}`);
+  if (dm.couponCode) parts.push(`Use code ${dm.couponCode} for a limited offer.`);
+  if (dm.websiteUrl) parts.push(`Shop here: ${dm.websiteUrl}`);
+  if (!dm.catalogueUrl && !dm.couponCode && !dm.websiteUrl) {
+    parts.push('Dropping the details — happy to help you order.');
+  }
+  return parts.join('\n');
 }
 
 export function categorizeComment(text) {
@@ -161,13 +270,36 @@ export function suggestReply(text, category, brandTone = 'friendly') {
   return tone[category] || tone.other;
 }
 
-export function analyzeCommentRules(text, brandTone = 'friendly') {
-  const result = categorizeComment(text);
+function enrichAnalysis(text, base, avgOrderValue = 2499) {
+  const purchaseProbability = base.purchaseProbability ?? 0;
+  const competitorName =
+    base.category === 'competitor_mention' ? detectCompetitor(text) : base.competitorName || '';
+  const featureTheme =
+    base.category === 'feature_request' || base.category === 'sales_opportunity'
+      ? detectFeatureTheme(text) || base.featureTheme || ''
+      : base.featureTheme || '';
+
   return {
-    ...result,
-    suggestedReply: suggestReply(text, result.category, brandTone),
-    analysisSource: 'rules',
+    ...base,
+    purchaseProbability,
+    expectedOrderValue: estimateExpectedOrderValue(purchaseProbability, avgOrderValue),
+    leadTemperature: leadTemperatureFromProbability(purchaseProbability),
+    competitorName,
+    featureTheme,
   };
+}
+
+export function analyzeCommentRules(text, brandTone = 'friendly', avgOrderValue = 2499) {
+  const result = categorizeComment(text);
+  return enrichAnalysis(
+    text,
+    {
+      ...result,
+      suggestedReply: suggestReply(text, result.category, brandTone),
+      analysisSource: 'rules',
+    },
+    avgOrderValue
+  );
 }
 
 function normalizeCategory(value) {
@@ -188,20 +320,22 @@ function clampProbability(n) {
   return Math.max(0, Math.min(100, Math.round(num)));
 }
 
-async function analyzeWithLLM(text, brandTone = 'friendly') {
+async function analyzeWithLLM(text, brandTone = 'friendly', avgOrderValue = 2499) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   const toneDesc = TONE_LABELS[brandTone] || TONE_LABELS.friendly;
 
-  const system = `You are Voxa, an AI revenue intelligence engine for social media comments.
+  const system = `You are Voxa, an AI Social Revenue Platform for Instagram & YouTube comments.
 Classify each comment and draft a short reply in the brand's tone (${toneDesc}).
 Return ONLY valid JSON with keys:
 category (one of: ${CATEGORIES.join(', ')}),
-purchaseProbability (0-100 integer; how likely they will buy / need sales help),
+purchaseProbability (0-100 integer; buying intent),
 sentiment (positive|neutral|negative),
-suggestedReply (string; empty string for spam; max 2 sentences; brand-tone).`;
+suggestedReply (string; empty string for spam; max 2 sentences; brand-tone),
+competitorName (string; brand name if competitor_mention else ""),
+featureTheme (string; short product/theme label if feature_request else "").`;
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -228,57 +362,45 @@ suggestedReply (string; empty string for spam; max 2 sentences; brand-tone).`;
   const data = await res.json();
   const raw = data.choices?.[0]?.message?.content || '{}';
   const parsed = JSON.parse(raw);
+  const category = normalizeCategory(parsed.category);
 
-  return {
-    category: normalizeCategory(parsed.category),
-    purchaseProbability: clampProbability(parsed.purchaseProbability),
-    sentiment: normalizeSentiment(parsed.sentiment),
-    suggestedReply:
-      typeof parsed.suggestedReply === 'string'
-        ? parsed.suggestedReply.trim()
-        : suggestReply(text, normalizeCategory(parsed.category), brandTone),
-    analysisSource: 'llm',
-  };
+  return enrichAnalysis(
+    text,
+    {
+      category,
+      purchaseProbability: clampProbability(parsed.purchaseProbability),
+      sentiment: normalizeSentiment(parsed.sentiment),
+      suggestedReply:
+        typeof parsed.suggestedReply === 'string'
+          ? parsed.suggestedReply.trim()
+          : suggestReply(text, category, brandTone),
+      competitorName: typeof parsed.competitorName === 'string' ? parsed.competitorName.trim() : '',
+      featureTheme: typeof parsed.featureTheme === 'string' ? parsed.featureTheme.trim() : '',
+      analysisSource: 'llm',
+    },
+    avgOrderValue
+  );
 }
 
 /**
  * Prefer OpenAI LLM when OPENAI_API_KEY is set; otherwise rule-based fallback.
  */
-export async function analyzeComment(text, brandTone = 'friendly') {
+export async function analyzeComment(text, brandTone = 'friendly', avgOrderValue = 2499) {
   if (!text?.trim()) {
-    return analyzeCommentRules(text || '', brandTone);
+    return analyzeCommentRules(text || '', brandTone, avgOrderValue);
   }
 
   if (process.env.OPENAI_API_KEY) {
     try {
-      const llm = await analyzeWithLLM(text, brandTone);
+      const llm = await analyzeWithLLM(text, brandTone, avgOrderValue);
       if (llm) return llm;
     } catch (err) {
       console.warn('LLM analysis failed, using rules:', err.message);
     }
   }
 
-  return analyzeCommentRules(text, brandTone);
+  return analyzeCommentRules(text, brandTone, avgOrderValue);
 }
-
-const COMPLAINT_THEMES = {
-  Battery: /battery|charge|drain|backup/i,
-  Shipping: /ship|deliver|courier|dispatch|late|delay/i,
-  Quality: /broke|broken|defective|faulty|poor quality|stopped working|zipper|tear|crack/i,
-  Support: /support|response|reply|customer care|helpline|no one/i,
-  Size: /size|small|large|tight|loose|fit/i,
-  Price: /expensive|costly|price|overpriced|refund|money back/i,
-};
-
-const PRODUCT_THEMES = {
-  'USB-C': /usb-?c/i,
-  'Dark mode': /dark mode/i,
-  'Blue color': /\bblue\b/i,
-  'Black color': /\bblack\b/i,
-  'XL / large size': /\b(xl|extra large|large size)\b/i,
-  'Vegan option': /vegan/i,
-  'Budget under ₹999': /under ?₹?999|cheaper|budget/i,
-};
 
 function bucketThemes(comments, themes) {
   const counts = {};
@@ -292,7 +414,36 @@ function bucketThemes(comments, themes) {
     .sort((a, b) => b.count - a.count);
 }
 
-export function buildDailyReport(comments) {
+function aggregateFeatureRequests(comments) {
+  const map = new Map();
+  for (const c of comments.filter((x) => x.category === 'feature_request')) {
+    const label = c.featureTheme || detectFeatureTheme(c.text) || c.text.slice(0, 48);
+    const prev = map.get(label) || { label, count: 0, sample: c.text };
+    prev.count += 1;
+    map.set(label, prev);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count);
+}
+
+function aggregateCompetitors(comments) {
+  const map = new Map();
+  for (const c of comments.filter((x) => x.category === 'competitor_mention')) {
+    const name = c.competitorName || detectCompetitor(c.text) || 'Unknown';
+    const prev = map.get(name) || { name, count: 0, samples: [] };
+    prev.count += 1;
+    if (prev.samples.length < 3) prev.samples.push(c.text);
+    map.set(name, prev);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count);
+}
+
+/**
+ * @param {Array} comments
+ * @param {{ avgOrderValue?: number, currency?: string }} options
+ */
+export function buildDailyReport(comments, options = {}) {
+  const avgOrderValue = options.avgOrderValue ?? 2499;
+  const currency = options.currency || 'INR';
   const total = comments.length;
   const byCategory = comments.reduce((acc, c) => {
     acc[c.category] = (acc[c.category] || 0) + 1;
@@ -300,10 +451,31 @@ export function buildDailyReport(comments) {
   }, {});
 
   const sales = comments.filter((c) => c.category === 'sales_opportunity');
-  const complaints = comments.filter(
-    (c) => c.category === 'complaint' || c.category === 'shipping_issue' || c.category === 'refund_request'
+  const complaints = comments.filter((c) =>
+    ['complaint', 'shipping_issue', 'refund_request'].includes(c.category)
   );
-  const estimatedMissedRevenue = sales.length * 2499;
+  const missedNew = sales.filter((c) => c.status === 'new' || c.status === 'ignored');
+  const estimatedMissedRevenue = missedNew.reduce(
+    (sum, c) => sum + (c.expectedOrderValue || estimateExpectedOrderValue(c.purchaseProbability, avgOrderValue)),
+    0
+  );
+  const pipelineValue = sales.reduce(
+    (sum, c) => sum + (c.expectedOrderValue || estimateExpectedOrderValue(c.purchaseProbability, avgOrderValue)),
+    0
+  );
+
+  const converted = comments.filter((c) => c.status === 'converted');
+  const revenueGenerated = converted.reduce(
+    (sum, c) => sum + (c.revenueAttributed || c.expectedOrderValue || avgOrderValue),
+    0
+  );
+  const leadsSent = comments.filter(
+    (c) => c.status === 'sent_to_sales' || c.status === 'converted' || (c.routedTo || []).length > 0
+  );
+  const replied = comments.filter((c) => c.status === 'replied' || c.status === 'converted');
+  const recoveredComplaints = complaints.filter(
+    (c) => c.status === 'replied' || c.status === 'reviewed' || c.status === 'converted'
+  );
 
   const sentimentCounts = comments.reduce(
     (acc, c) => {
@@ -318,39 +490,35 @@ export function buildDailyReport(comments) {
   const viral = [...comments].sort((a, b) => b.likes + b.replies - (a.likes + a.replies))[0] || null;
   const influencers = comments.filter((c) => c.isVip || c.category === 'influencer').slice(0, 5);
 
-  const featureRequests = comments.filter((c) => c.category === 'feature_request');
-  const trendingFeature = featureRequests[0]?.text || null;
+  const featureRequestGroups = aggregateFeatureRequests(comments);
+  const competitorIntel = aggregateCompetitors(comments);
+  const trendingFeature = featureRequestGroups[0]
+    ? `${featureRequestGroups[0].label} requested by ${featureRequestGroups[0].count} users`
+    : null;
 
-  const competitors = comments
-    .filter((c) => c.category === 'competitor_mention')
-    .map((c) => {
-      const match = c.text.match(/samsung|nothing|google pixel|apple|sony|oneplus|xiaomi/i);
-      return match ? match[0] : 'Unknown';
-    });
-
-  // Complaint intelligence — themes + where the pain is concentrated
   const complaintThemes = bucketThemes(complaints, COMPLAINT_THEMES);
-
-  // Product intelligence — roadmap signals from feature requests + sales questions
   const productSignalPool = comments.filter(
     (c) => c.category === 'feature_request' || c.category === 'sales_opportunity'
   );
   const productRoadmap = bucketThemes(productSignalPool, PRODUCT_THEMES);
 
-  // Buying intent — hottest leads first
   const hotLeads = [...comments]
     .filter((c) => c.purchaseProbability >= 60)
     .sort((a, b) => b.purchaseProbability - a.purchaseProbability)
     .slice(0, 8)
     .map((c) => ({
+      id: c._id,
       author: c.author,
       handle: c.authorHandle,
       text: c.text,
       platform: c.platform,
       purchaseProbability: c.purchaseProbability,
+      expectedOrderValue: c.expectedOrderValue || estimateExpectedOrderValue(c.purchaseProbability, avgOrderValue),
+      leadTemperature: c.leadTemperature || leadTemperatureFromProbability(c.purchaseProbability),
+      suggestedReply: c.suggestedReply,
+      status: c.status,
     }));
 
-  // Crisis detection — sudden negativity / scam spike
   const scamMentions = comments.filter((c) => /scam|fraud|fake|cheat|thief|report/i.test(c.text));
   const negativePct = Math.round((sentimentCounts.negative / sentimentTotal) * 100);
   const crisis = {
@@ -365,21 +533,30 @@ export function buildDailyReport(comments) {
           : null,
   };
 
+  const avgResponseProxy = Math.round(
+    total ? (replied.length / Math.max(sales.length + complaints.length, 1)) * 100 : 0
+  );
+
   return {
     date: new Date().toISOString().slice(0, 10),
     totalComments: total,
     byCategory,
     salesOpportunities: sales.length,
+    missedComments: missedNew.length,
     estimatedMissedRevenue,
-    currency: 'INR',
+    pipelineValue,
+    avgOrderValue,
+    currency,
     complaints: complaints.length,
     topComplaint,
     complaintThemes,
     productRoadmap,
+    featureRequestGroups,
+    competitorIntel,
     hotLeads,
     crisis,
     trendingFeatureRequest: trendingFeature,
-    competitorMentions: [...new Set(competitors)],
+    competitorMentions: competitorIntel.map((c) => c.name),
     mostViralComment: viral
       ? { text: viral.text, author: viral.author, likes: viral.likes, replies: viral.replies }
       : null,
@@ -393,10 +570,37 @@ export function buildDailyReport(comments) {
       handle: c.authorHandle,
       text: c.text,
     })),
+    roi: {
+      revenueGenerated,
+      leadsConverted: converted.length,
+      leadsSentToSales: leadsSent.length,
+      responseCoveragePct: avgResponseProxy,
+      complaintsRecovered: recoveredComplaints.length,
+      moneyRecoveredEstimate: recoveredComplaints.length * Math.round(avgOrderValue * 0.35),
+      customerSatisfactionProxy: Math.round((sentimentCounts.positive / sentimentTotal) * 100),
+    },
+  };
+}
+
+export function buildRoiSummary(comments, options = {}) {
+  const report = buildDailyReport(comments, options);
+  return {
+    currency: report.currency,
+    avgOrderValue: report.avgOrderValue,
+    ...report.roi,
+    pipelineValue: report.pipelineValue,
+    estimatedMissedRevenue: report.estimatedMissedRevenue,
+    salesOpportunities: report.salesOpportunities,
+    totalComments: report.totalComments,
   };
 }
 
 export function renderReportEmail(brandName, report) {
+  const money = (n) =>
+    report.currency === 'INR'
+      ? `₹${Number(n || 0).toLocaleString('en-IN')}`
+      : `${report.currency} ${Number(n || 0).toLocaleString()}`;
+
   const line = (label, value) => `${label}: ${value}`;
   const text = [
     `${brandName} — Daily CEO Report (${report.date})`,
@@ -404,7 +608,12 @@ export function renderReportEmail(brandName, report) {
     `${report.totalComments.toLocaleString()} comments analyzed`,
     '',
     line('Sales opportunities', report.salesOpportunities),
-    line('Estimated missed revenue', `₹${report.estimatedMissedRevenue.toLocaleString('en-IN')}`),
+    line('Missed / unreplied leads', report.missedComments),
+    line('Estimated missed revenue', money(report.estimatedMissedRevenue)),
+    line('Pipeline value', money(report.pipelineValue)),
+    '',
+    line('Revenue attributed', money(report.roi?.revenueGenerated)),
+    line('Leads converted', report.roi?.leadsConverted ?? 0),
     '',
     line('Complaints', report.complaints),
     line('Top complaint', report.topComplaint || '—'),
@@ -413,8 +622,11 @@ export function renderReportEmail(brandName, report) {
       : '',
     '',
     line('Trending feature request', report.trendingFeatureRequest || '—'),
-    report.productRoadmap.length
-      ? line('Product roadmap signals', report.productRoadmap.map((t) => `${t.label} (${t.count})`).join(', '))
+    report.featureRequestGroups?.length
+      ? line(
+          'Feature requests',
+          report.featureRequestGroups.map((t) => `${t.label} ×${t.count}`).join(', ')
+        )
       : '',
     line('Competitor mentions', report.competitorMentions.join(', ') || '—'),
     '',
@@ -423,7 +635,10 @@ export function renderReportEmail(brandName, report) {
     `Sentiment — 😊 ${report.sentiment.positive}%  😐 ${report.sentiment.neutral}%  😡 ${report.sentiment.negative}%`,
     '',
     report.hotLeads.length ? 'Hottest leads:' : '',
-    ...report.hotLeads.map((l) => `  • ${l.author} (${l.purchaseProbability}%) — "${l.text}"`),
+    ...report.hotLeads.map(
+      (l) =>
+        `  • ${l.author} (${l.purchaseProbability}% · ${money(l.expectedOrderValue)}) — "${l.text}"`
+    ),
   ]
     .filter((l) => l !== '')
     .join('\n');
@@ -441,30 +656,28 @@ export function renderReportEmail(brandName, report) {
       <tr>
         <td style="padding:8px;border:1px solid #eee"><b>${report.totalComments}</b><br>comments</td>
         <td style="padding:8px;border:1px solid #eee"><b>${report.salesOpportunities}</b><br>sales leads</td>
-        <td style="padding:8px;border:1px solid #eee"><b>₹${report.estimatedMissedRevenue.toLocaleString('en-IN')}</b><br>missed revenue</td>
+        <td style="padding:8px;border:1px solid #eee"><b>${money(report.estimatedMissedRevenue)}</b><br>missed revenue</td>
       </tr>
       <tr>
         <td style="padding:8px;border:1px solid #eee"><b>${report.complaints}</b><br>complaints</td>
         <td style="padding:8px;border:1px solid #eee"><b>${report.sentiment.positive}%</b><br>positive</td>
-        <td style="padding:8px;border:1px solid #eee"><b>${report.sentiment.negative}%</b><br>negative</td>
+        <td style="padding:8px;border:1px solid #eee"><b>${money(report.roi?.revenueGenerated || 0)}</b><br>revenue attributed</td>
       </tr>
     </table>
     <p><b>Top complaint:</b> ${report.topComplaint || '—'}</p>
-    ${
-      report.complaintThemes.length
-        ? `<p><b>Complaint themes:</b> ${report.complaintThemes.map((t) => `${t.label} (${t.count})`).join(', ')}</p>`
-        : ''
-    }
-    ${
-      report.productRoadmap.length
-        ? `<p><b>Product roadmap signals:</b> ${report.productRoadmap.map((t) => `${t.label} (${t.count})`).join(', ')}</p>`
-        : ''
-    }
+    <p><b>Feature requests:</b> ${
+      report.featureRequestGroups?.length
+        ? report.featureRequestGroups.map((t) => `${t.label} (${t.count})`).join(', ')
+        : '—'
+    }</p>
     <p><b>Competitors:</b> ${report.competitorMentions.join(', ') || '—'}</p>
     ${
       report.hotLeads.length
         ? `<h3>Hottest leads</h3><ul>${report.hotLeads
-            .map((l) => `<li><b>${l.author}</b> (${l.purchaseProbability}%) — “${l.text}”</li>`)
+            .map(
+              (l) =>
+                `<li><b>${l.author}</b> (${l.purchaseProbability}% · ${money(l.expectedOrderValue)}) — “${l.text}”</li>`
+            )
             .join('')}</ul>`
         : ''
     }

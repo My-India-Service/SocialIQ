@@ -7,6 +7,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Connections from './pages/Connections';
 import Report from './pages/Report';
+import Revenue from './pages/Revenue';
+import Insights from './pages/Insights';
 import Settings from './pages/Settings';
 
 export default function App() {
@@ -21,6 +23,8 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="connections" element={<Connections />} />
             <Route path="report" element={<Report />} />
+            <Route path="revenue" element={<Revenue />} />
+            <Route path="insights" element={<Insights />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

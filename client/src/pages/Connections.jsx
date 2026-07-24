@@ -4,11 +4,11 @@ import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const PLATFORMS = [
-  { id: 'youtube', label: 'YouTube', ready: true },
-  { id: 'instagram', label: 'Instagram', ready: true },
-  { id: 'facebook', label: 'Facebook', ready: true },
-  { id: 'tiktok', label: 'TikTok', ready: false },
-  { id: 'x', label: 'X', ready: false },
+  { id: 'youtube', label: 'YouTube', ready: true, mvp: true },
+  { id: 'instagram', label: 'Instagram', ready: true, mvp: true },
+  { id: 'facebook', label: 'Facebook', ready: true, mvp: false },
+  { id: 'tiktok', label: 'TikTok', ready: false, mvp: false },
+  { id: 'x', label: 'X', ready: false, mvp: false },
 ];
 
 export default function Connections() {
@@ -130,7 +130,7 @@ export default function Connections() {
       <div className="page-head">
         <div>
           <h1>Connect channels</h1>
-          <p>Official APIs only — YouTube (Google) + Instagram & Facebook (Meta). No scraping.</p>
+          <p>MVP focus: Instagram & YouTube via official APIs. Facebook optional; TikTok/X later.</p>
         </div>
       </div>
 

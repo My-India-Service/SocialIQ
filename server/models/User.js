@@ -11,6 +11,23 @@ const userSchema = new mongoose.Schema(
       enum: ['friendly', 'professional', 'playful', 'luxury'],
       default: 'friendly',
     },
+    /** Average order value used for revenue estimates (INR by default). */
+    avgOrderValue: { type: Number, default: 2499, min: 0 },
+    currency: { type: String, default: 'INR' },
+    integrations: {
+      slackWebhookUrl: { type: String, default: '' },
+      whatsappWebhookUrl: { type: String, default: '' },
+      crmWebhookUrl: { type: String, default: '' },
+      /** Auto-route hot leads (purchaseProbability >= threshold) on sync. */
+      autoRouteHotLeads: { type: Boolean, default: false },
+      hotLeadThreshold: { type: Number, default: 80, min: 0, max: 100 },
+    },
+    autoDm: {
+      enabled: { type: Boolean, default: false },
+      catalogueUrl: { type: String, default: '' },
+      couponCode: { type: String, default: '' },
+      websiteUrl: { type: String, default: '' },
+    },
   },
   { timestamps: true }
 );

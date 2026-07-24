@@ -20,7 +20,10 @@ async function loadReport(userId) {
   }
 
   const user = await User.findById(userId).select('-password');
-  const report = buildDailyReport(comments);
+  const report = buildDailyReport(comments, {
+    avgOrderValue: user?.avgOrderValue ?? 2499,
+    currency: user?.currency || 'INR',
+  });
   return { user, report };
 }
 

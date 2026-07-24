@@ -25,9 +25,11 @@ export default function AppLayout() {
           <NavLink to="/app" end>
             Inbox
           </NavLink>
+          <NavLink to="/app/report">CEO dashboard</NavLink>
+          <NavLink to="/app/revenue">Revenue & ROI</NavLink>
+          <NavLink to="/app/insights">Insights</NavLink>
           <NavLink to="/app/connections">Connect</NavLink>
-          <NavLink to="/app/report">Daily report</NavLink>
-          <NavLink to="/app/settings">Brand tone</NavLink>
+          <NavLink to="/app/settings">Settings</NavLink>
         </nav>
         <div className="side-foot">
           <div className="who">

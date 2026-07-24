@@ -16,6 +16,24 @@ function publicUser(user) {
     email: user.email,
     brandName: user.brandName,
     brandTone: user.brandTone,
+    avgOrderValue: user.avgOrderValue ?? 2499,
+    currency: user.currency || 'INR',
+    integrations: {
+      slackWebhookUrl: user.integrations?.slackWebhookUrl || '',
+      whatsappWebhookUrl: user.integrations?.whatsappWebhookUrl || '',
+      crmWebhookUrl: user.integrations?.crmWebhookUrl || '',
+      autoRouteHotLeads: Boolean(user.integrations?.autoRouteHotLeads),
+      hotLeadThreshold: user.integrations?.hotLeadThreshold ?? 80,
+      hasSlack: Boolean(user.integrations?.slackWebhookUrl),
+      hasWhatsapp: Boolean(user.integrations?.whatsappWebhookUrl),
+      hasCrm: Boolean(user.integrations?.crmWebhookUrl),
+    },
+    autoDm: {
+      enabled: Boolean(user.autoDm?.enabled),
+      catalogueUrl: user.autoDm?.catalogueUrl || '',
+      couponCode: user.autoDm?.couponCode || '',
+      websiteUrl: user.autoDm?.websiteUrl || '',
+    },
   };
 }
 
@@ -91,17 +109,56 @@ router.patch('/brand', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
     const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
-    const { brandName, brandTone } = req.body;
-    const user = await User.findByIdAndUpdate(
-      payload.id,
-      {
-        ...(brandName !== undefined && { brandName }),
-        ...(brandTone !== undefined && { brandTone }),
-      },
-      { new: true }
-    ).select('-password');
+    const {
+      brandName,
+      brandTone,
+      avgOrderValue,
+      currency,
+      integrations,
+      autoDm,
+    } = req.body;
 
+    const user = await User.findById(payload.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (brandName !== undefined) user.brandName = brandName;
+    if (brandTone !== undefined) user.brandTone = brandTone;
+    if (avgOrderValue !== undefined) user.avgOrderValue = Math.max(0, Number(avgOrderValue) || 0);
+    if (currency !== undefined) user.currency = currency;
+
+    if (integrations && typeof integrations === 'object') {
+      user.integrations = user.integrations || {};
+      if (integrations.slackWebhookUrl !== undefined) {
+        user.integrations.slackWebhookUrl = String(integrations.slackWebhookUrl).trim();
+      }
+      if (integrations.whatsappWebhookUrl !== undefined) {
+        user.integrations.whatsappWebhookUrl = String(integrations.whatsappWebhookUrl).trim();
+      }
+      if (integrations.crmWebhookUrl !== undefined) {
+        user.integrations.crmWebhookUrl = String(integrations.crmWebhookUrl).trim();
+      }
+      if (integrations.autoRouteHotLeads !== undefined) {
+        user.integrations.autoRouteHotLeads = Boolean(integrations.autoRouteHotLeads);
+      }
+      if (integrations.hotLeadThreshold !== undefined) {
+        user.integrations.hotLeadThreshold = Math.max(
+          0,
+          Math.min(100, Number(integrations.hotLeadThreshold) || 80)
+        );
+      }
+      user.markModified('integrations');
+    }
+
+    if (autoDm && typeof autoDm === 'object') {
+      user.autoDm = user.autoDm || {};
+      if (autoDm.enabled !== undefined) user.autoDm.enabled = Boolean(autoDm.enabled);
+      if (autoDm.catalogueUrl !== undefined) user.autoDm.catalogueUrl = String(autoDm.catalogueUrl).trim();
+      if (autoDm.couponCode !== undefined) user.autoDm.couponCode = String(autoDm.couponCode).trim();
+      if (autoDm.websiteUrl !== undefined) user.autoDm.websiteUrl = String(autoDm.websiteUrl).trim();
+      user.markModified('autoDm');
+    }
+
+    await user.save();
     res.json({ user: publicUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });

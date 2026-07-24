@@ -1,13 +1,23 @@
-# Voxa — AI Revenue Intelligence
+# Voxa — AI Social Revenue Platform
 
-Turn YouTube, Instagram & Facebook comments into sales leads, complaint intel, and brand-tone reply drafts.
+We turn every Instagram & YouTube comment into revenue.
+
+AI reads comments, scores buying intent, estimates order value, drafts brand-tone replies, routes hot leads to Slack/WhatsApp/CRM, and shows executives a morning CEO dashboard with ROI.
 
 ## Stack
 
 - **MongoDB** — users, connections, comments
 - **Express** — REST API + Google/Meta OAuth + LLM categorization
-- **React (Vite)** — landing page + dashboard
+- **React (Vite)** — landing + revenue inbox + CEO / ROI / insights
 - **Node.js** — server runtime
+
+## MVP scope
+
+1. Instagram + YouTube (Facebook optional)
+2. Detect sales, complaints, feature requests, positive feedback, competitors
+3. AI replies in brand tone + Auto DM preview (catalogue / coupon / link)
+4. Send leads to Slack, WhatsApp, or CRM webhooks
+5. Revenue-focused CEO dashboard + ROI tracking
 
 ## Quick start
 
@@ -72,23 +82,24 @@ npm run dev
 - App: http://localhost:5173  
 - API: http://localhost:5000  
 
+## Product surfaces
+
+| Area | What you get |
+|------|----------------|
+| **Inbox** | Hot/warm leads, purchase intent %, expected order value, Send to sales, Auto DM |
+| **CEO dashboard** | Lost revenue, missed leads, complaints, feature aggregates, competitors, viral |
+| **Revenue & ROI** | Revenue attributed, conversions, response coverage, complaint recovery |
+| **Insights** | Feature requests grouped (“Blue ×512”), competitor trends |
+| **Settings** | Brand tone, AOV, Slack/WhatsApp/CRM webhooks, Auto DM catalogue |
+
+## Pricing (marketing)
+
+- Starter $49/mo · Growth $149/mo · Business $399/mo · Enterprise $1,000+/mo  
+  (priced by monthly comments processed)
+
 ## Test real channels
 
 1. Log in → **Connect**
 2. **YouTube** → Connect with Google → Sync  
-3. **Instagram** / **Facebook** → Connect with Meta → Sync  
-4. Open **Inbox** — filter by platform  
-
-If `OPENAI_API_KEY` is set → LLM categorization; else rules engine.
-
-## MVP features
-
-1. YouTube OAuth + real comment ingest
-2. Instagram + Facebook Meta OAuth + real comment ingest
-3. AI categories: sales, complaint, feature, positive, spam (+ extras)
-4. Brand-tone reply suggestions
-5. Daily CEO report + email preview
-
-## Product name
-
-**Voxa** — hear every comment, capture every sale.
+3. **Instagram** → Connect with Meta → Sync  
+4. Open **Inbox** — filter Hot leads · Send to sales (after adding webhooks in Settings)
