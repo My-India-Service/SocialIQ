@@ -1,14 +1,18 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { user, loginSuccess } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('demo@voxa.app');
   const [password, setPassword] = useState('demo1234');
   const [error, setError] = useState('');
+  const [success] = useState(
+    location.state?.resetSuccess ? 'Password updated. You can log in now.' : ''
+  );
   const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to="/app" replace />;
@@ -43,6 +47,7 @@ export default function Login() {
         <h1>Welcome back</h1>
         <p>Log in to your revenue intelligence dashboard.</p>
         {error && <div className="error-banner">{error}</div>}
+        {success && <div className="success-banner">{success}</div>}
         <form className="form-stack" onSubmit={onSubmit}>
           <label>
             Email
@@ -55,7 +60,12 @@ export default function Login() {
             />
           </label>
           <label>
-            Password
+            <span className="label-row">
+              Password
+              <Link to="/forgot-password" className="forgot-link">
+                Forgot password?
+              </Link>
+            </span>
             <input
               type="password"
               value={password}

@@ -1,9 +1,17 @@
+import crypto from 'crypto';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { sendEmail } from '../services/mailer.js';
 
 const router = express.Router();
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function hashResetToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 function signToken(user) {
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -82,6 +90,81 @@ router.post('/login', async (req, res) => {
     }
 
     res.json({ token: signToken(user), user: publicUser(user) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const email = req.body.email?.toLowerCase()?.trim();
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const genericMessage =
+      'If an account exists for that email, you will receive a password reset link shortly.';
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json({ message: genericMessage });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = hashResetToken(rawToken);
+    user.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+    await user.save();
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/reset-password?token=${rawToken}`;
+
+    const result = await sendEmail({
+      to: user.email,
+      subject: 'Reset your Voxa password',
+      text: `Hi ${user.name},\n\nReset your password using this link (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
+      html: `
+        <p>Hi ${user.name},</p>
+        <p>Reset your password using the link below. It expires in 1 hour.</p>
+        <p><a href="${resetUrl}">Reset password</a></p>
+        <p>If you did not request this, you can ignore this email.</p>
+      `,
+    });
+
+    if (!result.delivered) {
+      console.warn(`[forgot-password] Email not sent (${result.reason}). Reset link for ${user.email}: ${resetUrl}`);
+    }
+
+    res.json({ message: genericMessage });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: hashResetToken(token),
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ message: 'Password updated. You can log in with your new password.' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -28,6 +28,8 @@ const userSchema = new mongoose.Schema(
       couponCode: { type: String, default: '' },
       websiteUrl: { type: String, default: '' },
     },
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );
