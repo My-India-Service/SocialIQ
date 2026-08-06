@@ -57,13 +57,22 @@ Copy `server/.env.example` → `server/.env` and fill keys:
 1. Create an app at [Meta for Developers](https://developers.facebook.com/)
 2. Add products: **Facebook Login** + **Instagram Graph API** (and Pages if prompted)
 3. Facebook Login → Settings → Valid OAuth Redirect URIs:
-   `http://localhost:5000/api/connections/meta/callback`
+   `http://localhost:5000/api/connections/meta/callback`  
+   (production: `https://YOUR-API.onrender.com/api/connections/meta/callback`)
 4. App settings → copy **App ID** + **App Secret** into `.env`
 5. Roles → add yourself as developer/tester
-6. Requirements for real data:
+6. **App Review → Permissions and features** (or Use cases → Customize): set these to **Ready for testing**, then **Reconnect** in Voxa so the token picks them up:
+   - `pages_show_list`
+   - `pages_read_engagement`
+   - `pages_read_user_content` (required to sync Page post comments)
+   - `pages_manage_metadata`
+   - `instagram_basic` / `instagram_manage_comments` (for Instagram)
+7. Requirements for real data:
    - A **Facebook Page** you admin
    - Instagram **Business/Creator** account linked to that Page
-7. Restart the server after saving `.env`
+8. Restart the server after saving `.env`
+
+If Sync shows Meta `(#100)` / missing permission: enable `pages_read_engagement` + `pages_read_user_content`, Reconnect Facebook, Sync again. You do **not** need Page Public Content Access for your own Page.
 
 ### 6. Seed demo data (optional)
 

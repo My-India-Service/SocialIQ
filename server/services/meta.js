@@ -79,6 +79,79 @@ async function graphGet(path, accessToken, params = {}) {
   return data;
 }
 
+const COMMENT_READ_SCOPES = ['pages_read_engagement', 'pages_read_user_content'];
+
+/**
+ * Inspect token scopes so sync errors can show what Meta actually granted.
+ * Prefer debug_token (Page or user token); fall back to /me/permissions with user token.
+ */
+async function describeMetaTokenScopes(connection) {
+  const needed = COMMENT_READ_SCOPES;
+  try {
+    const { appId, appSecret } = getConfig();
+    const appToken = `${appId}|${appSecret}`;
+    const debug = await graphGet('debug_token', appToken, {
+      input_token: connection.accessToken,
+    });
+    const data = debug.data || {};
+    const scopes = Array.isArray(data.scopes) ? data.scopes : [];
+    const missing = needed.filter((s) => !scopes.includes(s));
+    const type = data.type || 'unknown';
+    const parts = [
+      `tokenType=${type}`,
+      scopes.length ? `granted=[${scopes.join(', ')}]` : 'granted=[]',
+    ];
+    if (missing.length) parts.push(`missingForComments=[${missing.join(', ')}]`);
+
+    if (connection.refreshToken) {
+      try {
+        const perms = await graphGet('me/permissions', connection.refreshToken);
+        const granted = (perms.data || [])
+          .filter((p) => p.status === 'granted')
+          .map((p) => p.permission);
+        const userMissing = needed.filter((s) => !granted.includes(s));
+        if (granted.length) {
+          parts.push(`userGranted=[${granted.join(', ')}]`);
+        }
+        if (userMissing.length) {
+          parts.push(`userMissing=[${userMissing.join(', ')}]`);
+        }
+      } catch {
+        /* user permissions optional */
+      }
+    }
+
+    return parts.join('; ');
+  } catch (err) {
+    return `scopeDebugUnavailable (${err.message})`;
+  }
+}
+
+function isMetaCommentPermissionError(message = '') {
+  const m = String(message).toLowerCase();
+  return (
+    m.includes('pages_read_user_content') ||
+    m.includes('pages_read_engagement') ||
+    m.includes('page public content access') ||
+    m.includes('page public metadata access') ||
+    m.includes('(#100)') ||
+    m.includes('(#10)') ||
+    m.includes('(#200)') ||
+    m.includes('permission') ||
+    m.includes('insufficient') ||
+    m.includes('oauth') ||
+    m.includes('does not exist')
+  );
+}
+
+function buildCommentPermissionError(lastError, scopeHint) {
+  return (
+    'Cannot read Page comments. In Meta Developer Console set pages_read_engagement and pages_read_user_content to Ready for testing, then Reconnect Facebook (re-consent) and Sync again.' +
+    (lastError ? ` Meta: ${lastError}` : '') +
+    (scopeHint ? ` Token: ${scopeHint}` : '')
+  );
+}
+
 async function exchangeCodeForUserToken(code) {
   const { appId, appSecret, redirectUri } = getConfig();
 
@@ -234,18 +307,6 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
   };
 }
 
-function isMetaCommentPermissionError(message = '') {
-  const m = String(message).toLowerCase();
-  return (
-    m.includes('pages_read_user_content') ||
-    m.includes('permission') ||
-    m.includes('(#10)') ||
-    m.includes('(#200)') ||
-    m.includes('insufficient') ||
-    m.includes('oauth')
-  );
-}
-
 /**
  * Facebook Page post comments (official Graph API).
  */
@@ -348,15 +409,17 @@ export async function fetchFacebookComments(connection, { maxPosts = 10, maxComm
   }
 
   if (permissionDenied || (commentFetchFailures > 0 && commentFetchFailures === postList.length)) {
-    throw new Error(
-      'Cannot read Page comments. Enable pages_read_user_content (Ready for testing) in Meta, then Reconnect Facebook and Sync again.' +
-        (lastError ? ` Meta: ${lastError}` : '')
-    );
+    const scopeHint = await describeMetaTokenScopes(connection);
+    throw new Error(buildCommentPermissionError(lastError, scopeHint));
   }
 
   let warning;
   if (!comments.length && commentFetchFailures > 0) {
-    warning = `Checked ${postList.length} posts; comment fetch failed on ${commentFetchFailures}. Enable pages_read_user_content and Reconnect Facebook.`;
+    const scopeHint = await describeMetaTokenScopes(connection);
+    warning =
+      `Checked ${postList.length} posts; comment fetch failed on ${commentFetchFailures}. ` +
+      `Enable pages_read_engagement + pages_read_user_content (Ready for testing), Reconnect Facebook, then Sync. ` +
+      `Token: ${scopeHint}`;
   } else if (!comments.length) {
     warning = `Checked ${postList.length} recent posts but found no text comments. Older posts beyond this window are not synced.`;
   } else if (commentFetchFailures > 0) {

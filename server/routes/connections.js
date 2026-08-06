@@ -168,7 +168,7 @@ router.post('/facebook/sync', authRequired, async (req, res) => {
     const hint = result.warning
       ? ` ${result.warning}`
       : result.fetched === 0
-        ? ' No comments imported — enable pages_read_user_content in Meta, Reconnect Facebook, then Sync again.'
+        ? ' No comments imported — enable pages_read_engagement + pages_read_user_content in Meta, Reconnect Facebook, then Sync again.'
         : '';
     res.json({
       ...result,

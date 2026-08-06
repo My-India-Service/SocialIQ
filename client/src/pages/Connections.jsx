@@ -242,7 +242,9 @@ export default function Connections() {
         <h2>Facebook</h2>
         <p className="prob" style={{ marginTop: 0 }}>
           Connect a Facebook Page you admin. Pulls post comments via Graph API. If IG is linked, it
-          also connects Instagram.
+          also connects Instagram. Comment sync needs Meta permissions{' '}
+          <code>pages_read_engagement</code> + <code>pages_read_user_content</code> (Ready for
+          testing), then Reconnect so the token includes them.
         </p>
         <div className="reply-actions">
           <button
