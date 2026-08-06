@@ -197,6 +197,7 @@ export default function Dashboard() {
           <option value="all">All platforms</option>
           <option value="youtube">YouTube</option>
           <option value="instagram">Instagram</option>
+          <option value="facebook">Facebook</option>
         </select>
         <input
           placeholder="Search comments…"
@@ -220,7 +221,7 @@ export default function Dashboard() {
         {!loading && comments.length === 0 && (
           <div className="panel">
             <p style={{ margin: 0, color: 'var(--muted)' }}>
-              No comments yet. Connect Instagram or YouTube, or run <code>npm run seed</code> for
+              No comments yet. Connect Instagram, YouTube, or Facebook, or run <code>npm run seed</code> for
               demo data.
             </p>
           </div>
