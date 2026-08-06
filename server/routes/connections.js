@@ -164,10 +164,16 @@ router.post('/facebook/sync', authRequired, async (req, res) => {
       maxPosts: Number(req.body?.maxPosts) || 10,
       maxCommentsPerPost: Number(req.body?.maxCommentsPerPost) || 40,
     });
+    const base = `Facebook: synced ${result.imported} new (${result.updated} updated).`;
+    const hint = result.warning
+      ? ` ${result.warning}`
+      : result.fetched === 0
+        ? ' No comments imported — enable pages_read_user_content in Meta, Reconnect Facebook, then Sync again.'
+        : '';
     res.json({
       ...result,
       analysisMode: isLLMConfigured() ? 'llm' : 'rules',
-      message: `Facebook: synced ${result.imported} new (${result.updated} updated).`,
+      message: `${base}${hint}`,
     });
   } catch (err) {
     res.status(400).json({ message: err.message });

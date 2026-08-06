@@ -135,7 +135,13 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     'Click “Connect Facebook” first.'
   );
   const user = await User.findById(userId);
-  const { comments: rawComments, accountName } = await fetchFacebookComments(connection, options);
+  const {
+    comments: rawComments,
+    accountName,
+    postsChecked = 0,
+    commentFetchFailures = 0,
+    warning,
+  } = await fetchFacebookComments(connection, options);
   const stats = await ingestRawComments(userId, 'facebook', rawComments, user);
 
   connection.lastSyncedAt = new Date();
@@ -146,6 +152,9 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     platform: 'facebook',
     channelTitle: connection.accountName,
     fetched: rawComments.length,
+    postsChecked,
+    commentFetchFailures,
+    warning,
     ...stats,
     lastSyncedAt: connection.lastSyncedAt,
   };

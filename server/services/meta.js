@@ -234,6 +234,18 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
   };
 }
 
+function isMetaCommentPermissionError(message = '') {
+  const m = String(message).toLowerCase();
+  return (
+    m.includes('pages_read_user_content') ||
+    m.includes('permission') ||
+    m.includes('(#10)') ||
+    m.includes('(#200)') ||
+    m.includes('insufficient') ||
+    m.includes('oauth')
+  );
+}
+
 /**
  * Facebook Page post comments (official Graph API).
  */
@@ -247,21 +259,42 @@ export async function fetchFacebookComments(connection, { maxPosts = 10, maxComm
     limit: maxPosts,
   });
 
-  const comments = [];
+  const postList = posts.data || [];
+  if (!postList.length) {
+    return {
+      accountName: connection.accountName,
+      comments: [],
+      postsChecked: 0,
+      commentFetchFailures: 0,
+      warning:
+        'No recent posts found on this Facebook Page (checked latest posts). Confirm the connected Page has published posts.',
+    };
+  }
 
-  for (const post of posts.data || []) {
+  const comments = [];
+  let commentFetchFailures = 0;
+  let permissionDenied = false;
+  let lastError = '';
+
+  for (const post of postList) {
     let nextUrl = null;
     let fetched = 0;
 
-    const first = await graphGet(`${post.id}/comments`, connection.accessToken, {
-      fields: 'id,from,message,created_time,comment_count,like_count',
-      filter: 'stream',
-      order: 'reverse_chronological',
-      limit: Math.min(50, maxCommentsPerPost),
-    }).catch((err) => {
-      console.warn('FB comments skip post', post.id, err.message);
-      return { data: [] };
-    });
+    let first;
+    try {
+      first = await graphGet(`${post.id}/comments`, connection.accessToken, {
+        fields: 'id,from,message,created_time,comment_count,like_count',
+        filter: 'stream',
+        order: 'reverse_chronological',
+        limit: Math.min(50, maxCommentsPerPost),
+      });
+    } catch (err) {
+      commentFetchFailures += 1;
+      lastError = err.message || String(err);
+      console.warn('FB comments skip post', post.id, lastError);
+      if (isMetaCommentPermissionError(lastError)) permissionDenied = true;
+      continue;
+    }
 
     const queue = [...(first.data || [])];
     nextUrl = first.paging?.next;
@@ -288,6 +321,9 @@ export async function fetchFacebookComments(connection, { maxPosts = 10, maxComm
     if (nextUrl && fetched < maxCommentsPerPost) {
       try {
         const more = await fetch(nextUrl).then((r) => r.json());
+        if (more.error) {
+          throw new Error(more.error.message || 'Facebook comments paging failed');
+        }
         for (const c of more.data || []) {
           if (fetched >= maxCommentsPerPost) break;
           if (!c?.message?.trim()) continue;
@@ -305,15 +341,34 @@ export async function fetchFacebookComments(connection, { maxPosts = 10, maxComm
           });
           fetched += 1;
         }
-      } catch {
-        /* ignore */
+      } catch (err) {
+        console.warn('FB comments paging skip', post.id, err.message);
       }
     }
+  }
+
+  if (permissionDenied || (commentFetchFailures > 0 && commentFetchFailures === postList.length)) {
+    throw new Error(
+      'Cannot read Page comments. Enable pages_read_user_content (Ready for testing) in Meta, then Reconnect Facebook and Sync again.' +
+        (lastError ? ` Meta: ${lastError}` : '')
+    );
+  }
+
+  let warning;
+  if (!comments.length && commentFetchFailures > 0) {
+    warning = `Checked ${postList.length} posts; comment fetch failed on ${commentFetchFailures}. Enable pages_read_user_content and Reconnect Facebook.`;
+  } else if (!comments.length) {
+    warning = `Checked ${postList.length} recent posts but found no text comments. Older posts beyond this window are not synced.`;
+  } else if (commentFetchFailures > 0) {
+    warning = `Synced with ${commentFetchFailures} post(s) skipped due to comment API errors.`;
   }
 
   return {
     accountName: connection.accountName,
     comments,
+    postsChecked: postList.length,
+    commentFetchFailures,
+    warning,
   };
 }
 
