@@ -144,12 +144,196 @@ function isMetaCommentPermissionError(message = '') {
   );
 }
 
+function scopesAlreadyGranted(scopeHint = '') {
+  return (
+    scopeHint.includes('pages_read_engagement') &&
+    scopeHint.includes('pages_read_user_content') &&
+    !scopeHint.includes('missingForComments=[')
+  );
+}
+
 function buildCommentPermissionError(lastError, scopeHint) {
+  if (scopesAlreadyGranted(scopeHint)) {
+    return (
+      'Cannot read Page comments even though pages_read_engagement and pages_read_user_content are on the Page token. ' +
+      'Meta may be blocking the post/comments object (wrong post edge, New Page Experience, or App Review feature). ' +
+      'Confirm the connected Page matches the Page with comments, try Sync again after redeploy, and check Meta App mode. ' +
+      (lastError ? `Meta: ${lastError} ` : '') +
+      (scopeHint ? `Token: ${scopeHint}` : '')
+    );
+  }
   return (
     'Cannot read Page comments. In Meta Developer Console set pages_read_engagement and pages_read_user_content to Ready for testing, then Reconnect Facebook (re-consent) and Sync again.' +
     (lastError ? ` Meta: ${lastError}` : '') +
     (scopeHint ? ` Token: ${scopeHint}` : '')
   );
+}
+
+function mapFbComment(c, post) {
+  if (!c?.message?.trim()) return null;
+  return {
+    externalId: c.id,
+    videoId: post.id,
+    postTitle: (post.message || 'Facebook post').slice(0, 120),
+    author: c.from?.name || 'Facebook user',
+    authorHandle: c.from?.id ? `fb:${c.from.id}` : '',
+    text: c.message,
+    likes: c.like_count || 0,
+    replies: c.comment_count || 0,
+    postedAt: c.created_time ? new Date(c.created_time) : new Date(),
+    platform: 'facebook',
+  };
+}
+
+async function listPagePosts(pageId, accessToken, maxPosts, maxCommentsPerPost = 50) {
+  const commentLimit = Math.min(50, maxCommentsPerPost);
+  const commentFields = `comments.limit(${commentLimit}){id,message,created_time,like_count,comment_count,from{id,name}}`;
+  const edges = ['published_posts', 'feed', 'posts'];
+  let lastErr = null;
+
+  for (const edge of edges) {
+    try {
+      // Prefer nested comments so we avoid a fragile /{post-id}/comments call.
+      const withComments = await graphGet(`${pageId}/${edge}`, accessToken, {
+        fields: `id,message,created_time,permalink_url,${commentFields}`,
+        limit: maxPosts,
+      });
+      return { edge, posts: withComments.data || [], nested: true };
+    } catch (err) {
+      lastErr = err;
+      console.warn(`FB ${edge} with nested comments failed:`, err.message);
+      try {
+        const plain = await graphGet(`${pageId}/${edge}`, accessToken, {
+          fields: 'id,message,created_time,permalink_url',
+          limit: maxPosts,
+        });
+        return { edge, posts: plain.data || [], nested: false };
+      } catch (err2) {
+        lastErr = err2;
+        console.warn(`FB ${edge} plain list failed:`, err2.message);
+      }
+    }
+  }
+
+  throw lastErr || new Error('Could not list Facebook Page posts.');
+}
+
+async function fetchCommentsForPost(postId, accessToken, maxCommentsPerPost) {
+  const limit = Math.min(50, maxCommentsPerPost);
+  const attempts = [
+    { fields: 'id,message,created_time,like_count,comment_count,from{id,name}', limit },
+    { fields: 'id,message,created_time,like_count,comment_count', limit },
+  ];
+
+  let lastErr;
+  for (const params of attempts) {
+    try {
+      return await graphGet(`${postId}/comments`, accessToken, params);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error('Facebook comments request failed');
+}
+
+/**
+ * Facebook Page post comments (official Graph API).
+ */
+export async function fetchFacebookComments(connection, { maxPosts = 10, maxCommentsPerPost = 50 } = {}) {
+  if (!connection.accessToken || !connection.channelId) {
+    throw new Error('Facebook Page token missing. Reconnect with Meta.');
+  }
+
+  const { posts: postList, nested } = await listPagePosts(
+    connection.channelId,
+    connection.accessToken,
+    maxPosts,
+    maxCommentsPerPost
+  );
+
+  if (!postList.length) {
+    return {
+      accountName: connection.accountName,
+      comments: [],
+      postsChecked: 0,
+      commentFetchFailures: 0,
+      warning:
+        'No recent posts found on this Facebook Page (checked published_posts/feed/posts). Confirm the connected Page has published posts.',
+    };
+  }
+
+  const comments = [];
+  let commentFetchFailures = 0;
+  let permissionDenied = false;
+  let lastError = '';
+
+  for (const post of postList) {
+    let fetched = 0;
+    const pushBatch = (rows) => {
+      for (const c of rows || []) {
+        if (fetched >= maxCommentsPerPost) break;
+        const mapped = mapFbComment(c, post);
+        if (!mapped) continue;
+        comments.push(mapped);
+        fetched += 1;
+      }
+    };
+
+    if (nested && Array.isArray(post.comments?.data)) {
+      pushBatch(post.comments.data);
+      continue;
+    }
+
+    try {
+      const first = await fetchCommentsForPost(post.id, connection.accessToken, maxCommentsPerPost);
+      pushBatch(first.data);
+
+      const nextUrl = first.paging?.next;
+      if (nextUrl && fetched < maxCommentsPerPost) {
+        try {
+          const more = await fetch(nextUrl).then((r) => r.json());
+          if (more.error) {
+            throw new Error(more.error.message || 'Facebook comments paging failed');
+          }
+          pushBatch(more.data);
+        } catch (err) {
+          console.warn('FB comments paging skip', post.id, err.message);
+        }
+      }
+    } catch (err) {
+      commentFetchFailures += 1;
+      lastError = err.message || String(err);
+      console.warn('FB comments skip post', post.id, lastError);
+      if (isMetaCommentPermissionError(lastError)) permissionDenied = true;
+    }
+  }
+
+  if (permissionDenied || (commentFetchFailures > 0 && commentFetchFailures === postList.length)) {
+    const scopeHint = await describeMetaTokenScopes(connection);
+    throw new Error(buildCommentPermissionError(lastError, scopeHint));
+  }
+
+  let warning;
+  if (!comments.length && commentFetchFailures > 0) {
+    const scopeHint = await describeMetaTokenScopes(connection);
+    warning =
+      `Checked ${postList.length} posts; comment fetch failed on ${commentFetchFailures}. ` +
+      (scopesAlreadyGranted(scopeHint)
+        ? `Permissions look granted on the token — Meta still blocked comment reads. ${scopeHint}`
+        : `Enable pages_read_engagement + pages_read_user_content (Ready for testing), Reconnect Facebook, then Sync. Token: ${scopeHint}`);
+  } else if (!comments.length) {
+    warning = `Checked ${postList.length} recent posts but found no text comments. Older posts beyond this window are not synced.`;
+  } else if (commentFetchFailures > 0) {
+    warning = `Synced with ${commentFetchFailures} post(s) skipped due to comment API errors.`;
+  }
+
+  return {
+    accountName: connection.accountName,
+    comments,
+    postsChecked: postList.length,
+    commentFetchFailures,
+    warning,
+  };
 }
 
 async function exchangeCodeForUserToken(code) {
@@ -304,134 +488,6 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
       accountName: c.accountName,
       channelId: c.channelId,
     })),
-  };
-}
-
-/**
- * Facebook Page post comments (official Graph API).
- */
-export async function fetchFacebookComments(connection, { maxPosts = 10, maxCommentsPerPost = 50 } = {}) {
-  if (!connection.accessToken || !connection.channelId) {
-    throw new Error('Facebook Page token missing. Reconnect with Meta.');
-  }
-
-  const posts = await graphGet(`${connection.channelId}/posts`, connection.accessToken, {
-    fields: 'id,message,created_time,permalink_url',
-    limit: maxPosts,
-  });
-
-  const postList = posts.data || [];
-  if (!postList.length) {
-    return {
-      accountName: connection.accountName,
-      comments: [],
-      postsChecked: 0,
-      commentFetchFailures: 0,
-      warning:
-        'No recent posts found on this Facebook Page (checked latest posts). Confirm the connected Page has published posts.',
-    };
-  }
-
-  const comments = [];
-  let commentFetchFailures = 0;
-  let permissionDenied = false;
-  let lastError = '';
-
-  for (const post of postList) {
-    let nextUrl = null;
-    let fetched = 0;
-
-    let first;
-    try {
-      first = await graphGet(`${post.id}/comments`, connection.accessToken, {
-        fields: 'id,from,message,created_time,comment_count,like_count',
-        filter: 'stream',
-        order: 'reverse_chronological',
-        limit: Math.min(50, maxCommentsPerPost),
-      });
-    } catch (err) {
-      commentFetchFailures += 1;
-      lastError = err.message || String(err);
-      console.warn('FB comments skip post', post.id, lastError);
-      if (isMetaCommentPermissionError(lastError)) permissionDenied = true;
-      continue;
-    }
-
-    const queue = [...(first.data || [])];
-    nextUrl = first.paging?.next;
-
-    while (queue.length && fetched < maxCommentsPerPost) {
-      const c = queue.shift();
-      if (!c?.message?.trim()) continue;
-      comments.push({
-        externalId: c.id,
-        videoId: post.id,
-        postTitle: (post.message || 'Facebook post').slice(0, 120),
-        author: c.from?.name || 'Facebook user',
-        authorHandle: c.from?.id ? `fb:${c.from.id}` : '',
-        text: c.message,
-        likes: c.like_count || 0,
-        replies: c.comment_count || 0,
-        postedAt: c.created_time ? new Date(c.created_time) : new Date(),
-        platform: 'facebook',
-      });
-      fetched += 1;
-    }
-
-    // one extra page if needed
-    if (nextUrl && fetched < maxCommentsPerPost) {
-      try {
-        const more = await fetch(nextUrl).then((r) => r.json());
-        if (more.error) {
-          throw new Error(more.error.message || 'Facebook comments paging failed');
-        }
-        for (const c of more.data || []) {
-          if (fetched >= maxCommentsPerPost) break;
-          if (!c?.message?.trim()) continue;
-          comments.push({
-            externalId: c.id,
-            videoId: post.id,
-            postTitle: (post.message || 'Facebook post').slice(0, 120),
-            author: c.from?.name || 'Facebook user',
-            authorHandle: c.from?.id ? `fb:${c.from.id}` : '',
-            text: c.message,
-            likes: c.like_count || 0,
-            replies: c.comment_count || 0,
-            postedAt: c.created_time ? new Date(c.created_time) : new Date(),
-            platform: 'facebook',
-          });
-          fetched += 1;
-        }
-      } catch (err) {
-        console.warn('FB comments paging skip', post.id, err.message);
-      }
-    }
-  }
-
-  if (permissionDenied || (commentFetchFailures > 0 && commentFetchFailures === postList.length)) {
-    const scopeHint = await describeMetaTokenScopes(connection);
-    throw new Error(buildCommentPermissionError(lastError, scopeHint));
-  }
-
-  let warning;
-  if (!comments.length && commentFetchFailures > 0) {
-    const scopeHint = await describeMetaTokenScopes(connection);
-    warning =
-      `Checked ${postList.length} posts; comment fetch failed on ${commentFetchFailures}. ` +
-      `Enable pages_read_engagement + pages_read_user_content (Ready for testing), Reconnect Facebook, then Sync. ` +
-      `Token: ${scopeHint}`;
-  } else if (!comments.length) {
-    warning = `Checked ${postList.length} recent posts but found no text comments. Older posts beyond this window are not synced.`;
-  } else if (commentFetchFailures > 0) {
-    warning = `Synced with ${commentFetchFailures} post(s) skipped due to comment API errors.`;
-  }
-
-  return {
-    accountName: connection.accountName,
-    comments,
-    postsChecked: postList.length,
-    commentFetchFailures,
-    warning,
   };
 }
 
