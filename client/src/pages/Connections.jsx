@@ -101,9 +101,13 @@ export default function Connections() {
             ? '/api/connections/facebook/sync'
             : '/api/connections/instagram/sync';
       const data = await api(path, { method: 'POST', token, body: {} });
-      setMessage(
-        `${data.message} Analysis: ${data.analysisMode === 'llm' ? 'OpenAI LLM' : 'rules fallback'}.`
-      );
+      const summary = `${data.message} Analysis: ${data.analysisMode === 'llm' ? 'OpenAI LLM' : 'rules fallback'}.`;
+      if (platform === 'facebook' && data.fetched === 0) {
+        setError(summary);
+        setMessage('');
+      } else {
+        setMessage(summary);
+      }
       await load();
     } catch (err) {
       setError(err.message);
@@ -241,10 +245,10 @@ export default function Connections() {
       <div className="panel" style={{ marginBottom: '1rem' }}>
         <h2>Facebook</h2>
         <p className="prob" style={{ marginTop: 0 }}>
-          Connect a Facebook Page you admin. Pulls post comments via Graph API (up to ~50 recent
-          posts). The connected Page must be the same one that shows comments in Meta Comments
-          Manager — if Sync returns 0, Reconnect and pick that Page. If IG is linked, Meta also
-          connects Instagram. Comment sync needs{' '}
+          Connect a Facebook Page you admin. Sync deep-scans up to ~250 posts for comment activity,
+          then imports comments from up to ~50 of those. The connected Page must match Meta Comments
+          Manager — if Sync returns 0, read the error banner (scanned / signal counts). If IG is
+          linked, Meta also connects Instagram. Comment sync needs{' '}
           <code>pages_read_engagement</code> + <code>pages_read_user_content</code> (Ready for
           testing), then Reconnect so the token includes them.
         </p>

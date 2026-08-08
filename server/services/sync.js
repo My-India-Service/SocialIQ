@@ -139,6 +139,8 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     comments: rawComments,
     accountName,
     postsChecked = 0,
+    scannedPosts = 0,
+    postsWithCommentSignal = 0,
     commentFetchFailures = 0,
     warning,
   } = await fetchFacebookComments(connection, options);
@@ -153,6 +155,8 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     channelTitle: connection.accountName,
     fetched: rawComments.length,
     postsChecked,
+    scannedPosts,
+    postsWithCommentSignal,
     commentFetchFailures,
     warning,
     ...stats,

@@ -167,10 +167,15 @@ router.post('/facebook/sync', authRequired, async (req, res) => {
     const result = await syncFacebookCommentsForUser(req.userId, {
       maxPosts: Number(req.body?.maxPosts) || 50,
       maxCommentsPerPost: Number(req.body?.maxCommentsPerPost) || 40,
+      maxScan: Number(req.body?.maxScan) || 250,
     });
-    const checked =
-      typeof result.postsChecked === 'number' ? ` Checked ${result.postsChecked} posts.` : '';
-    const base = `Facebook: synced ${result.imported} new (${result.updated} updated) from ${result.fetched} fetched.${checked}`;
+    const scan =
+      typeof result.scannedPosts === 'number'
+        ? ` Scanned ${result.scannedPosts} posts (${result.postsWithCommentSignal ?? 0} with comment signal); checked ${result.postsChecked ?? 0}.`
+        : typeof result.postsChecked === 'number'
+          ? ` Checked ${result.postsChecked} posts.`
+          : '';
+    const base = `Facebook: synced ${result.imported} new (${result.updated} updated) from ${result.fetched} fetched.${scan}`;
     const hint = result.warning
       ? ` ${result.warning}`
       : result.fetched === 0

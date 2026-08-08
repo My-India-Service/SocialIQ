@@ -198,50 +198,101 @@ function sortPostsByCommentActivity(posts) {
   return [...posts].sort((a, b) => commentActivityScore(b) - commentActivityScore(a));
 }
 
-async function listPagePosts(pageId, accessToken, maxPosts, maxCommentsPerPost = 50) {
+async function fetchGraphUrl(url) {
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || `Meta Graph API error (${res.status})`);
+  }
+  return data;
+}
+
+/**
+ * Deep-scan a Page edge: follow paging until maxScan posts or maxPosts with comment activity.
+ */
+async function scanEdgePosts(
+  pageId,
+  accessToken,
+  edge,
+  { maxPosts, maxScan, fields, nested }
+) {
+  const pageSize = Math.min(25, Math.max(5, maxScan));
+  let data = await graphGet(`${pageId}/${edge}`, accessToken, {
+    fields,
+    limit: pageSize,
+  });
+
+  const scanned = [];
+  const withActivity = [];
+
+  while (true) {
+    for (const post of data.data || []) {
+      scanned.push(post);
+      if (commentActivityScore(post) > 0) withActivity.push(post);
+      if (scanned.length >= maxScan || withActivity.length >= maxPosts) break;
+    }
+    if (scanned.length >= maxScan || withActivity.length >= maxPosts) break;
+    const next = data.paging?.next;
+    if (!next) break;
+    data = await fetchGraphUrl(next);
+  }
+
+  // Prefer posts that signal comments; if none, still try newest scanned posts.
+  const posts = withActivity.length
+    ? sortPostsByCommentActivity(withActivity).slice(0, maxPosts)
+    : scanned.slice(0, maxPosts);
+
+  return {
+    edge,
+    posts,
+    nested,
+    scannedPosts: scanned.length,
+    postsWithCommentSignal: withActivity.length,
+  };
+}
+
+async function listPagePosts(
+  pageId,
+  accessToken,
+  maxPosts,
+  maxCommentsPerPost = 50,
+  maxScan = 250
+) {
   const commentLimit = Math.min(50, maxCommentsPerPost);
   const commentFields = `comments.limit(${commentLimit}).summary(true){id,message,created_time,like_count,comment_count,from{id,name}}`;
   const edges = ['published_posts', 'feed', 'posts'];
+  const fieldModes = [
+    {
+      nested: true,
+      fields: `id,message,created_time,permalink_url,${commentFields}`,
+    },
+    {
+      nested: false,
+      fields: 'id,message,created_time,permalink_url,comments.limit(0).summary(true)',
+    },
+    {
+      nested: false,
+      fields: 'id,message,created_time,permalink_url',
+    },
+  ];
+
   let lastErr = null;
 
   for (const edge of edges) {
-    try {
-      // Prefer nested comments so we avoid a fragile /{post-id}/comments call.
-      const withComments = await graphGet(`${pageId}/${edge}`, accessToken, {
-        fields: `id,message,created_time,permalink_url,${commentFields}`,
-        limit: maxPosts,
-      });
-      return {
-        edge,
-        posts: sortPostsByCommentActivity(withComments.data || []),
-        nested: true,
-      };
-    } catch (err) {
-      lastErr = err;
-      console.warn(`FB ${edge} with nested comments failed:`, err.message);
+    for (const mode of fieldModes) {
       try {
-        // Plain list + summary total when nested comment objects are blocked.
-        const withSummary = await graphGet(`${pageId}/${edge}`, accessToken, {
-          fields: 'id,message,created_time,permalink_url,comments.limit(0).summary(true)',
-          limit: maxPosts,
+        return await scanEdgePosts(pageId, accessToken, edge, {
+          maxPosts,
+          maxScan,
+          fields: mode.fields,
+          nested: mode.nested,
         });
-        return {
-          edge,
-          posts: sortPostsByCommentActivity(withSummary.data || []),
-          nested: false,
-        };
-      } catch (errSummary) {
-        console.warn(`FB ${edge} with comment summary failed:`, errSummary.message);
-        try {
-          const plain = await graphGet(`${pageId}/${edge}`, accessToken, {
-            fields: 'id,message,created_time,permalink_url',
-            limit: maxPosts,
-          });
-          return { edge, posts: plain.data || [], nested: false };
-        } catch (err2) {
-          lastErr = err2;
-          console.warn(`FB ${edge} plain list failed:`, err2.message);
-        }
+      } catch (err) {
+        lastErr = err;
+        console.warn(
+          `FB deep-scan ${edge} (${mode.nested ? 'nested' : 'plain'}) failed:`,
+          err.message
+        );
       }
     }
   }
@@ -254,6 +305,11 @@ async function fetchCommentsForPost(postId, accessToken, maxCommentsPerPost) {
   const attempts = [
     { fields: 'id,message,created_time,like_count,comment_count,from{id,name}', limit },
     { fields: 'id,message,created_time,like_count,comment_count', limit },
+    {
+      fields: 'id,message,created_time,like_count,comment_count,from{id,name}',
+      limit,
+      filter: 'stream',
+    },
   ];
 
   let lastErr;
@@ -270,16 +326,25 @@ async function fetchCommentsForPost(postId, accessToken, maxCommentsPerPost) {
 /**
  * Facebook Page post comments (official Graph API).
  */
-export async function fetchFacebookComments(connection, { maxPosts = 50, maxCommentsPerPost = 50 } = {}) {
+export async function fetchFacebookComments(
+  connection,
+  { maxPosts = 50, maxCommentsPerPost = 50, maxScan = 250 } = {}
+) {
   if (!connection.accessToken || !connection.channelId) {
     throw new Error('Facebook Page token missing. Reconnect with Meta.');
   }
 
-  const { posts: postList, nested } = await listPagePosts(
+  const {
+    posts: postList,
+    nested,
+    scannedPosts = 0,
+    postsWithCommentSignal = 0,
+  } = await listPagePosts(
     connection.channelId,
     connection.accessToken,
     maxPosts,
-    maxCommentsPerPost
+    maxCommentsPerPost,
+    maxScan
   );
 
   if (!postList.length) {
@@ -287,6 +352,8 @@ export async function fetchFacebookComments(connection, { maxPosts = 50, maxComm
       accountName: connection.accountName,
       comments: [],
       postsChecked: 0,
+      scannedPosts,
+      postsWithCommentSignal,
       commentFetchFailures: 0,
       warning:
         'No recent posts found on this Facebook Page (checked published_posts/feed/posts). Confirm the connected Page has published posts.',
@@ -337,10 +404,7 @@ export async function fetchFacebookComments(connection, { maxPosts = 50, maxComm
       const nextUrl = first.paging?.next;
       if (nextUrl && fetched < maxCommentsPerPost) {
         try {
-          const more = await fetch(nextUrl).then((r) => r.json());
-          if (more.error) {
-            throw new Error(more.error.message || 'Facebook comments paging failed');
-          }
+          const more = await fetchGraphUrl(nextUrl);
           pushBatch(more.data);
         } catch (err) {
           console.warn('FB comments paging skip', post.id, err.message);
@@ -363,14 +427,16 @@ export async function fetchFacebookComments(connection, { maxPosts = 50, maxComm
   if (!comments.length && commentFetchFailures > 0) {
     const scopeHint = await describeMetaTokenScopes(connection);
     warning =
-      `Checked ${postList.length} posts; comment fetch failed on ${commentFetchFailures}. ` +
+      `Scanned ${scannedPosts} posts (${postsWithCommentSignal} with comment signal); ` +
+      `comment fetch failed on ${commentFetchFailures}/${postList.length}. ` +
       (scopesAlreadyGranted(scopeHint)
         ? `Permissions look granted on the token — Meta still blocked comment reads. ${scopeHint}`
         : `Enable pages_read_engagement + pages_read_user_content (Ready for testing), Reconnect Facebook, then Sync. Token: ${scopeHint}`);
   } else if (!comments.length) {
     warning =
-      `Checked ${postList.length} recent posts but found no text comments. ` +
-      `Older posts beyond this window are not synced — or reconnect and pick the Page that owns the comments in Comments Manager.`;
+      `Scanned ${scannedPosts} posts (${postsWithCommentSignal} with comment signal); ` +
+      `checked ${postList.length} for comment bodies but found no text comments. ` +
+      `Confirm the connected Page matches Comments Manager, or raise maxScan.`;
   } else if (commentFetchFailures > 0) {
     warning = `Synced with ${commentFetchFailures} post(s) skipped due to comment API errors.`;
   }
@@ -379,6 +445,8 @@ export async function fetchFacebookComments(connection, { maxPosts = 50, maxComm
     accountName: connection.accountName,
     comments,
     postsChecked: postList.length,
+    scannedPosts,
+    postsWithCommentSignal,
     commentFetchFailures,
     warning,
   };
