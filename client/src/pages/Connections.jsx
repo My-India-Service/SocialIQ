@@ -245,12 +245,13 @@ export default function Connections() {
       <div className="panel" style={{ marginBottom: '1rem' }}>
         <h2>Facebook</h2>
         <p className="prob" style={{ marginTop: 0 }}>
-          Connect a Facebook Page you admin. Sync deep-scans up to ~250 posts for comment activity,
-          then imports comments from up to ~50 of those. The connected Page must match Meta Comments
-          Manager — if Sync returns 0, read the error banner (scanned / signal counts). If IG is
-          linked, Meta also connects Instagram. Comment sync needs{' '}
-          <code>pages_read_engagement</code> + <code>pages_read_user_content</code> (Ready for
-          testing), then Reconnect so the token includes them.
+          Connect a Facebook Page you admin. Sync merges published_posts + feed + posts (up to
+          ~250), then imports comments. If Comments Manager shows comments but Sync finds 0, Graph
+          is hiding them — usually Meta <strong>Development</strong> mode. Checklist: (1) Page
+          admin must be Admin/Developer/Tester on the Meta app. (2) Post a test comment as that
+          role user, then Sync. (3) For public commenters: App Review for{' '}
+          <code>pages_read_engagement</code> + <code>pages_read_user_content</code>, set App{' '}
+          <strong>Live</strong>, Reconnect, Sync. If IG is linked, Meta also connects Instagram.
         </p>
         <div className="reply-actions">
           <button

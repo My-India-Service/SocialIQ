@@ -142,6 +142,10 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     scannedPosts = 0,
     postsWithCommentSignal = 0,
     commentFetchFailures = 0,
+    probePostId,
+    probeSummaryTotal,
+    probeDataLength,
+    probeError,
     warning,
   } = await fetchFacebookComments(connection, options);
   const stats = await ingestRawComments(userId, 'facebook', rawComments, user);
@@ -158,6 +162,10 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     scannedPosts,
     postsWithCommentSignal,
     commentFetchFailures,
+    probePostId,
+    probeSummaryTotal,
+    probeDataLength,
+    probeError,
     warning,
     ...stats,
     lastSyncedAt: connection.lastSyncedAt,

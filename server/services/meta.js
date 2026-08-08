@@ -208,13 +208,14 @@ async function fetchGraphUrl(url) {
 }
 
 /**
- * Deep-scan a Page edge: follow paging until maxScan posts or maxPosts with comment activity.
+ * Deep-scan a Page edge: follow paging until maxScan posts
+ * (and optionally until maxPosts with comment activity).
  */
 async function scanEdgePosts(
   pageId,
   accessToken,
   edge,
-  { maxPosts, maxScan, fields, nested }
+  { maxPosts, maxScan, fields, nested, stopOnActivity = true }
 ) {
   const pageSize = Math.min(25, Math.max(5, maxScan));
   let data = await graphGet(`${pageId}/${edge}`, accessToken, {
@@ -229,9 +230,11 @@ async function scanEdgePosts(
     for (const post of data.data || []) {
       scanned.push(post);
       if (commentActivityScore(post) > 0) withActivity.push(post);
-      if (scanned.length >= maxScan || withActivity.length >= maxPosts) break;
+      if (scanned.length >= maxScan) break;
+      if (stopOnActivity && withActivity.length >= maxPosts) break;
     }
-    if (scanned.length >= maxScan || withActivity.length >= maxPosts) break;
+    if (scanned.length >= maxScan) break;
+    if (stopOnActivity && withActivity.length >= maxPosts) break;
     const next = data.paging?.next;
     if (!next) break;
     data = await fetchGraphUrl(next);
@@ -245,12 +248,16 @@ async function scanEdgePosts(
   return {
     edge,
     posts,
+    scanned,
     nested,
     scannedPosts: scanned.length,
     postsWithCommentSignal: withActivity.length,
   };
 }
 
+/**
+ * Scan published_posts + feed + posts and union by id (do not stop at first edge).
+ */
 async function listPagePosts(
   pageId,
   accessToken,
@@ -276,17 +283,36 @@ async function listPagePosts(
     },
   ];
 
+  const byId = new Map();
+  const edgesUsed = [];
+  let nested = false;
   let lastErr = null;
 
   for (const edge of edges) {
+    if (byId.size >= maxScan) break;
+
+    let edgeOk = false;
     for (const mode of fieldModes) {
       try {
-        return await scanEdgePosts(pageId, accessToken, edge, {
-          maxPosts,
-          maxScan,
+        const remaining = maxScan - byId.size;
+        const result = await scanEdgePosts(pageId, accessToken, edge, {
+          maxPosts: remaining,
+          maxScan: remaining,
           fields: mode.fields,
           nested: mode.nested,
+          stopOnActivity: false,
         });
+        nested = nested || result.nested;
+        edgesUsed.push(edge);
+        for (const post of result.scanned || []) {
+          if (!post?.id) continue;
+          const prev = byId.get(post.id);
+          if (!prev || commentActivityScore(post) > commentActivityScore(prev)) {
+            byId.set(post.id, post);
+          }
+        }
+        edgeOk = true;
+        break;
       } catch (err) {
         lastErr = err;
         console.warn(
@@ -295,9 +321,28 @@ async function listPagePosts(
         );
       }
     }
+    if (!edgeOk) {
+      console.warn(`FB deep-scan skipped edge ${edge}`);
+    }
   }
 
-  throw lastErr || new Error('Could not list Facebook Page posts.');
+  if (!byId.size) {
+    throw lastErr || new Error('Could not list Facebook Page posts.');
+  }
+
+  const all = [...byId.values()];
+  const withActivity = all.filter((p) => commentActivityScore(p) > 0);
+  const posts = withActivity.length
+    ? sortPostsByCommentActivity(withActivity).slice(0, maxPosts)
+    : all.slice(0, maxPosts);
+
+  return {
+    edge: edgesUsed.join('+') || 'none',
+    posts,
+    nested,
+    scannedPosts: all.length,
+    postsWithCommentSignal: withActivity.length,
+  };
 }
 
 async function fetchCommentsForPost(postId, accessToken, maxCommentsPerPost) {
@@ -321,6 +366,56 @@ async function fetchCommentsForPost(postId, accessToken, maxCommentsPerPost) {
     }
   }
   throw lastErr || new Error('Facebook comments request failed');
+}
+
+async function probePostComments(postId, accessToken) {
+  try {
+    const res = await graphGet(`${postId}/comments`, accessToken, {
+      fields: 'id,message',
+      limit: 1,
+      summary: true,
+    });
+    return {
+      probePostId: postId,
+      probeSummaryTotal:
+        typeof res.summary?.total_count === 'number' ? res.summary.total_count : null,
+      probeDataLength: Array.isArray(res.data) ? res.data.length : 0,
+    };
+  } catch (err) {
+    return {
+      probePostId: postId,
+      probeSummaryTotal: null,
+      probeDataLength: 0,
+      probeError: err.message || String(err),
+    };
+  }
+}
+
+function buildZeroCommentVisibilityWarning({
+  scannedPosts,
+  postsWithCommentSignal,
+  postsChecked,
+  probe,
+  scopeHint,
+}) {
+  const probeBits = [];
+  if (probe?.probePostId) {
+    probeBits.push(`probePost=${probe.probePostId}`);
+    if (probe.probeSummaryTotal != null) probeBits.push(`summaryTotal=${probe.probeSummaryTotal}`);
+    probeBits.push(`probeDataLength=${probe.probeDataLength ?? 0}`);
+    if (probe.probeError) probeBits.push(`probeError=${probe.probeError}`);
+  }
+
+  return (
+    `Scanned ${scannedPosts} posts (${postsWithCommentSignal} with comment signal); ` +
+    `checked ${postsChecked} for comment bodies but Graph returned none. ` +
+    `Comments Manager can show comments that Graph hides — common in Meta Development mode ` +
+    `or before App Review. Fix: (1) App roles — Page admin must be Admin/Developer/Tester on the app. ` +
+    `(2) Post a test comment as that role user, then Sync — if it appears, Dev-mode filtering is confirmed. ` +
+    `(3) For public commenters: App Review for pages_read_engagement + pages_read_user_content, set App Live, Reconnect, Sync. ` +
+    (probeBits.length ? `Probe: ${probeBits.join(', ')}. ` : '') +
+    (scopeHint ? `Token: ${scopeHint}` : '')
+  );
 }
 
 /**
@@ -423,20 +518,39 @@ export async function fetchFacebookComments(
     throw new Error(buildCommentPermissionError(lastError, scopeHint));
   }
 
+  let probe = null;
   let warning;
-  if (!comments.length && commentFetchFailures > 0) {
+  if (!comments.length) {
+    const sampleId = postList[0]?.id;
+    if (sampleId) {
+      probe = await probePostComments(sampleId, connection.accessToken);
+    }
     const scopeHint = await describeMetaTokenScopes(connection);
-    warning =
-      `Scanned ${scannedPosts} posts (${postsWithCommentSignal} with comment signal); ` +
-      `comment fetch failed on ${commentFetchFailures}/${postList.length}. ` +
-      (scopesAlreadyGranted(scopeHint)
-        ? `Permissions look granted on the token — Meta still blocked comment reads. ${scopeHint}`
-        : `Enable pages_read_engagement + pages_read_user_content (Ready for testing), Reconnect Facebook, then Sync. Token: ${scopeHint}`);
-  } else if (!comments.length) {
-    warning =
-      `Scanned ${scannedPosts} posts (${postsWithCommentSignal} with comment signal); ` +
-      `checked ${postList.length} for comment bodies but found no text comments. ` +
-      `Confirm the connected Page matches Comments Manager, or raise maxScan.`;
+
+    if (commentFetchFailures > 0) {
+      warning =
+        `Scanned ${scannedPosts} posts (${postsWithCommentSignal} with comment signal); ` +
+        `comment fetch failed on ${commentFetchFailures}/${postList.length}. ` +
+        (scopesAlreadyGranted(scopeHint)
+          ? `Permissions look granted on the token — Meta still blocked comment reads. ${scopeHint}`
+          : `Enable pages_read_engagement + pages_read_user_content, Reconnect Facebook, then Sync. Token: ${scopeHint}`);
+    } else if (scannedPosts > 0 && postsWithCommentSignal === 0) {
+      warning = buildZeroCommentVisibilityWarning({
+        scannedPosts,
+        postsWithCommentSignal,
+        postsChecked: postList.length,
+        probe,
+        scopeHint,
+      });
+    } else {
+      warning = buildZeroCommentVisibilityWarning({
+        scannedPosts,
+        postsWithCommentSignal,
+        postsChecked: postList.length,
+        probe,
+        scopeHint,
+      });
+    }
   } else if (commentFetchFailures > 0) {
     warning = `Synced with ${commentFetchFailures} post(s) skipped due to comment API errors.`;
   }
@@ -448,6 +562,7 @@ export async function fetchFacebookComments(
     scannedPosts,
     postsWithCommentSignal,
     commentFetchFailures,
+    ...(probe || {}),
     warning,
   };
 }
