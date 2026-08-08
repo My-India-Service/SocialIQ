@@ -185,9 +185,22 @@ function mapFbComment(c, post) {
   };
 }
 
+function commentActivityScore(post) {
+  const summary = post.comments?.summary?.total_count;
+  if (typeof summary === 'number') return summary;
+  if (Array.isArray(post.comments?.data)) return post.comments.data.length;
+  if (typeof post.comment_count === 'number') return post.comment_count;
+  return 0;
+}
+
+/** Prefer posts that already show comment activity within the sync window. */
+function sortPostsByCommentActivity(posts) {
+  return [...posts].sort((a, b) => commentActivityScore(b) - commentActivityScore(a));
+}
+
 async function listPagePosts(pageId, accessToken, maxPosts, maxCommentsPerPost = 50) {
   const commentLimit = Math.min(50, maxCommentsPerPost);
-  const commentFields = `comments.limit(${commentLimit}){id,message,created_time,like_count,comment_count,from{id,name}}`;
+  const commentFields = `comments.limit(${commentLimit}).summary(true){id,message,created_time,like_count,comment_count,from{id,name}}`;
   const edges = ['published_posts', 'feed', 'posts'];
   let lastErr = null;
 
@@ -198,19 +211,37 @@ async function listPagePosts(pageId, accessToken, maxPosts, maxCommentsPerPost =
         fields: `id,message,created_time,permalink_url,${commentFields}`,
         limit: maxPosts,
       });
-      return { edge, posts: withComments.data || [], nested: true };
+      return {
+        edge,
+        posts: sortPostsByCommentActivity(withComments.data || []),
+        nested: true,
+      };
     } catch (err) {
       lastErr = err;
       console.warn(`FB ${edge} with nested comments failed:`, err.message);
       try {
-        const plain = await graphGet(`${pageId}/${edge}`, accessToken, {
-          fields: 'id,message,created_time,permalink_url',
+        // Plain list + summary total when nested comment objects are blocked.
+        const withSummary = await graphGet(`${pageId}/${edge}`, accessToken, {
+          fields: 'id,message,created_time,permalink_url,comments.limit(0).summary(true)',
           limit: maxPosts,
         });
-        return { edge, posts: plain.data || [], nested: false };
-      } catch (err2) {
-        lastErr = err2;
-        console.warn(`FB ${edge} plain list failed:`, err2.message);
+        return {
+          edge,
+          posts: sortPostsByCommentActivity(withSummary.data || []),
+          nested: false,
+        };
+      } catch (errSummary) {
+        console.warn(`FB ${edge} with comment summary failed:`, errSummary.message);
+        try {
+          const plain = await graphGet(`${pageId}/${edge}`, accessToken, {
+            fields: 'id,message,created_time,permalink_url',
+            limit: maxPosts,
+          });
+          return { edge, posts: plain.data || [], nested: false };
+        } catch (err2) {
+          lastErr = err2;
+          console.warn(`FB ${edge} plain list failed:`, err2.message);
+        }
       }
     }
   }
@@ -239,7 +270,7 @@ async function fetchCommentsForPost(postId, accessToken, maxCommentsPerPost) {
 /**
  * Facebook Page post comments (official Graph API).
  */
-export async function fetchFacebookComments(connection, { maxPosts = 10, maxCommentsPerPost = 50 } = {}) {
+export async function fetchFacebookComments(connection, { maxPosts = 50, maxCommentsPerPost = 50 } = {}) {
   if (!connection.accessToken || !connection.channelId) {
     throw new Error('Facebook Page token missing. Reconnect with Meta.');
   }
@@ -269,19 +300,34 @@ export async function fetchFacebookComments(connection, { maxPosts = 10, maxComm
 
   for (const post of postList) {
     let fetched = 0;
+    const nestedRows = Array.isArray(post.comments?.data) ? post.comments.data : null;
+    const summaryTotal =
+      typeof post.comments?.summary?.total_count === 'number'
+        ? post.comments.summary.total_count
+        : null;
+    const seenIds = new Set();
+
     const pushBatch = (rows) => {
       for (const c of rows || []) {
         if (fetched >= maxCommentsPerPost) break;
+        if (c?.id && seenIds.has(c.id)) continue;
         const mapped = mapFbComment(c, post);
         if (!mapped) continue;
+        if (c?.id) seenIds.add(c.id);
         comments.push(mapped);
         fetched += 1;
       }
     };
 
-    if (nested && Array.isArray(post.comments?.data)) {
-      pushBatch(post.comments.data);
-      continue;
+    // Nested fast path only when Graph returned real comment objects.
+    // Empty data[] must fall through to /{post-id}/comments.
+    if (nested && nestedRows?.length) {
+      pushBatch(nestedRows);
+      const incomplete =
+        typeof summaryTotal === 'number' &&
+        summaryTotal > nestedRows.length &&
+        fetched < maxCommentsPerPost;
+      if (!incomplete) continue;
     }
 
     try {
@@ -322,7 +368,9 @@ export async function fetchFacebookComments(connection, { maxPosts = 10, maxComm
         ? `Permissions look granted on the token — Meta still blocked comment reads. ${scopeHint}`
         : `Enable pages_read_engagement + pages_read_user_content (Ready for testing), Reconnect Facebook, then Sync. Token: ${scopeHint}`);
   } else if (!comments.length) {
-    warning = `Checked ${postList.length} recent posts but found no text comments. Older posts beyond this window are not synced.`;
+    warning =
+      `Checked ${postList.length} recent posts but found no text comments. ` +
+      `Older posts beyond this window are not synced — or reconnect and pick the Page that owns the comments in Comments Manager.`;
   } else if (commentFetchFailures > 0) {
     warning = `Synced with ${commentFetchFailures} post(s) skipped due to comment API errors.`;
   }
@@ -380,6 +428,43 @@ async function getManagedPages(userAccessToken) {
   return data.data || [];
 }
 
+/** Sum comment totals on a few recent posts — used to pick the right Page when user manages many. */
+async function probePageCommentActivity(page) {
+  if (!page?.id || !page?.access_token) return 0;
+  const edges = ['published_posts', 'feed', 'posts'];
+  for (const edge of edges) {
+    try {
+      const res = await graphGet(`${page.id}/${edge}`, page.access_token, {
+        fields: 'id,comments.limit(0).summary(true)',
+        limit: 10,
+      });
+      const posts = res.data || [];
+      return posts.reduce((sum, p) => sum + commentActivityScore(p), 0);
+    } catch (err) {
+      console.warn(`FB page probe ${page.id} ${edge}:`, err.message);
+    }
+  }
+  return 0;
+}
+
+async function pickFacebookPage(pages) {
+  if (pages.length === 1) return pages[0];
+  let best = pages[0];
+  let bestScore = -1;
+  for (const page of pages) {
+    try {
+      const score = await probePageCommentActivity(page);
+      if (score > bestScore) {
+        bestScore = score;
+        best = page;
+      }
+    } catch (err) {
+      console.warn('FB page probe failed', page.id, err.message);
+    }
+  }
+  return best;
+}
+
 /**
  * After OAuth: resolve Facebook Page and/or Instagram Business Account and save connection(s).
  */
@@ -393,7 +478,8 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
     );
   }
 
-  // Prefer a page that has Instagram linked when connecting IG
+  // Prefer a page that has Instagram linked when connecting IG;
+  // for Facebook, prefer the Page with the most recent comment activity.
   let page = pages[0];
   if (platform === 'instagram') {
     page = pages.find((p) => p.instagram_business_account?.id) || null;
@@ -402,6 +488,8 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
         'No Instagram Business/Creator account linked to your Facebook Page. Link IG in Meta Business Suite, then retry.'
       );
     }
+  } else if (platform === 'facebook') {
+    page = await pickFacebookPage(pages);
   }
 
   const pageToken = page.access_token;

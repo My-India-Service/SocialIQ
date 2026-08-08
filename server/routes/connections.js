@@ -67,7 +67,9 @@ router.get('/youtube/auth', authRequired, async (req, res) => {
 });
 
 router.get('/youtube/callback', async (req, res) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173')
+    .split(',')[0]
+    .trim();
   try {
     const { code, state, error } = req.query;
     if (error) {
@@ -130,7 +132,9 @@ router.get('/meta/auth', authRequired, async (req, res) => {
 });
 
 router.get('/meta/callback', async (req, res) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173')
+    .split(',')[0]
+    .trim();
   let platform = 'facebook';
   try {
     const { code, state, error } = req.query;
@@ -161,14 +165,16 @@ router.get('/meta/callback', async (req, res) => {
 router.post('/facebook/sync', authRequired, async (req, res) => {
   try {
     const result = await syncFacebookCommentsForUser(req.userId, {
-      maxPosts: Number(req.body?.maxPosts) || 10,
+      maxPosts: Number(req.body?.maxPosts) || 50,
       maxCommentsPerPost: Number(req.body?.maxCommentsPerPost) || 40,
     });
-    const base = `Facebook: synced ${result.imported} new (${result.updated} updated).`;
+    const checked =
+      typeof result.postsChecked === 'number' ? ` Checked ${result.postsChecked} posts.` : '';
+    const base = `Facebook: synced ${result.imported} new (${result.updated} updated) from ${result.fetched} fetched.${checked}`;
     const hint = result.warning
       ? ` ${result.warning}`
       : result.fetched === 0
-        ? ' No comments imported — enable pages_read_engagement + pages_read_user_content in Meta, Reconnect Facebook, then Sync again.'
+        ? ' No comments imported — enable pages_read_engagement + pages_read_user_content in Meta, Reconnect the correct Facebook Page (must match Comments Manager), then Sync again.'
         : '';
     res.json({
       ...result,

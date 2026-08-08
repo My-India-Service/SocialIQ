@@ -241,8 +241,10 @@ export default function Connections() {
       <div className="panel" style={{ marginBottom: '1rem' }}>
         <h2>Facebook</h2>
         <p className="prob" style={{ marginTop: 0 }}>
-          Connect a Facebook Page you admin. Pulls post comments via Graph API. If IG is linked, it
-          also connects Instagram. Comment sync needs Meta permissions{' '}
+          Connect a Facebook Page you admin. Pulls post comments via Graph API (up to ~50 recent
+          posts). The connected Page must be the same one that shows comments in Meta Comments
+          Manager — if Sync returns 0, Reconnect and pick that Page. If IG is linked, Meta also
+          connects Instagram. Comment sync needs{' '}
           <code>pages_read_engagement</code> + <code>pages_read_user_content</code> (Ready for
           testing), then Reconnect so the token includes them.
         </p>
@@ -275,6 +277,18 @@ export default function Connections() {
             </button>
           )}
         </div>
+        {fb?.hasOAuth && (
+          <p className="prob">
+            Connected Page: <strong>{fb.accountName || 'Unknown'}</strong>
+            {fb.channelId ? (
+              <>
+                {' '}
+                (id <code>{fb.channelId}</code>)
+              </>
+            ) : null}
+            . Confirm this matches Meta Comments Manager, then Sync.
+          </p>
+        )}
         {fb?.hasOAuth && fb?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(fb.lastSyncedAt).toLocaleString()}</p>
         )}

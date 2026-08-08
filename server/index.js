@@ -10,9 +10,22 @@ import reportRoutes from './routes/reports.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+/** Comma-separated CLIENT_URL values; always allow local Vite in non-production. */
+function corsOrigins() {
+  const fromEnv = (process.env.CLIENT_URL || 'http://localhost:5173')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const origins = new Set(fromEnv);
+  if (process.env.NODE_ENV !== 'production') {
+    origins.add('http://localhost:5173');
+  }
+  return [...origins];
+}
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: corsOrigins(),
     credentials: true,
   })
 );

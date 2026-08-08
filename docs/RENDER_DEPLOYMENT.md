@@ -58,7 +58,7 @@ In Render: **New → Web Service** → connect your GitHub repo.
 | `NODE_ENV` | Yes | `production` |
 | `MONGODB_URI` | Yes | Atlas URI with `/voxa` |
 | `JWT_SECRET` | Yes | Random string, 32+ characters |
-| `CLIENT_URL` | Yes | Static site URL — set after Step 3 |
+| `CLIENT_URL` | Yes | Static site URL — set after Step 3. Comma-separated allowed (first URL used for OAuth redirects) |
 | `SERVER_URL` | For OAuth | `https://YOUR-API.onrender.com` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | YouTube OAuth |
 | `GOOGLE_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/youtube/callback` |
@@ -191,7 +191,9 @@ Then redeploy the static site after `VITE_API_URL` is set (it must be present at
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | Homepage loads but API calls fail | `VITE_API_URL` missing or wrong at build time | Set env on Static Site (**no** trailing `/api`), redeploy |
-| Login fails / CORS errors | `CLIENT_URL` wrong or API not redeployed | Set static URL on API, redeploy API |
+| Login fails / CORS errors | `CLIENT_URL` wrong or API not redeployed | Set static URL on API (comma-ok), redeploy API |
+| Local login `403` / empty body | Vite proxy port ≠ server `PORT` | Match `PORT` and Vite proxy (`5001` / `VITE_API_PROXY`) |
+| Facebook Inbox empty after Sync | Wrong Page or posts outside sync window | Reconnect correct Page; Sync again (checks ~50 posts) |
 | API starts but no data | Atlas empty or wrong DB name in URI | Add `/voxa` to URI, run `npm run seed` |
 | Build fails on static site | Wrong publish path | Use `dist` with Root Directory `client` |
 | Build fails on API (`file:..` / voxa) | Stale lockfile or old dep | Ensure `voxa` is not in `server`/`client` package.json; Root Directory is `server` |
@@ -208,21 +210,26 @@ Then redeploy the static site after `VITE_API_URL` is set (it must be present at
 **`server/.env`** (see also [`server/.env.example`](../server/.env.example))
 
 ```env
-PORT=5000
+PORT=5001
 MONGODB_URI=mongodb://127.0.0.1:27017/voxa
 JWT_SECRET=your-dev-secret-32-chars-minimum
 CLIENT_URL=http://localhost:5173
-SERVER_URL=http://localhost:5000
+SERVER_URL=http://localhost:5001
 NODE_ENV=development
 ```
 
-**`client/.env`** (optional — Vite proxies `/api` in dev)
+**`client`** — leave `VITE_API_URL` empty so requests go through the Vite proxy. Proxy target defaults to `http://localhost:5001` (must match `PORT`). Override with `VITE_API_PROXY` if needed.
 
 ```env
 VITE_API_URL=
+# optional: VITE_API_PROXY=http://localhost:5001
 ```
 
-Leave `VITE_API_URL` empty locally so requests go through the Vite proxy to `http://localhost:5000`.
+### Facebook comments empty in Inbox
+
+1. Connect → **Sync comments** on Facebook; read the message (`fetched` / `postsChecked` / warnings).
+2. Confirm the connected Page is the same Page that shows comments in Meta Comments Manager (Reconnect if not).
+3. Sync checks ~50 recent posts — older posts outside that window are skipped.
 
 ### Production (Render)
 
