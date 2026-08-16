@@ -240,7 +240,13 @@ export default function Landing() {
 
       <footer className="footer container">
         <span>© {new Date().getFullYear()} Voxa</span>
-        <span>AI Social Revenue Platform</span>
+        <span>
+          <Link to="/privacy">Privacy</Link>
+          {' · '}
+          <Link to="/terms">Terms</Link>
+          {' · '}
+          <Link to="/data-deletion">Data deletion</Link>
+        </span>
       </footer>
     </div>
   );

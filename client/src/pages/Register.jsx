@@ -93,6 +93,11 @@ export default function Register() {
           <br />
           Or try demo: demo@voxa.app / demo1234
         </p>
+        <p className="muted-link">
+          <Link to="/privacy">Privacy</Link>
+          {' · '}
+          <Link to="/terms">Terms</Link>
+        </p>
       </div>
     </div>
   );

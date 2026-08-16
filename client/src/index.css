@@ -463,6 +463,79 @@ img {
   font-size: 0.92rem;
 }
 
+.footer a {
+  color: inherit;
+}
+
+.legal-page {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.legal-top {
+  border-bottom: 1px solid var(--line);
+}
+
+.legal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.legal-nav .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.legal-nav .nav-links a:not(.btn) {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.legal-body {
+  padding: 2.5rem 0 3rem;
+  max-width: 720px;
+}
+
+.legal-body h1 {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  margin: 0 0 0.5rem;
+}
+
+.legal-updated {
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+  font-size: 0.92rem;
+}
+
+.legal-prose h2 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.6rem;
+}
+
+.legal-prose p,
+.legal-prose li {
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+.legal-prose ul,
+.legal-prose ol {
+  padding-left: 1.25rem;
+}
+
+.legal-prose a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* ——— Auth ——— */
 .auth-page {
   min-height: 100vh;

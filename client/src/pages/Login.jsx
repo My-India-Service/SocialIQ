@@ -81,6 +81,11 @@ export default function Login() {
         <p className="muted-link">
           New here? <Link to="/register">Create an account</Link>
         </p>
+        <p className="muted-link">
+          <Link to="/privacy">Privacy</Link>
+          {' · '}
+          <Link to="/terms">Terms</Link>
+        </p>
       </div>
     </div>
   );
