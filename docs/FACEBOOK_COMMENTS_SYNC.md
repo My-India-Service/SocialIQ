@@ -96,6 +96,50 @@ Code cannot invent comments that Graph hides.
 - [ ] Reconnect Facebook + Sync after going Live  
 - [ ] Connected Page name/id matches Comments Manager  
 
+## Meta Developer Tools MCP (inspect only)
+
+Cursor can read Meta app settings via [Developer Tools MCP](https://developers.facebook.com/documentation/mcp/devtools-mcp) (`https://mcp.facebook.com/devtools`). It does **not** set Privacy URLs, App Domains, or OAuth redirect URIs. Write access is webhooks only.
+
+Config: user `~/.cursor/mcp.json` and this repo [`.cursor/mcp.json`](../.cursor/mcp.json). After adding the server:
+
+1. Cursor **Settings → Tools & Integrations** → **Meta Developer Tools** → **Needs login**.
+2. Sign in with the Meta account that admins app `1645663120309703`.
+3. Grant **Read** on that app.
+
+Then ask the agent to list apps and show basic settings. Cross-check against live:
+
+| Setting | Expected |
+|--------|----------|
+| Privacy Policy | `https://socialiq-client.onrender.com/privacy` |
+| Terms of Service | `https://socialiq-client.onrender.com/terms` |
+| User data deletion | `https://socialiq-client.onrender.com/data-deletion` |
+| Valid OAuth Redirect URI | `https://socialiq-37aa.onrender.com/api/connections/meta/callback` |
+| App Domains | `socialiq-37aa.onrender.com`, `socialiq-client.onrender.com` |
+
+If redirect URI or domains do not match, fix them in [Meta Developer Console](https://developers.facebook.com/apps) — not via MCP.
+
+### Authenticate stuck on `127.0.0.1 refused to connect`
+
+Cursor often listens only on IPv6 (`[::1]:8787`) while Facebook redirects to IPv4 `http://127.0.0.1:8787/callback`. Confirm with:
+
+```bash
+lsof -nP -iTCP:8787 -sTCP:LISTEN
+```
+
+If you see `[::1]:8787` and not `127.0.0.1:8787`:
+
+1. Cursor → **Authenticate** (keep Cursor open).
+2. In another terminal from the repo root:
+
+```bash
+node scripts/cursor-mcp-ipv4-proxy.mjs
+```
+
+3. Facebook → **Continue**. The proxy forwards IPv4 to Cursor.
+4. Stop the proxy with Ctrl+C after MCP shows connected.
+
+This does not change Voxa’s Render callback (`https://socialiq-37aa.onrender.com/api/connections/meta/callback`).
+
 ---
 
 ## Related
