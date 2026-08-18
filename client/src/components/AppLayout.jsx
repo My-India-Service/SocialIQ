@@ -2,10 +2,15 @@ import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function AppLayout() {
-  const { user, loading, logout } = useAuth();
+  const { user, token, loading, logout } = useAuth();
 
   if (loading) {
     return <div className="loading-screen">Loading Voxa…</div>;
+  }
+
+  // JWT still present (e.g. after OAuth return) but /me briefly failed — do not send to login.
+  if (!user && token) {
+    return <div className="loading-screen">Restoring session…</div>;
   }
 
   if (!user) {

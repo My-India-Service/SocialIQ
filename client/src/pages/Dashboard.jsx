@@ -198,6 +198,7 @@ export default function Dashboard() {
           <option value="youtube">YouTube</option>
           <option value="instagram">Instagram</option>
           <option value="facebook">Facebook</option>
+          <option value="whatsapp">WhatsApp</option>
         </select>
         <input
           placeholder="Search comments…"

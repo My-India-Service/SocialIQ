@@ -20,6 +20,7 @@ import {
   isMetaConfigured,
   verifyMetaOAuthState,
 } from '../services/meta.js';
+import { getClientUrl } from '../utils/clientUrl.js';
 
 const router = express.Router();
 
@@ -67,9 +68,7 @@ router.get('/youtube/auth', authRequired, async (req, res) => {
 });
 
 router.get('/youtube/callback', async (req, res) => {
-  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173')
-    .split(',')[0]
-    .trim();
+  const clientUrl = getClientUrl();
   try {
     const { code, state, error } = req.query;
     if (error) {
@@ -132,9 +131,7 @@ router.get('/meta/auth', authRequired, async (req, res) => {
 });
 
 router.get('/meta/callback', async (req, res) => {
-  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173')
-    .split(',')[0]
-    .trim();
+  const clientUrl = getClientUrl();
   let platform = 'facebook';
   try {
     const { code, state, error } = req.query;

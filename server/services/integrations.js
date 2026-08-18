@@ -1,6 +1,7 @@
 /**
- * Outbound lead routing: Slack, WhatsApp-compatible webhooks, generic CRM webhooks.
+ * Outbound lead routing: Slack webhooks, WhatsApp Cloud API, generic CRM webhooks.
  */
+import { isWhatsAppConfigured, sendWhatsAppLeadAlert } from './whatsapp.js';
 
 function moneyLabel(amount, currency = 'INR') {
   if (currency === 'INR') return `₹${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -82,12 +83,15 @@ export async function sendToSlack(webhookUrl, user, comment) {
   return { ok: true, channel: 'slack' };
 }
 
-export async function sendToWhatsApp(webhookUrl, user, comment) {
-  if (!webhookUrl) return { ok: false, skipped: true, reason: 'No WhatsApp webhook' };
-  await postJson(webhookUrl, {
-    ...formatLeadPayload(user, comment, 'whatsapp'),
-    message: `Hot lead (${comment.purchaseProbability}%): ${comment.author} — "${comment.text}" · Reply: ${comment.suggestedReply || '—'}`,
-  });
+export async function sendToWhatsApp(user, comment) {
+  const to = user?.integrations?.whatsappNotifyPhone;
+  if (!to) return { ok: false, skipped: true, reason: 'No WhatsApp notify phone' };
+  if (!isWhatsAppConfigured()) {
+    return { ok: false, skipped: true, reason: 'WhatsApp Cloud API not configured' };
+  }
+
+  const message = `Hot lead (${comment.purchaseProbability}%): ${comment.author} — "${comment.text}" · Reply: ${comment.suggestedReply || '—'}`;
+  await sendWhatsAppLeadAlert(to, message);
   return { ok: true, channel: 'whatsapp' };
 }
 
@@ -119,9 +123,9 @@ export async function routeLead(user, comment, channels = 'all') {
     }
   }
 
-  if (want.includes('whatsapp') && integ.whatsappWebhookUrl) {
+  if (want.includes('whatsapp') && integ.whatsappNotifyPhone && isWhatsAppConfigured()) {
     try {
-      results.push(await sendToWhatsApp(integ.whatsappWebhookUrl, user, comment));
+      results.push(await sendToWhatsApp(user, comment));
     } catch (err) {
       results.push({ ok: false, channel: 'whatsapp', error: err.message });
     }
@@ -140,7 +144,7 @@ export async function routeLead(user, comment, channels = 'all') {
       routed: false,
       results: [],
       message:
-        'No destinations configured. Add Slack / WhatsApp / CRM webhook URLs in Settings → Integrations.',
+        'No destinations configured. Add Slack webhook, WhatsApp notify phone (Cloud API), or CRM webhook in Settings.',
     };
   }
 
@@ -154,5 +158,9 @@ export async function routeLead(user, comment, channels = 'all') {
 
 export function hasAnyIntegration(user) {
   const i = user?.integrations || {};
-  return Boolean(i.slackWebhookUrl || i.whatsappWebhookUrl || i.crmWebhookUrl);
+  return Boolean(
+    i.slackWebhookUrl ||
+      (i.whatsappNotifyPhone && isWhatsAppConfigured()) ||
+      i.crmWebhookUrl
+  );
 }

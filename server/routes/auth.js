@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { sendEmail } from '../services/mailer.js';
+import { getClientUrl } from '../utils/clientUrl.js';
 
 const router = express.Router();
 
@@ -28,12 +29,12 @@ function publicUser(user) {
     currency: user.currency || 'INR',
     integrations: {
       slackWebhookUrl: user.integrations?.slackWebhookUrl || '',
-      whatsappWebhookUrl: user.integrations?.whatsappWebhookUrl || '',
+      whatsappNotifyPhone: user.integrations?.whatsappNotifyPhone || '',
       crmWebhookUrl: user.integrations?.crmWebhookUrl || '',
       autoRouteHotLeads: Boolean(user.integrations?.autoRouteHotLeads),
       hotLeadThreshold: user.integrations?.hotLeadThreshold ?? 80,
       hasSlack: Boolean(user.integrations?.slackWebhookUrl),
-      hasWhatsapp: Boolean(user.integrations?.whatsappWebhookUrl),
+      hasWhatsapp: Boolean(user.integrations?.whatsappNotifyPhone),
       hasCrm: Boolean(user.integrations?.crmWebhookUrl),
     },
     autoDm: {
@@ -115,9 +116,7 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
     await user.save();
 
-    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173')
-      .split(',')[0]
-      .trim();
+    const clientUrl = getClientUrl();
     const resetUrl = `${clientUrl}/reset-password?token=${rawToken}`;
 
     const result = await sendEmail({
@@ -216,8 +215,8 @@ router.patch('/brand', async (req, res) => {
       if (integrations.slackWebhookUrl !== undefined) {
         user.integrations.slackWebhookUrl = String(integrations.slackWebhookUrl).trim();
       }
-      if (integrations.whatsappWebhookUrl !== undefined) {
-        user.integrations.whatsappWebhookUrl = String(integrations.whatsappWebhookUrl).trim();
+      if (integrations.whatsappNotifyPhone !== undefined) {
+        user.integrations.whatsappNotifyPhone = String(integrations.whatsappNotifyPhone).trim();
       }
       if (integrations.crmWebhookUrl !== undefined) {
         user.integrations.crmWebhookUrl = String(integrations.crmWebhookUrl).trim();

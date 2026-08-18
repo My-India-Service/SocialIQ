@@ -73,6 +73,8 @@ Always: **Reconnect Facebook** → **Sync comments** → Inbox filter **Facebook
 
 Deploy note: Graph/sync logic lives on the **API** service. Redeploy the API on Render after code pushes; the static client alone is not enough.
 
+After Connect, you must stay logged in: on the Render API set `CLIENT_URL=https://socialiq-client.onrender.com` (not localhost first) and redeploy the API so OAuth returns to the live site with your JWT.
+
 ---
 
 ## What Voxa already does (code)

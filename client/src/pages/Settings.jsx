@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,8 +8,8 @@ export default function Settings() {
   const [brandTone, setBrandTone] = useState(user?.brandTone || 'friendly');
   const [avgOrderValue, setAvgOrderValue] = useState(user?.avgOrderValue ?? 2499);
   const [slackWebhookUrl, setSlackWebhookUrl] = useState(user?.integrations?.slackWebhookUrl || '');
-  const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState(
-    user?.integrations?.whatsappWebhookUrl || ''
+  const [whatsappNotifyPhone, setWhatsappNotifyPhone] = useState(
+    user?.integrations?.whatsappNotifyPhone || ''
   );
   const [crmWebhookUrl, setCrmWebhookUrl] = useState(user?.integrations?.crmWebhookUrl || '');
   const [autoRouteHotLeads, setAutoRouteHotLeads] = useState(
@@ -26,6 +26,24 @@ export default function Settings() {
   const [analysis, setAnalysis] = useState(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [waStatus, setWaStatus] = useState(null);
+  const [waBusy, setWaBusy] = useState(false);
+  const [waMessage, setWaMessage] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  async function loadWhatsAppStatus() {
+    try {
+      const data = await api('/api/whatsapp/status', { token });
+      setWaStatus(data);
+    } catch (err) {
+      setWaStatus(null);
+      console.warn('WhatsApp status:', err.message);
+    }
+  }
+
+  useEffect(() => {
+    if (token) loadWhatsAppStatus();
+  }, [token]);
 
   async function save(e) {
     e.preventDefault();
@@ -41,7 +59,7 @@ export default function Settings() {
           avgOrderValue: Number(avgOrderValue),
           integrations: {
             slackWebhookUrl,
-            whatsappWebhookUrl,
+            whatsappNotifyPhone,
             crmWebhookUrl,
             autoRouteHotLeads,
             hotLeadThreshold: Number(hotLeadThreshold),
@@ -76,12 +94,56 @@ export default function Settings() {
     }
   }
 
+  async function enableWhatsAppInbox() {
+    setWaBusy(true);
+    setWaMessage('');
+    setError('');
+    try {
+      const data = await api('/api/whatsapp/enable', { method: 'POST', token });
+      setWaMessage(data.message || 'WhatsApp inbox enabled');
+      await loadWhatsAppStatus();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setWaBusy(false);
+    }
+  }
+
+  async function testWhatsAppSend() {
+    setWaBusy(true);
+    setWaMessage('');
+    setError('');
+    try {
+      const data = await api('/api/whatsapp/test-send', {
+        method: 'POST',
+        token,
+        body: { to: whatsappNotifyPhone || undefined },
+      });
+      setWaMessage(data.message || 'Test message sent');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setWaBusy(false);
+    }
+  }
+
+  async function copyWebhookUrl() {
+    if (!waStatus?.webhookUrl) return;
+    try {
+      await navigator.clipboard.writeText(waStatus.webhookUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('Could not copy — select the URL manually');
+    }
+  }
+
   return (
     <div>
       <div className="page-head">
         <div>
           <h1>Brand & integrations</h1>
-          <p>Tone, average order value, Slack/CRM routing, and Auto DM catalogue.</p>
+          <p>Tone, average order value, Slack/CRM routing, WhatsApp Cloud API, and Auto DM.</p>
         </div>
       </div>
 
@@ -89,6 +151,11 @@ export default function Settings() {
       {saved && (
         <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>
           Settings saved.
+        </div>
+      )}
+      {waMessage && (
+        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>
+          {waMessage}
         </div>
       )}
 
@@ -120,10 +187,80 @@ export default function Settings() {
         </div>
 
         <div className="panel">
+          <h2>WhatsApp (Meta Cloud API)</h2>
+          <p className="prob">
+            Meta does not give you a webhook URL. Voxa exposes the Callback URL below — paste it
+            into Meta Developers → WhatsApp → Configuration → Webhooks. Tokens stay on the API
+            server (Render env), never in the browser.
+          </p>
+
+          {waStatus ? (
+            <>
+              <label>
+                Webhook Callback URL (copy into Meta)
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input readOnly value={waStatus.webhookUrl || ''} />
+                  <button className="btn btn-primary btn-sm" type="button" onClick={copyWebhookUrl}>
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </label>
+              <p className="prob">
+                Phone Number ID: {waStatus.phoneNumberId || '—'} · WABA ID:{' '}
+                {waStatus.wabaId || '—'} · Graph {waStatus.graphApiVersion}
+              </p>
+              <p className="prob">
+                Access token: {waStatus.accessTokenConfigured ? 'configured' : 'missing'} · Verify
+                token: {waStatus.verifyTokenConfigured ? 'configured' : 'missing'} · App secret:{' '}
+                {waStatus.appSecretConfigured ? 'configured' : 'missing'} · Cloud API:{' '}
+                {waStatus.configured ? 'ready' : 'incomplete'}
+              </p>
+              <p className="prob">
+                Inbox for this account:{' '}
+                {waStatus.inboxEnabled ? 'enabled' : 'not enabled — click below after Meta setup'}
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  type="button"
+                  disabled={waBusy || !waStatus.configured}
+                  onClick={enableWhatsAppInbox}
+                >
+                  Enable WhatsApp inbox
+                </button>
+                <button
+                  className="btn btn-sm"
+                  type="button"
+                  disabled={waBusy || !waStatus.configured || !whatsappNotifyPhone}
+                  onClick={testWhatsAppSend}
+                >
+                  Test send to sales phone
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="prob">Loading WhatsApp status…</p>
+          )}
+
+          <label style={{ marginTop: '1rem' }}>
+            Sales notify phone (E.164, e.g. 9198xxxxxxxx)
+            <input
+              placeholder="919876543210"
+              value={whatsappNotifyPhone}
+              onChange={(e) => setWhatsappNotifyPhone(e.target.value)}
+            />
+          </label>
+          <p className="prob">
+            Hot leads are sent to this number via Meta Graph API (not Zapier). Outside the 24h
+            session window, set META_WHATSAPP_LEAD_TEMPLATE on the API for template sends.
+          </p>
+        </div>
+
+        <div className="panel">
           <h2>Send leads to sales</h2>
           <p className="prob">
-            Paste webhook URLs — Slack Incoming Webhook, WhatsApp automation, or any CRM/Zapier
-            endpoint.
+            Slack and CRM still use outbound webhook URLs. WhatsApp uses Cloud API + the notify
+            phone above.
           </p>
           <label>
             Slack webhook URL
@@ -131,14 +268,6 @@ export default function Settings() {
               placeholder="https://hooks.slack.com/services/…"
               value={slackWebhookUrl}
               onChange={(e) => setSlackWebhookUrl(e.target.value)}
-            />
-          </label>
-          <label>
-            WhatsApp webhook URL
-            <input
-              placeholder="https://…"
-              value={whatsappWebhookUrl}
-              onChange={(e) => setWhatsappWebhookUrl(e.target.value)}
             />
           </label>
           <label>

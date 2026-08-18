@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import commentRoutes from './routes/comments.js';
 import connectionRoutes from './routes/connections.js';
 import reportRoutes from './routes/reports.js';
+import whatsappRoutes from './routes/whatsapp.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,7 +30,17 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+
+// Capture raw body for Meta X-Hub-Signature-256 on WhatsApp webhooks.
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      if (req.originalUrl?.startsWith('/api/whatsapp/webhook')) {
+        req.rawBody = buf;
+      }
+    },
+  })
+);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, product: 'Voxa', message: 'AI Revenue Intelligence API' });
@@ -39,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 async function start() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/voxa';

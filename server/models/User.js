@@ -16,7 +16,8 @@ const userSchema = new mongoose.Schema(
     currency: { type: String, default: 'INR' },
     integrations: {
       slackWebhookUrl: { type: String, default: '' },
-      whatsappWebhookUrl: { type: String, default: '' },
+      /** E.164 sales phone for Meta WhatsApp Cloud API lead alerts (not a Zapier URL). */
+      whatsappNotifyPhone: { type: String, default: '' },
       crmWebhookUrl: { type: String, default: '' },
       /** Auto-route hot leads (purchaseProbability >= threshold) on sync. */
       autoRouteHotLeads: { type: Boolean, default: false },

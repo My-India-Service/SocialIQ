@@ -5,7 +5,7 @@ const commentSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     platform: {
       type: String,
-      enum: ['youtube', 'instagram', 'facebook', 'tiktok', 'x'],
+      enum: ['youtube', 'instagram', 'facebook', 'tiktok', 'x', 'whatsapp'],
       required: true,
     },
     externalId: { type: String },

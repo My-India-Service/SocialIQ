@@ -6,7 +6,7 @@ import { fetchYouTubeComments } from './youtube.js';
 import { fetchFacebookComments, fetchInstagramComments } from './meta.js';
 import { routeLead } from './integrations.js';
 
-async function ingestRawComments(userId, platform, rawComments, user) {
+export async function ingestRawComments(userId, platform, rawComments, user) {
   let imported = 0;
   let updated = 0;
   let skipped = 0;

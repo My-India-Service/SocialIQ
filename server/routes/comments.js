@@ -220,7 +220,7 @@ router.post('/:id/send-to-sales', async (req, res) => {
     if (!hasAnyIntegration(user)) {
       return res.status(400).json({
         message:
-          'No sales destinations configured. Add Slack, WhatsApp, or CRM webhook in Settings.',
+          'No sales destinations configured. Add Slack webhook, WhatsApp notify phone, or CRM webhook in Settings.',
       });
     }
 
