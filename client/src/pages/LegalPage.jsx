@@ -12,6 +12,8 @@ export default function LegalPage({ title, updated, children }) {
             Voxa
           </Link>
           <div className="nav-links">
+            <Link to="/about">About</Link>
+            <Link to="/faq">FAQ</Link>
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
             <Link to="/data-deletion">Data deletion</Link>
@@ -31,6 +33,10 @@ export default function LegalPage({ title, updated, children }) {
       <footer className="footer container">
         <span>© {new Date().getFullYear()} Voxa</span>
         <span>
+          <Link to="/about">About</Link>
+          {' · '}
+          <Link to="/faq">FAQ</Link>
+          {' · '}
           <Link to="/privacy">Privacy</Link>
           {' · '}
           <Link to="/terms">Terms</Link>

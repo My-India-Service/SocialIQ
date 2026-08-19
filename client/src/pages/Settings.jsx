@@ -2,6 +2,24 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
+function webhookUrlLooksWrong(url) {
+  if (!url) return false;
+  return /\/connections\//.test(url) || /\/callback(\/|$)/.test(url);
+}
+
+function whatsappActionHint(status, notifyPhone) {
+  if (!status?.configured) {
+    if (!status?.verifyTokenConfigured) {
+      return 'Set META_WEBHOOK_VERIFY_TOKEN in API env (a string you invent), then redeploy.';
+    }
+    return 'Cloud API is incomplete — set missing env vars on the API and redeploy.';
+  }
+  if (!notifyPhone) {
+    return 'Save a sales notify phone to enable Test send.';
+  }
+  return '';
+}
+
 export default function Settings() {
   const { token, user, setUser } = useAuth();
   const [brandName, setBrandName] = useState(user?.brandName || '');
@@ -27,17 +45,21 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [waStatus, setWaStatus] = useState(null);
+  const [waLoading, setWaLoading] = useState(true);
   const [waBusy, setWaBusy] = useState(false);
   const [waMessage, setWaMessage] = useState('');
   const [copied, setCopied] = useState(false);
 
   async function loadWhatsAppStatus() {
+    setWaLoading(true);
     try {
       const data = await api('/api/whatsapp/status', { token });
       setWaStatus(data);
     } catch (err) {
       setWaStatus(null);
       console.warn('WhatsApp status:', err.message);
+    } finally {
+      setWaLoading(false);
     }
   }
 
@@ -138,6 +160,8 @@ export default function Settings() {
     }
   }
 
+  const waHint = waStatus ? whatsappActionHint(waStatus, whatsappNotifyPhone) : '';
+
   return (
     <div>
       <div className="page-head">
@@ -148,16 +172,8 @@ export default function Settings() {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
-      {saved && (
-        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>
-          Settings saved.
-        </div>
-      )}
-      {waMessage && (
-        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>
-          {waMessage}
-        </div>
-      )}
+      {saved && <div className="success-banner">Settings saved.</div>}
+      {waMessage && <div className="success-banner">{waMessage}</div>}
 
       <form className="form-stack settings-form" onSubmit={save}>
         <div className="panel">
@@ -186,40 +202,103 @@ export default function Settings() {
           </label>
         </div>
 
-        <div className="panel">
-          <h2>WhatsApp (Meta Cloud API)</h2>
-          <p className="prob">
-            Meta does not give you a webhook URL. Voxa exposes the Callback URL below — paste it
-            into Meta Developers → WhatsApp → Configuration → Webhooks. Tokens stay on the API
-            server (Render env), never in the browser.
-          </p>
+        <div className="panel wa-setup">
+          <div className="wa-setup-head">
+            <h2>WhatsApp (Meta Cloud API)</h2>
+            {waLoading ? (
+              <span className="pill">Checking…</span>
+            ) : waStatus?.inboxEnabled ? (
+              <span className="pill wa-pill-ready">Inbox on</span>
+            ) : waStatus?.configured ? (
+              <span className="pill wa-pill-ready">Ready</span>
+            ) : (
+              <span className="pill wa-pill-missing">Incomplete</span>
+            )}
+          </div>
 
-          {waStatus ? (
+          <ol className="step-list">
+            <li>
+              Set API env: <code>META_WHATSAPP_*</code> and{' '}
+              <code>META_WEBHOOK_VERIFY_TOKEN</code>. The verify token is a string{' '}
+              <strong>you invent</strong> — same value in Render <code>.env</code> and the Meta
+              form. Meta does not generate it.
+            </li>
+            <li>
+              Copy the Callback URL below into Meta → WhatsApp → Production setup → Callback URL.
+              Do <strong>not</strong> use Facebook Login (<code>…/meta/callback</code>).
+            </li>
+            <li>
+              Click <strong>Verify and save</strong>, then subscribe to the <strong>messages</strong>{' '}
+              field.
+            </li>
+            <li>Enable inbox here, then optionally set a sales notify phone for outbound alerts.</li>
+          </ol>
+
+          {waLoading ? (
+            <p className="prob wa-checking">Checking Cloud API…</p>
+          ) : waStatus ? (
             <>
+              {webhookUrlLooksWrong(waStatus.webhookUrl) && (
+                <div className="wa-warn">
+                  <code>SERVER_URL</code> must be the API origin only (e.g.{' '}
+                  <code>https://socialiq-37aa.onrender.com</code>), not the OAuth callback path.
+                </div>
+              )}
+
               <label>
-                Webhook Callback URL (copy into Meta)
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                Callback URL (paste into Meta)
+                <div className="copy-row">
                   <input readOnly value={waStatus.webhookUrl || ''} />
                   <button className="btn btn-primary btn-sm" type="button" onClick={copyWebhookUrl}>
                     {copied ? 'Copied' : 'Copy'}
                   </button>
                 </div>
               </label>
-              <p className="prob">
-                Phone Number ID: {waStatus.phoneNumberId || '—'} · WABA ID:{' '}
-                {waStatus.wabaId || '—'} · Graph {waStatus.graphApiVersion}
-              </p>
-              <p className="prob">
-                Access token: {waStatus.accessTokenConfigured ? 'configured' : 'missing'} · Verify
-                token: {waStatus.verifyTokenConfigured ? 'configured' : 'missing'} · App secret:{' '}
-                {waStatus.appSecretConfigured ? 'configured' : 'missing'} · Cloud API:{' '}
-                {waStatus.configured ? 'ready' : 'incomplete'}
-              </p>
-              <p className="prob">
-                Inbox for this account:{' '}
-                {waStatus.inboxEnabled ? 'enabled' : 'not enabled — click below after Meta setup'}
-              </p>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+
+              <div className="status-grid">
+                <div>
+                  <span className="status-grid-label">Access token</span>
+                  <span
+                    className={`pill ${waStatus.accessTokenConfigured ? 'wa-pill-ready' : 'wa-pill-missing'}`}
+                  >
+                    {waStatus.accessTokenConfigured ? 'Configured' : 'Missing'}
+                  </span>
+                </div>
+                <div>
+                  <span className="status-grid-label">Verify token</span>
+                  <span
+                    className={`pill ${waStatus.verifyTokenConfigured ? 'wa-pill-ready' : 'wa-pill-missing'}`}
+                  >
+                    {waStatus.verifyTokenConfigured ? 'Configured' : 'Missing'}
+                  </span>
+                </div>
+                <div>
+                  <span className="status-grid-label">App secret</span>
+                  <span
+                    className={`pill ${waStatus.appSecretConfigured ? 'wa-pill-ready' : 'wa-pill-missing'}`}
+                  >
+                    {waStatus.appSecretConfigured ? 'Configured' : 'Missing'}
+                  </span>
+                </div>
+                <div>
+                  <span className="status-grid-label">Inbox</span>
+                  <span
+                    className={`pill ${waStatus.inboxEnabled ? 'wa-pill-ready' : 'wa-pill-missing'}`}
+                  >
+                    {waStatus.inboxEnabled ? 'On' : 'Off'}
+                  </span>
+                </div>
+                <div>
+                  <span className="status-grid-label">Phone Number ID</span>
+                  <code className="status-mono">{waStatus.phoneNumberId || '—'}</code>
+                </div>
+                <div>
+                  <span className="status-grid-label">WABA ID</span>
+                  <code className="status-mono">{waStatus.wabaId || '—'}</code>
+                </div>
+              </div>
+
+              <div className="wa-actions">
                 <button
                   className="btn btn-primary btn-sm"
                   type="button"
@@ -237,22 +316,23 @@ export default function Settings() {
                   Test send to sales phone
                 </button>
               </div>
+              {waHint ? <p className="prob">{waHint}</p> : null}
             </>
           ) : (
-            <p className="prob">Loading WhatsApp status…</p>
+            <p className="prob">Could not load WhatsApp status. Confirm the API is running.</p>
           )}
 
-          <label style={{ marginTop: '1rem' }}>
-            Sales notify phone (E.164, e.g. 9198xxxxxxxx)
+          <label>
+            Sales notify phone
             <input
-              placeholder="919876543210"
+              placeholder="9198xxxxxxxx"
               value={whatsappNotifyPhone}
               onChange={(e) => setWhatsappNotifyPhone(e.target.value)}
             />
           </label>
           <p className="prob">
-            Hot leads are sent to this number via Meta Graph API (not Zapier). Outside the 24h
-            session window, set META_WHATSAPP_LEAD_TEMPLATE on the API for template sends.
+            Outbound hot-lead alerts only (E.164, no +). Save settings after changing. Outside the
+            24h window, set <code>META_WHATSAPP_LEAD_TEMPLATE</code> on the API.
           </p>
         </div>
 

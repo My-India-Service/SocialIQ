@@ -15,6 +15,9 @@ import Settings from './pages/Settings';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import DataDeletion from './pages/DataDeletion';
+import About from './pages/About';
+import Faq from './pages/Faq';
+import Help from './pages/Help';
 
 export default function App() {
   return (
@@ -29,6 +32,8 @@ export default function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/data-deletion" element={<DataDeletion />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/faq" element={<Faq />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="connections" element={<Connections />} />
@@ -36,6 +41,7 @@ export default function App() {
             <Route path="revenue" element={<Revenue />} />
             <Route path="insights" element={<Insights />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="help" element={<Help />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

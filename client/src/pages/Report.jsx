@@ -82,11 +82,7 @@ export default function Report() {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
-      {sent && (
-        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>
-          {sent}
-        </div>
-      )}
+      {sent && <div className="success-banner">{sent}</div>}
       {!emailConfigured && (
         <p className="prob" style={{ marginTop: '-0.5rem' }}>
           Email sending off — add <code>SMTP_HOST</code>, <code>SMTP_USER</code>,{' '}

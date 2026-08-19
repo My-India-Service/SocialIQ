@@ -71,6 +71,12 @@ export default function Landing() {
               Voxa
             </Link>
             <div className="nav-links">
+              <Link to="/about" className="btn btn-ghost btn-sm">
+                About
+              </Link>
+              <Link to="/faq" className="btn btn-ghost btn-sm">
+                FAQ
+              </Link>
               <a href="#pricing" className="btn btn-ghost btn-sm">
                 Pricing
               </a>
@@ -241,6 +247,10 @@ export default function Landing() {
       <footer className="footer container">
         <span>© {new Date().getFullYear()} Voxa</span>
         <span>
+          <Link to="/about">About</Link>
+          {' · '}
+          <Link to="/faq">FAQ</Link>
+          {' · '}
           <Link to="/privacy">Privacy</Link>
           {' · '}
           <Link to="/terms">Terms</Link>

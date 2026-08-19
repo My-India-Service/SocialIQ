@@ -35,14 +35,20 @@ export default function AppLayout() {
           <NavLink to="/app/insights">Insights</NavLink>
           <NavLink to="/app/connections">Connect</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>
+          <NavLink to="/app/help">Guide</NavLink>
         </nav>
         <div className="side-foot">
           <div className="who">
-            {user.brandName}
-            <br />
-            {user.email}
+            <span className="who-avatar" aria-hidden="true">
+              {(user.brandName || 'V').slice(0, 1).toUpperCase()}
+            </span>
+            <span>
+              <strong>{user.brandName}</strong>
+              <br />
+              {user.email}
+            </span>
           </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={logout} style={{ color: '#e8eef2', borderColor: 'rgba(232,238,242,0.2)' }}>
+          <button type="button" className="btn btn-ghost btn-sm sidebar-logout" onClick={logout}>
             Log out
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,6 +7,7 @@ const PLATFORMS = [
   { id: 'youtube', label: 'YouTube', ready: true, mvp: true },
   { id: 'instagram', label: 'Instagram', ready: true, mvp: true },
   { id: 'facebook', label: 'Facebook', ready: true, mvp: false },
+  { id: 'whatsapp', label: 'WhatsApp', ready: true, mvp: true },
   { id: 'tiktok', label: 'TikTok', ready: false, mvp: false },
   { id: 'x', label: 'X', ready: false, mvp: false },
 ];
@@ -134,7 +135,7 @@ export default function Connections() {
       <div className="page-head">
         <div>
           <h1>Connect channels</h1>
-          <p>MVP focus: Instagram & YouTube via official APIs. Facebook optional; TikTok/X later.</p>
+          <p>Instagram, YouTube, Facebook via OAuth. WhatsApp Cloud API is configured in Settings.</p>
         </div>
       </div>
 
@@ -154,13 +155,22 @@ export default function Connections() {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
-      {message && (
-        <div className="panel" style={{ marginBottom: '1rem', background: '#eef8d4' }}>
-          {message}
-        </div>
-      )}
+      {message && <div className="success-banner">{message}</div>}
 
-      <div className="panel" style={{ marginBottom: '1rem' }}>
+      <div className="panel stack-gap">
+        <h2>WhatsApp</h2>
+        <p className="prob" style={{ marginTop: 0 }}>
+          Incoming messages use Meta Cloud API webhooks — not Facebook Login. Enable inbox and copy
+          the Callback URL in Settings.
+        </p>
+        <div className="reply-actions">
+          <Link className="btn btn-citrus btn-sm" to="/app/settings">
+            Open WhatsApp settings
+          </Link>
+        </div>
+      </div>
+
+      <div className="panel stack-gap">
         <h2>YouTube</h2>
         <p className="prob" style={{ marginTop: 0 }}>
           Connect with Google, then sync comments.
@@ -199,7 +209,7 @@ export default function Connections() {
         )}
       </div>
 
-      <div className="panel" style={{ marginBottom: '1rem' }}>
+      <div className="panel stack-gap">
         <h2>Instagram</h2>
         <p className="prob" style={{ marginTop: 0 }}>
           Needs an Instagram Business/Creator account linked to a Facebook Page. Meta Login → Sync
@@ -242,7 +252,7 @@ export default function Connections() {
         )}
       </div>
 
-      <div className="panel" style={{ marginBottom: '1rem' }}>
+      <div className="panel stack-gap">
         <h2>Facebook</h2>
         <p className="prob" style={{ marginTop: 0 }}>
           Connect a Facebook Page you admin. Sync merges published_posts + feed + posts (up to
@@ -309,14 +319,28 @@ export default function Connections() {
                 <div>
                   <strong>{p.label}</strong>
                   <div className="prob">
-                    <span className={`status-dot ${conn?.hasOAuth ? '' : 'off'}`} />
-                    {conn
-                      ? conn.hasOAuth
-                        ? `OAuth · ${conn.accountName}`
-                        : `Stub · ${conn.accountName}`
-                      : p.ready
-                        ? 'Not connected'
-                        : 'Coming soon'}
+                    <span
+                      className={`status-dot ${
+                        p.id === 'whatsapp'
+                          ? conn
+                            ? ''
+                            : 'off'
+                          : conn?.hasOAuth
+                            ? ''
+                            : 'off'
+                      }`}
+                    />
+                    {p.id === 'whatsapp'
+                      ? conn
+                        ? `Inbox · ${conn.accountName}`
+                        : 'Configure in Settings'
+                      : conn
+                        ? conn.hasOAuth
+                          ? `OAuth · ${conn.accountName}`
+                          : `Stub · ${conn.accountName}`
+                        : p.ready
+                          ? 'Not connected'
+                          : 'Coming soon'}
                   </div>
                 </div>
                 {conn ? (
@@ -328,7 +352,9 @@ export default function Connections() {
                     Disconnect
                   </button>
                 ) : (
-                  <span className="pill">{p.ready ? 'OAuth' : 'Later'}</span>
+                  <span className="pill">
+                    {p.id === 'whatsapp' ? 'Cloud API' : p.ready ? 'OAuth' : 'Later'}
+                  </span>
                 )}
               </div>
             );
