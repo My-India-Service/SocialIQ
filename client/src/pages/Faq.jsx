@@ -8,7 +8,7 @@ export default function Faq() {
     <LegalPage title="FAQ" updated="18 August 2026">
       <p>
         Short answers. Start with the <Link to="/about">main objective and user guide</Link> if you
-        are new.
+        are new. Plans: <Link to="/pricing">Pricing</Link>.
       </p>
       <FaqList />
     </LegalPage>

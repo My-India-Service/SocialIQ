@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { isValidPlanId } from '../data/plans';
 
 export default function Register() {
   const { user, loginSuccess } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedPlan = searchParams.get('plan');
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -32,7 +35,11 @@ export default function Register() {
         body: form,
       });
       loginSuccess(data);
-      navigate('/app');
+      if (isValidPlanId(selectedPlan) && selectedPlan !== 'starter') {
+        navigate(`/app/billing?plan=${selectedPlan}`);
+      } else {
+        navigate('/app');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -97,6 +104,8 @@ export default function Register() {
           <Link to="/about">About</Link>
           {' · '}
           <Link to="/faq">FAQ</Link>
+          {' · '}
+          <Link to="/pricing">Pricing</Link>
           {' · '}
           <Link to="/privacy">Privacy</Link>
           {' · '}

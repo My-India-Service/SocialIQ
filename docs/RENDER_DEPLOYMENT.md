@@ -59,14 +59,14 @@ In Render: **New → Web Service** → connect your GitHub repo.
 | `MONGODB_URI` | Yes | Atlas URI with `/voxa` |
 | `JWT_SECRET` | Yes | Random string, 32+ characters |
 | `CLIENT_URL` | Yes | Static site URL — set after Step 3. Comma-separated allowed. **In production the first `https://` non-localhost entry is used for OAuth return** (do not put `http://localhost:5173` first on Render). |
-| `SERVER_URL` | For OAuth | `https://YOUR-API.onrender.com` |
+| `SERVER_URL` | OAuth + WhatsApp | `https://YOUR-API.onrender.com` (origin only). WhatsApp Callback URL = `{SERVER_URL}/api/whatsapp/webhook` — there is no separate callback env var |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | YouTube OAuth |
 | `GOOGLE_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/youtube/callback` |
 | `META_APP_ID` / `META_APP_SECRET` | Optional | Instagram + Facebook OAuth; App Secret also verifies WhatsApp webhooks |
-| `META_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/meta/callback` |
+| `META_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/meta/callback` (Facebook Login — not the WhatsApp webhook) |
 | `META_WHATSAPP_ACCESS_TOKEN` | WhatsApp | Cloud API permanent token |
 | `META_PHONE_NUMBER_ID` / `META_WABA_ID` | WhatsApp | From Meta WhatsApp → API setup |
-| `META_WEBHOOK_VERIFY_TOKEN` | WhatsApp | Same string as Meta Webhooks verify token |
+| `META_WEBHOOK_VERIFY_TOKEN` | WhatsApp | Same string as Meta Webhooks **Verify token** field |
 | `META_GRAPH_API_VERSION` | WhatsApp | e.g. `v21.0` |
 | `META_WHATSAPP_LEAD_TEMPLATE` | Optional | Template name for outbound leads outside 24h window |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | Optional | LLM categorization (else rule-based) |
@@ -204,7 +204,7 @@ Then redeploy the static site after `VITE_API_URL` is set (it must be present at
 | Homepage loads but API calls fail | `VITE_API_URL` missing or wrong at build time | Set env on Static Site (**no** trailing `/api`), redeploy |
 | Login fails / CORS errors | `CLIENT_URL` wrong or API not redeployed | Set static URL on API (comma-ok), redeploy API |
 | Logged out after Facebook Connect | `CLIENT_URL` localhost-first, or `/me` wiped JWT | Set live `CLIENT_URL` first; redeploy API + client |
-| WhatsApp webhook / inbox empty | Meta Callback URL wrong or Cloud API env missing | Callback = `{SERVER_URL}/api/whatsapp/webhook` (API host). See [`WHATSAPP_WEBHOOK.md`](./WHATSAPP_WEBHOOK.md) |
+| WhatsApp webhook / inbox empty | Meta Callback URL wrong or Cloud API env missing | Callback = `{SERVER_URL}/api/whatsapp/webhook`. On Render set `SERVER_URL` + `META_WEBHOOK_VERIFY_TOKEN` (no separate callback env). Redeploy API; wake with `/api/health` then Verify again. See [`WHATSAPP_WEBHOOK.md`](./WHATSAPP_WEBHOOK.md) |
 | Local login `403` / empty body | Vite proxy port ≠ server `PORT` | Match `PORT` and Vite proxy (`5001` / `VITE_API_PROXY`) |
 | Facebook Inbox empty after Sync | Wrong Page or posts outside sync window | Reconnect correct Page; Sync again (checks ~50 posts) |
 | API starts but no data | Atlas empty or wrong DB name in URI | Add `/voxa` to URI, run `npm run seed` |

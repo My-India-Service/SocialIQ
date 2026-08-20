@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PLANS } from '../data/plans';
 
 const STREAM = [
   { tag: 'Hot lead · 95%', className: 'tag-sales', text: 'Do you deliver in Delhi?' },
@@ -9,34 +10,6 @@ const STREAM = [
   { tag: 'Complaint', className: 'tag-complaint', text: 'Battery drains too fast.' },
   { tag: 'Hot lead · 98%', className: 'tag-sales', text: 'Where can I buy?' },
   { tag: 'Feature', className: 'tag-feature', text: 'Need a vegan option under ₹999.' },
-];
-
-const PLANS = [
-  {
-    name: 'Starter',
-    price: '$49',
-    blurb: 'For early Shopify brands validating comment revenue.',
-    perks: ['Up to 2k comments/mo', 'IG + YouTube', 'AI replies', 'Daily CEO email'],
-  },
-  {
-    name: 'Growth',
-    price: '$149',
-    blurb: 'For teams that need Slack routing and ROI tracking.',
-    perks: ['Up to 15k comments/mo', 'Hot-lead alerts', 'Slack / WhatsApp / CRM', 'ROI dashboard'],
-    featured: true,
-  },
-  {
-    name: 'Business',
-    price: '$399',
-    blurb: 'For multi-SKU brands with heavy ad spend.',
-    perks: ['Up to 75k comments/mo', 'Competitor intel', 'Auto DM catalogue', 'Priority sync'],
-  },
-  {
-    name: 'Enterprise',
-    price: '$1,000+',
-    blurb: 'Custom volume, SSO, and recovered-revenue SLAs.',
-    perks: ['Unlimited volume', 'Dedicated success', 'Custom AOV models', 'API access'],
-  },
 ];
 
 export default function Landing() {
@@ -77,9 +50,9 @@ export default function Landing() {
               <Link to="/faq" className="btn btn-ghost btn-sm">
                 FAQ
               </Link>
-              <a href="#pricing" className="btn btn-ghost btn-sm">
+              <Link to="/pricing" className="btn btn-ghost btn-sm">
                 Pricing
-              </a>
+              </Link>
               <Link to="/login" className="btn btn-ghost btn-sm">
                 Log in
               </Link>
@@ -212,7 +185,7 @@ export default function Landing() {
           <div className="pricing-grid">
             {PLANS.map((plan) => (
               <article
-                key={plan.name}
+                key={plan.id}
                 className={`pricing-card${plan.featured ? ' featured' : ''}`}
               >
                 <h3>{plan.name}</h3>
@@ -226,9 +199,21 @@ export default function Landing() {
                     <li key={p}>{p}</li>
                   ))}
                 </ul>
-                <Link to="/register" className={`btn ${plan.featured ? 'btn-citrus' : 'btn-primary'} btn-sm`}>
-                  Start with {plan.name}
-                </Link>
+                {plan.contactSales ? (
+                  <a
+                    href="mailto:sales@voxa.app?subject=Enterprise%20plan"
+                    className="btn btn-primary btn-sm"
+                  >
+                    Contact sales
+                  </a>
+                ) : (
+                  <Link
+                    to={`/register?plan=${plan.id}`}
+                    className={`btn ${plan.featured ? 'btn-citrus' : 'btn-primary'} btn-sm`}
+                  >
+                    Start with {plan.name}
+                  </Link>
+                )}
               </article>
             ))}
           </div>
@@ -250,6 +235,8 @@ export default function Landing() {
           <Link to="/about">About</Link>
           {' · '}
           <Link to="/faq">FAQ</Link>
+          {' · '}
+          <Link to="/pricing">Pricing</Link>
           {' · '}
           <Link to="/privacy">Privacy</Link>
           {' · '}

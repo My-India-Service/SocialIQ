@@ -8,6 +8,7 @@ import {
   isWhatsAppConfigured,
   mapWhatsAppMessageToRaw,
   parseInboundMessages,
+  isLikelyMetaSandboxNumber,
   sendWhatsAppLeadAlert,
   verifySignature,
   verifyWebhookChallenge,
@@ -173,6 +174,14 @@ router.post('/test-send', authRequired, async (req, res) => {
     if (!to) {
       return res.status(400).json({
         message: 'Set a sales notify phone in Settings, or pass { to: "+91…" }',
+      });
+    }
+
+    if (isLikelyMetaSandboxNumber(to)) {
+      return res.status(400).json({
+        message:
+          'That looks like Meta’s +1 555 sandbox business (sender) number, not a recipient. Add your personal WhatsApp under Meta → Try it out → Recipient, then put that number in Sales notify phone.',
+        code: 'SANDBOX_SENDER_AS_RECIPIENT',
       });
     }
 

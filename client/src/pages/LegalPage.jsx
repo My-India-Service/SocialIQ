@@ -14,6 +14,7 @@ export default function LegalPage({ title, updated, children }) {
           <div className="nav-links">
             <Link to="/about">About</Link>
             <Link to="/faq">FAQ</Link>
+            <Link to="/pricing">Pricing</Link>
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
             <Link to="/data-deletion">Data deletion</Link>
@@ -36,6 +37,8 @@ export default function LegalPage({ title, updated, children }) {
           <Link to="/about">About</Link>
           {' · '}
           <Link to="/faq">FAQ</Link>
+          {' · '}
+          <Link to="/pricing">Pricing</Link>
           {' · '}
           <Link to="/privacy">Privacy</Link>
           {' · '}

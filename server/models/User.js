@@ -29,6 +29,20 @@ const userSchema = new mongoose.Schema(
       couponCode: { type: String, default: '' },
       websiteUrl: { type: String, default: '' },
     },
+    /** Mock subscription until Stripe. */
+    subscription: {
+      planId: {
+        type: String,
+        enum: ['starter', 'growth', 'business', 'enterprise'],
+        default: 'starter',
+      },
+      status: {
+        type: String,
+        enum: ['trialing', 'active', 'canceled'],
+        default: 'trialing',
+      },
+      updatedAt: { type: Date, default: Date.now },
+    },
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
   },

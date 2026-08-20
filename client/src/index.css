@@ -1197,6 +1197,48 @@ button.stat:hover {
 .settings-form {
   display: grid;
   gap: 1rem;
+  padding-bottom: 6.5rem;
+}
+
+.settings-utility {
+  margin-top: 1rem;
+}
+
+.settings-savebar {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 20;
+  margin-top: 1rem;
+  background: rgba(15, 28, 36, 0.94);
+  color: var(--mist);
+  border: 1px solid rgba(232, 238, 242, 0.08);
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.settings-savebar-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.settings-savebar-copy strong {
+  font-size: 0.95rem;
+}
+
+.settings-savebar-copy span {
+  font-size: 0.84rem;
+  color: rgba(232, 238, 242, 0.72);
+}
+
+.banner-detail {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 .insights-grid {
@@ -1447,6 +1489,16 @@ button.stat:hover {
 }
 
 @media (max-width: 640px) {
+  .settings-form {
+    padding-bottom: 8rem;
+  }
+
+  .settings-savebar {
+    flex-direction: column;
+    align-items: stretch;
+    bottom: 0.75rem;
+  }
+
   .status-grid {
     grid-template-columns: 1fr;
   }
@@ -1584,5 +1636,97 @@ button.stat:hover {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Pricing + billing */
+.pricing-page-body {
+  padding: 2.5rem 0 3rem;
+}
+
+.pricing-page-body .section-head h1 {
+  font-family: var(--font-display);
+  letter-spacing: -0.04em;
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
+}
+
+.pricing-footnote {
+  margin: 1.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  max-width: 36rem;
+}
+
+.billing-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.billing-page .page-sub,
+.billing-page .page-head p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  max-width: 36rem;
+}
+
+.billing-current-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.billing-plan-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.billing-current .muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.billing-plans h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  margin: 0 0 1rem;
+}
+
+.billing-flash {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.92rem;
+}
+
+.billing-flash.ok {
+  background: #eef8e8;
+  color: #2d4a1e;
+}
+
+.billing-flash.err {
+  background: #fdeeee;
+  color: #7a1f1f;
+}
+
+.pricing-card.billing-current-card {
+  outline: 2px solid var(--ink-soft);
+}
+
+.pricing-card.billing-highlight {
+  box-shadow: 0 0 0 3px rgba(180, 210, 80, 0.45);
+}
+
+.settings-plan-chip {
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .billing-current-row {
+    grid-template-columns: 1fr;
   }
 }

@@ -18,6 +18,8 @@ import DataDeletion from './pages/DataDeletion';
 import About from './pages/About';
 import Faq from './pages/Faq';
 import Help from './pages/Help';
+import Pricing from './pages/Pricing';
+import Billing from './pages/Billing';
 
 export default function App() {
   return (
@@ -34,6 +36,7 @@ export default function App() {
           <Route path="/data-deletion" element={<DataDeletion />} />
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<Faq />} />
+          <Route path="/pricing" element={<Pricing />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="connections" element={<Connections />} />
@@ -41,6 +44,7 @@ export default function App() {
             <Route path="revenue" element={<Revenue />} />
             <Route path="insights" element={<Insights />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="billing" element={<Billing />} />
             <Route path="help" element={<Help />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

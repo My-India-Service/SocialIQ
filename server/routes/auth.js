@@ -43,6 +43,11 @@ function publicUser(user) {
       couponCode: user.autoDm?.couponCode || '',
       websiteUrl: user.autoDm?.websiteUrl || '',
     },
+    subscription: {
+      planId: user.subscription?.planId || 'starter',
+      status: user.subscription?.status || 'trialing',
+      updatedAt: user.subscription?.updatedAt || null,
+    },
   };
 }
 
@@ -243,6 +248,37 @@ router.patch('/brand', async (req, res) => {
     }
 
     await user.save();
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+const VALID_PLAN_IDS = ['starter', 'growth', 'business', 'enterprise'];
+
+/** Mock plan switch — no payment. Enterprise should use contact sales in UI. */
+router.patch('/subscription', async (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    const { planId } = req.body || {};
+    if (!VALID_PLAN_IDS.includes(planId)) {
+      return res.status(400).json({ message: 'Invalid plan' });
+    }
+
+    const user = await User.findById(payload.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.subscription = user.subscription || {};
+    user.subscription.planId = planId;
+    user.subscription.status = 'active';
+    user.subscription.updatedAt = new Date();
+    user.markModified('subscription');
+    await user.save();
+
     res.json({ user: publicUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });

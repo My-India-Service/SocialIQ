@@ -35,6 +35,7 @@ export default function AppLayout() {
           <NavLink to="/app/insights">Insights</NavLink>
           <NavLink to="/app/connections">Connect</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>
+          <NavLink to="/app/billing">Billing</NavLink>
           <NavLink to="/app/help">Guide</NavLink>
         </nav>
         <div className="side-foot">

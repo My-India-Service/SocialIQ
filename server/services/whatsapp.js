@@ -26,7 +26,13 @@ export function isWhatsAppConfigured() {
 }
 
 export function getWebhookPublicUrl() {
-  const base = (process.env.SERVER_URL || 'http://localhost:5001').replace(/\/$/, '');
+  let base = (process.env.SERVER_URL || 'http://localhost:5001').trim().replace(/\/$/, '');
+  // If SERVER_URL was mistakenly set to an OAuth callback path, use origin only.
+  try {
+    base = new URL(base).origin;
+  } catch {
+    // keep trimmed string
+  }
   return `${base}/api/whatsapp/webhook`;
 }
 
@@ -169,9 +175,43 @@ export function mapWhatsAppMessageToRaw(msg) {
   };
 }
 
-function normalizeE164(to) {
-  const digits = String(to || '').replace(/\D/g, '');
+export function normalizeE164(to) {
+  let digits = String(to || '').replace(/\D/g, '');
+  // Bare 10-digit Indian mobiles (6–9…) need country code for Graph API.
+  if (/^[6-9]\d{9}$/.test(digits)) {
+    digits = `91${digits}`;
+  }
   return digits;
+}
+
+/**
+ * Meta Cloud API sandbox business numbers look like +1 555-xxx-xxxx.
+ * That is the *sender* (test number), not a recipient. Sending "to" it returns #131030.
+ */
+export function isLikelyMetaSandboxNumber(to) {
+  const digits = normalizeE164(to);
+  if (!digits) return false;
+  // US-style Meta sandbox: 1 + 555 + 7 digits
+  if (/^1555\d{7}$/.test(digits)) return true;
+  // Same without country code if someone pasted 555xxxxxxx
+  if (/^555\d{7}$/.test(digits)) return true;
+  return false;
+}
+
+export function assertValidWhatsAppRecipient(to) {
+  const recipient = normalizeE164(to);
+  if (!recipient) {
+    throw new Error('WhatsApp recipient phone is required');
+  }
+  if (isLikelyMetaSandboxNumber(recipient)) {
+    const err = new Error(
+      'That looks like Meta’s +1 555 sandbox *business* (sender) number, not a recipient. Add your personal WhatsApp under Meta → Try it out → Recipient, then put that number in Sales notify phone.'
+    );
+    err.status = 400;
+    err.code = 'SANDBOX_SENDER_AS_RECIPIENT';
+    throw err;
+  }
+  return recipient;
 }
 
 async function graphSend(payload) {
@@ -208,8 +248,7 @@ async function graphSend(payload) {
  * Send a free-form text message (only allowed inside the 24h customer care window).
  */
 export async function sendWhatsAppMessage(to, message) {
-  const recipient = normalizeE164(to);
-  if (!recipient) throw new Error('WhatsApp recipient phone is required');
+  const recipient = assertValidWhatsAppRecipient(to);
   const body = String(message || '').trim();
   if (!body) throw new Error('WhatsApp message text is required');
 
@@ -229,8 +268,7 @@ export async function sendWhatsAppTemplate(
   languageCode = 'en',
   components = undefined
 ) {
-  const recipient = normalizeE164(to);
-  if (!recipient) throw new Error('WhatsApp recipient phone is required');
+  const recipient = assertValidWhatsAppRecipient(to);
   const name = String(templateName || '').trim();
   if (!name) throw new Error('WhatsApp template name is required');
 

@@ -34,7 +34,7 @@ export const GUIDE_STEPS = [
   },
   {
     title: '3. Connect WhatsApp (optional)',
-    body: 'Settings → WhatsApp. Copy the Callback URL into Meta Developers → WhatsApp → Production setup. Invent a verify token (Meta does not give one). Put the same string in META_WEBHOOK_VERIFY_TOKEN and the Meta form, Verify and save, subscribe to messages, then Enable WhatsApp inbox. Incoming chats appear in Inbox → platform WhatsApp.',
+    body: 'WhatsApp is an inbox channel + sales-phone alert — not a CRM. Settings → WhatsApp: copy Callback URL into Meta → WhatsApp setup, same verify token as META_WEBHOOK_VERIFY_TOKEN, Verify and save, subscribe to messages, then Enable WhatsApp inbox. Incoming messages appear in Inbox → platform WhatsApp (flat items, not a chat thread).',
   },
   {
     title: '4. Work the Revenue inbox (main screen)',
@@ -47,6 +47,10 @@ export const GUIDE_STEPS = [
   {
     title: '6. Check the other dashboards',
     body: 'CEO dashboard: yesterday’s comments, missed revenue, crisis alerts. Revenue & ROI: pipeline vs money you marked converted. Insights: grouped feature requests and competitor mentions — use these for product and ads, not for 1:1 replies.',
+  },
+  {
+    title: '7. Pick a subscription plan',
+    body: 'Open Billing to see your current plan (starts on Starter trial) and switch plans for demo. Public Pricing explains each tier. Enterprise is contact-sales only — no fake charge.',
   },
 ];
 
@@ -76,11 +80,19 @@ export const FAQS = [
     a: 'You paste Voxa’s Callback URL into Meta (API host + /api/whatsapp/webhook). The verify token is a string you invent — same in META_WEBHOOK_VERIFY_TOKEN and the Meta form. Then Enable inbox in Settings.',
   },
   {
+    q: 'Is WhatsApp a CRM in Voxa?',
+    a: 'No. WhatsApp is (1) inbound messages into the shared Inbox and (2) outbound hot-lead alerts to your sales notify phone. CRM is a separate webhook URL that receives a JSON lead payload — there is no contacts/deals pipeline in the app.',
+  },
+  {
     q: 'What does Send to sales do?',
-    a: 'It sends the lead to Slack and/or CRM webhooks, and can WhatsApp your sales notify phone via Cloud API. Configure those in Settings first.',
+    a: 'It sends the lead to Slack and/or CRM webhooks, and can WhatsApp your sales notify phone via Cloud API. Configure those in Settings first. It does not reply to the customer on WhatsApp.',
   },
   {
     q: 'How is purchase intent calculated?',
     a: 'Each new comment is categorized (sales, complaint, feature, etc.) with a 0–100 purchase probability. With OPENAI_API_KEY Voxa uses an LLM; otherwise rules.',
+  },
+  {
+    q: 'Where do I change my plan?',
+    a: 'In-app: Billing (sidebar). Public comparison: Pricing. Plans are mock until payments — switch anytime to preview upgrades. Enterprise: contact sales.',
   },
 ];

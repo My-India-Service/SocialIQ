@@ -86,6 +86,8 @@ export default function Login() {
           {' · '}
           <Link to="/faq">FAQ</Link>
           {' · '}
+          <Link to="/pricing">Pricing</Link>
+          {' · '}
           <Link to="/privacy">Privacy</Link>
           {' · '}
           <Link to="/terms">Terms</Link>

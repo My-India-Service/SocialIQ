@@ -29,8 +29,9 @@ export default function About() {
       </ol>
 
       <p>
-        Setup questions: <Link to="/faq">FAQ</Link>. After login, the same guide is under{' '}
-        <Link to="/app/help">Help</Link>.
+        Setup questions: <Link to="/faq">FAQ</Link>. Plans:{' '}
+        <Link to="/pricing">Pricing</Link>. After login, the same guide is under{' '}
+        <Link to="/app/help">Help</Link>; change plans in <Link to="/app/billing">Billing</Link>.
       </p>
     </LegalPage>
   );
