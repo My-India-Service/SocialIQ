@@ -2,25 +2,84 @@ import express from 'express';
 import Comment from '../models/Comment.js';
 import User from '../models/User.js';
 import { authRequired } from '../middleware/auth.js';
-import { analyzeComment, buildAutoDmPreview, buildDailyReport, buildRoiSummary } from '../services/ai.js';
+import { analyzeComment, buildAutoDmPreview, buildDailyReport, buildRoiSummary, regenerateSuggestedReply } from '../services/ai.js';
 import { hasAnyIntegration, routeLead } from '../services/integrations.js';
+import { csvDateStamp, rowsToCsv } from '../utils/csv.js';
 
 const router = express.Router();
 
 router.use(authRequired);
 
+function commentListFilter(userId, query) {
+  const { category, platform, status, q, temperature } = query;
+  const filter = { user: userId };
+  if (category && category !== 'all') filter.category = category;
+  if (platform && platform !== 'all') filter.platform = platform;
+  if (status && status !== 'all') filter.status = status;
+  if (temperature && temperature !== 'all') filter.leadTemperature = temperature;
+  if (q) filter.text = { $regex: q, $options: 'i' };
+  return filter;
+}
+
+const EXPORT_COLUMNS = [
+  'postedAt',
+  'platform',
+  'author',
+  'authorHandle',
+  'text',
+  'category',
+  'purchaseProbability',
+  'leadTemperature',
+  'expectedOrderValue',
+  'sentiment',
+  'status',
+  'suggestedReply',
+  'postTitle',
+  'routedTo',
+  'sentToSalesAt',
+  'revenueAttributed',
+  'analysisSource',
+];
+
 router.get('/', async (req, res) => {
   try {
-    const { category, platform, status, q, temperature } = req.query;
-    const filter = { user: req.userId };
-    if (category && category !== 'all') filter.category = category;
-    if (platform && platform !== 'all') filter.platform = platform;
-    if (status && status !== 'all') filter.status = status;
-    if (temperature && temperature !== 'all') filter.leadTemperature = temperature;
-    if (q) filter.text = { $regex: q, $options: 'i' };
-
+    const filter = commentListFilter(req.userId, req.query);
     const comments = await Comment.find(filter).sort({ postedAt: -1 }).limit(200);
     res.json({ comments });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/export.csv', async (req, res) => {
+  try {
+    const filter = commentListFilter(req.userId, req.query);
+    const comments = await Comment.find(filter).sort({ postedAt: -1 }).limit(5000);
+    const rows = comments.map((c) => ({
+      postedAt: c.postedAt ? new Date(c.postedAt).toISOString() : '',
+      platform: c.platform || '',
+      author: c.author || '',
+      authorHandle: c.authorHandle || '',
+      text: c.text || '',
+      category: c.category || '',
+      purchaseProbability: c.purchaseProbability ?? '',
+      leadTemperature: c.leadTemperature || '',
+      expectedOrderValue: c.expectedOrderValue ?? '',
+      sentiment: c.sentiment || '',
+      status: c.status || '',
+      suggestedReply: c.suggestedReply || '',
+      postTitle: c.postTitle || '',
+      routedTo: Array.isArray(c.routedTo) ? c.routedTo.join('|') : '',
+      sentToSalesAt: c.sentToSalesAt ? new Date(c.sentToSalesAt).toISOString() : '',
+      revenueAttributed: c.revenueAttributed ?? '',
+      analysisSource: c.analysisSource || '',
+    }));
+
+    const csv = rowsToCsv(EXPORT_COLUMNS, rows, { bom: true });
+    const filename = `voxa-leads-${csvDateStamp()}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -197,12 +256,14 @@ router.post('/:id/regenerate-reply', async (req, res) => {
     const comment = await Comment.findOne({ _id: req.params.id, user: req.userId });
     if (!comment) return res.status(404).json({ message: 'Comment not found' });
 
-    const analysis = await analyzeComment(comment.text, user.brandTone, user.avgOrderValue);
-    Object.assign(comment, analysis);
-    if (user.autoDm?.enabled && analysis.category === 'sales_opportunity') {
-      comment.autoDmPreview = buildAutoDmPreview(user, comment.text);
-      if (comment.autoDmStatus === 'none') comment.autoDmStatus = 'queued';
-    }
+    const next = await regenerateSuggestedReply(
+      comment.text,
+      comment.category,
+      user.brandTone,
+      comment.suggestedReply
+    );
+    comment.suggestedReply = next.suggestedReply;
+    comment.analysisSource = next.analysisSource;
     await comment.save();
     res.json({ comment });
   } catch (err) {

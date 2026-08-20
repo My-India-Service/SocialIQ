@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
+import { api, downloadFile } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const CATEGORY_LABELS = {
@@ -57,6 +57,8 @@ export default function Dashboard() {
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [regeneratingId, setRegeneratingId] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const currency = user?.currency || 'INR';
 
@@ -133,16 +135,21 @@ export default function Dashboard() {
 
   async function regenerate(id) {
     setBusyId(id);
+    setRegeneratingId(id);
+    setNotice('');
+    setError('');
     try {
       const data = await api(`/api/comments/${id}/regenerate-reply`, {
         method: 'POST',
         token,
       });
       setComments((prev) => prev.map((c) => (c._id === id ? data.comment : c)));
+      setNotice('Suggested reply updated');
     } catch (err) {
       setError(err.message);
     } finally {
       setBusyId(null);
+      setRegeneratingId(null);
     }
   }
 
@@ -183,6 +190,24 @@ export default function Dashboard() {
     }
   }
 
+  async function exportCsv() {
+    setExporting(true);
+    setError('');
+    setNotice('');
+    try {
+      const params = new URLSearchParams({ category, platform, q, temperature, status });
+      await downloadFile(`/api/comments/export.csv?${params}`, {
+        token,
+        fallbackFilename: 'voxa-leads.csv',
+      });
+      setNotice('CSV downloaded — opens in Excel or Google Sheets');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const filtersActive =
     category !== 'all' || platform !== 'all' || temperature !== 'all' || status !== 'all' || q;
 
@@ -193,12 +218,22 @@ export default function Dashboard() {
           <h1>Revenue inbox</h1>
           <p>Buying intent, expected order value, and brand-tone replies — comments into revenue.</p>
         </div>
-        {!loading && (
-          <span className="page-head-meta">
-            {comments.length} shown
-            {stats?.total != null ? ` · ${stats.total} total` : ''}
-          </span>
-        )}
+        <div className="page-head-actions">
+          {!loading && (
+            <span className="page-head-meta">
+              {comments.length} shown
+              {stats?.total != null ? ` · ${stats.total} total` : ''}
+            </span>
+          )}
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={exporting || loading}
+            onClick={exportCsv}
+          >
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </button>
+        </div>
       </div>
 
       {stats && (
@@ -428,6 +463,11 @@ export default function Dashboard() {
                         )
                       }
                     />
+                    {c.analysisSource === 'rules' ? (
+                      <span className="reply-source-hint">
+                        Template reply (add OPENAI_API_KEY for AI variations)
+                      </span>
+                    ) : null}
                   </label>
                 )}
                 {c.autoDmPreview && (
@@ -479,7 +519,7 @@ export default function Dashboard() {
                     disabled={busyId === c._id}
                     onClick={() => regenerate(c._id)}
                   >
-                    Regenerate
+                    {regeneratingId === c._id ? 'Regenerating…' : 'Regenerate'}
                   </button>
                 </div>
               </div>

@@ -156,6 +156,166 @@ const TONE_REPLIES = {
   },
 };
 
+/** Extra templates for Regenerate (rules path). Primary stays in TONE_REPLIES. */
+const REPLY_EXTRAS = {
+  friendly: {
+    sales_opportunity: [
+      "Happy to help you buy — check your DMs for pricing and the shop link!",
+      "Great question! We'll send availability and checkout details in a DM.",
+    ],
+    complaint: [
+      "Sorry this went wrong. Message us your order ID and we'll fix it.",
+      "That isn't the experience we want — DM your details and we'll make it right.",
+    ],
+    feature_request: [
+      "Awesome suggestion — logged and shared with the team.",
+      "Thanks for the idea! We're reviewing this for a future update.",
+    ],
+    positive_feedback: [
+      "Thank you! Comments like yours keep us going.",
+      "So glad you like it — means a lot!",
+    ],
+    competitor_mention: [
+      "Thanks for comparing — happy to answer questions in DMs!",
+      "Appreciate the mention. DM us if you want a quick side-by-side.",
+    ],
+    refund_request: [
+      "Sorry it didn't work out. Send your order ID in DM and we'll process this.",
+      "We can help with the refund — drop your order details in a DM.",
+    ],
+    shipping_issue: [
+      "Sorry for the wait. Share your order ID in DM and we'll track it.",
+      "Let's find that package — DM your order number and we'll dig in.",
+    ],
+    influencer: [
+      "Love having you here — we'll DM you shortly!",
+      "Thanks for engaging — check your DMs for next steps.",
+    ],
+    other: [
+      "Thanks for stopping by — anything we can help with?",
+      "Glad you're here! Tell us what you need.",
+      "Appreciate the comment — feel free to DM us anytime.",
+    ],
+  },
+  professional: {
+    sales_opportunity: [
+      "Thank you for your enquiry. We will share pricing and availability via DM.",
+      "We appreciate your interest. Please check your direct messages for details.",
+    ],
+    complaint: [
+      "We apologize for the inconvenience. Kindly DM your order details for assistance.",
+      "Please share your order information privately so we can resolve this promptly.",
+    ],
+    feature_request: [
+      "Thank you — your suggestion has been forwarded to our product team.",
+      "We value this feedback and will review it carefully.",
+    ],
+    positive_feedback: [
+      "Thank you for your kind remarks. We are pleased you are satisfied.",
+      "We appreciate your feedback and are glad the product meets your needs.",
+    ],
+    competitor_mention: [
+      "Thank you for considering us. We are available via DM for any comparisons.",
+      "We welcome the comparison. Please message us with any questions.",
+    ],
+    refund_request: [
+      "We are sorry this did not meet expectations. Please DM your order ID.",
+      "Kindly send your order reference via DM and we will process your request.",
+    ],
+    shipping_issue: [
+      "We apologize for the delay. Please share your order ID for tracking support.",
+      "Kindly message us your order details so we can investigate immediately.",
+    ],
+    influencer: [
+      "Thank you for engaging with us. We will follow up via DM.",
+      "We appreciate your interest and will be in touch shortly.",
+    ],
+    other: [
+      "Thank you for your comment. Please let us know how we can assist.",
+      "We appreciate you writing in. How may we help?",
+      "Thank you — feel free to message us if you need anything.",
+    ],
+  },
+  playful: {
+    sales_opportunity: [
+      "We see you 👀 Shop link + details landing in your DMs!",
+      "Ready when you are — packing the deets into a DM now.",
+    ],
+    complaint: [
+      "Oof, not ideal. Slide your order ID in DMs and we'll sort it.",
+      "That stinks — DM us the details and we'll make it right.",
+    ],
+    feature_request: [
+      "Chef's kiss suggestion — logged for the squad.",
+      "Manifesting this into the roadmap. Thanks!",
+    ],
+    positive_feedback: [
+      "Stop, you're too nice 🔥 Thanks!",
+      "This comment? Elite. Appreciate you!",
+    ],
+    competitor_mention: [
+      "Respect the comparison — DM us and we'll bring receipts.",
+      "Interesting pick. Hit us in DMs if you want the tea.",
+    ],
+    refund_request: [
+      "Bummer ending. Order ID in DMs and we'll handle it.",
+      "We got you — send the order ID privately and we'll process it.",
+    ],
+    shipping_issue: [
+      "Where's the package tho? DM the order ID — on it.",
+      "Delivery drama? Drop the order number in DMs.",
+    ],
+    influencer: [
+      "Icon behavior. Sliding into your DMs!",
+      "You're on our radar — DMing you soon.",
+    ],
+    other: [
+      "Yo — what's good? We're here.",
+      "Comment received loud and clear. Need anything?",
+      "Hey! Ping us if we can help.",
+    ],
+  },
+  luxury: {
+    sales_opportunity: [
+      "We would be delighted to assist. Our team will share details privately.",
+      "Thank you for your interest. Concierge support will follow via DM.",
+    ],
+    complaint: [
+      "Please accept our apologies. Share your details privately and we shall resolve this.",
+      "We regret this experience. Kindly message us so we may assist with care.",
+    ],
+    feature_request: [
+      "A thoughtful suggestion — noted for our atelier's consideration.",
+      "We value your insight and have recorded it with care.",
+    ],
+    positive_feedback: [
+      "Your words mean a great deal. Thank you for choosing us.",
+      "We are grateful for your appreciation.",
+    ],
+    competitor_mention: [
+      "We welcome considered comparison. Our team is available privately should you wish.",
+      "Thank you for the mention. We remain at your disposal via DM.",
+    ],
+    refund_request: [
+      "We understand. Please share your order reference privately for resolution.",
+      "Kindly message your order details and we shall arrange the next steps.",
+    ],
+    shipping_issue: [
+      "We apologize for any delay. Share your order reference for priority assistance.",
+      "Please send your order details privately so we may investigate at once.",
+    ],
+    influencer: [
+      "A pleasure to have you with us. We shall be in touch shortly.",
+      "Thank you for joining the conversation. Our team will reach out privately.",
+    ],
+    other: [
+      "Thank you for writing. How may we be of assistance?",
+      "We appreciate your note. Please let us know how we can help.",
+      "Grateful for your comment — we are here if you need us.",
+    ],
+  },
+};
+
 const TONE_LABELS = {
   friendly: 'warm, human, lightly casual',
   professional: 'clear, formal, polite',
@@ -268,6 +428,108 @@ export function categorizeComment(text) {
 export function suggestReply(text, category, brandTone = 'friendly') {
   const tone = TONE_REPLIES[brandTone] || TONE_REPLIES.friendly;
   return tone[category] || tone.other;
+}
+
+function replyVariantPool(category, brandTone = 'friendly') {
+  if (category === 'spam') return [''];
+  const toneKey = TONE_REPLIES[brandTone] ? brandTone : 'friendly';
+  const primary = suggestReply('', category, toneKey);
+  const extras = REPLY_EXTRAS[toneKey]?.[category] || REPLY_EXTRAS.friendly[category] || [];
+  return [...new Set([primary, ...extras].filter((s) => typeof s === 'string'))];
+}
+
+function pickRulesReplyVariant(category, brandTone, previousReply = '') {
+  const pool = replyVariantPool(category, brandTone);
+  if (pool.length === 0) return '';
+  if (pool.length === 1) return pool[0];
+  const prev = String(previousReply || '').trim();
+  const alternatives = pool.filter((s) => s.trim() !== prev);
+  const choices = alternatives.length ? alternatives : pool;
+  return choices[Math.floor(Math.random() * choices.length)];
+}
+
+async function regenerateReplyWithLLM(text, category, brandTone, previousReply) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const toneDesc = TONE_LABELS[brandTone] || TONE_LABELS.friendly;
+  const prev = String(previousReply || '').trim();
+
+  const system = `You are Voxa. Draft a short public comment reply in a ${toneDesc} brand tone.
+Return ONLY valid JSON: { "suggestedReply": string }.
+Rules: max 2 sentences; empty string if spam; do NOT repeat or lightly paraphrase the previous reply.`;
+
+  const user = `Category: ${category}
+Comment:
+"""${String(text || '').slice(0, 2000)}"""
+Previous suggested reply (write something different):
+"""${prev || '(none)'}"""`;
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.8,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`OpenAI error ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  const raw = data.choices?.[0]?.message?.content || '{}';
+  const parsed = JSON.parse(raw);
+  if (typeof parsed.suggestedReply !== 'string') return null;
+  return parsed.suggestedReply.trim();
+}
+
+/**
+ * Only refresh suggested reply (and analysisSource). Does not reclassify.
+ * @returns {{ suggestedReply: string, analysisSource: 'llm'|'rules' }}
+ */
+export async function regenerateSuggestedReply(
+  text,
+  category = 'other',
+  brandTone = 'friendly',
+  previousReply = ''
+) {
+  const cat = normalizeCategory(category);
+  if (cat === 'spam') {
+    return { suggestedReply: '', analysisSource: 'rules' };
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const llmReply = await regenerateReplyWithLLM(text, cat, brandTone, previousReply);
+      if (llmReply !== null && llmReply !== String(previousReply || '').trim()) {
+        return { suggestedReply: llmReply, analysisSource: 'llm' };
+      }
+      if (llmReply !== null && llmReply.length > 0) {
+        // Same as previous — fall through to rules for a visible change
+      } else if (llmReply === '') {
+        return { suggestedReply: '', analysisSource: 'llm' };
+      }
+    } catch (err) {
+      console.warn('LLM regenerate failed, using rules:', err.message);
+    }
+  }
+
+  return {
+    suggestedReply: pickRulesReplyVariant(cat, brandTone, previousReply),
+    analysisSource: 'rules',
+  };
 }
 
 function enrichAnalysis(text, base, avgOrderValue = 2499) {

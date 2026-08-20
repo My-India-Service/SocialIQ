@@ -38,7 +38,7 @@ export const GUIDE_STEPS = [
   },
   {
     title: '4. Work the Revenue inbox (main screen)',
-    body: 'This is the daily workspace. Click the stat cards to filter Hot leads, Sales, Complaints, or Needs review. Open a comment: read intent %, expected value, and the suggested reply. Approve & mark replied, Send to sales, or set status to Converted when they buy.',
+    body: 'This is the daily workspace. Click the stat cards to filter Hot leads, Sales, Complaints, or Needs review. Open a comment: read intent %, expected value, and the suggested reply. Regenerate cycles a new draft reply. Approve & mark replied, Send to sales, or set status to Converted when they buy.',
   },
   {
     title: '5. Route hot leads automatically',
@@ -94,5 +94,13 @@ export const FAQS = [
   {
     q: 'Where do I change my plan?',
     a: 'In-app: Billing (sidebar). Public comparison: Pricing. Plans are mock until payments — switch anytime to preview upgrades. Enterprise: contact sales.',
+  },
+  {
+    q: 'What does Regenerate do on a suggested reply?',
+    a: 'It drafts a new suggested reply only (does not change category). Without OPENAI_API_KEY it cycles brand-tone templates; with OpenAI it asks for a different AI draft. Approve still only marks replied — it does not post to YouTube/IG/WhatsApp.',
+  },
+  {
+    q: 'How do I export leads to Excel?',
+    a: 'Inbox → Export CSV. The file uses your current filters (category, platform, intent, status, search) and opens in Excel or Google Sheets. Up to 5,000 rows.',
   },
 ];
