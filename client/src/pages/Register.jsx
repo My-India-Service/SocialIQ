@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { isValidPlanId } from '../data/plans';
+import { postAuthPath, needsOnboarding } from '../utils/onboarding';
 
 export default function Register() {
   const { user, loginSuccess } = useAuth();
@@ -13,13 +13,13 @@ export default function Register() {
     name: '',
     email: '',
     password: '',
-    brandName: '',
-    brandTone: 'friendly',
   });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/app" replace />;
+  if (user) {
+    return <Navigate to={needsOnboarding(user) ? '/onboarding' : '/app'} replace />;
+  }
 
   function update(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -35,11 +35,7 @@ export default function Register() {
         body: form,
       });
       loginSuccess(data);
-      if (isValidPlanId(selectedPlan) && selectedPlan !== 'starter') {
-        navigate(`/app/billing?plan=${selectedPlan}`);
-      } else {
-        navigate('/app');
-      }
+      navigate(postAuthPath(data.user, selectedPlan));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -77,19 +73,6 @@ export default function Register() {
               required
               minLength={6}
             />
-          </label>
-          <label>
-            Brand name
-            <input value={form.brandName} onChange={update('brandName')} placeholder="NovaWear" />
-          </label>
-          <label>
-            Reply tone
-            <select value={form.brandTone} onChange={update('brandTone')}>
-              <option value="friendly">Friendly</option>
-              <option value="professional">Professional</option>
-              <option value="playful">Playful</option>
-              <option value="luxury">Luxury</option>
-            </select>
           </label>
           <button className="btn btn-citrus" type="submit" disabled={busy}>
             {busy ? 'Creating…' : 'Create account'}

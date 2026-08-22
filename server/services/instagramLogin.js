@@ -2,7 +2,11 @@ import jwt from 'jsonwebtoken';
 import Connection from '../models/Connection.js';
 
 const IG_GRAPH = 'https://graph.instagram.com/v21.0';
-const IG_SCOPES = ['instagram_business_basic', 'instagram_business_manage_comments'].join(',');
+const IG_SCOPES = [
+  'instagram_business_basic',
+  'instagram_business_manage_comments',
+  'instagram_business_manage_messages',
+].join(',');
 let warnedMissingInstagramAppId = false;
 
 export function resolveInstagramCredentials() {

@@ -54,6 +54,28 @@ const CATEGORY_RULES = [
       /want this/i,
       /link\??$/i,
       /when is this back/i,
+      // Hinglish / Indian social-commerce
+      /kitne ka/i,
+      /kitna hai/i,
+      /kya price/i,
+      /price batao/i,
+      /rate kya/i,
+      /dm krdo/i,
+      /dm karo/i,
+      /dm me/i,
+      /link bhejo/i,
+      /link do/i,
+      /available hai/i,
+      /mujhe chahiye/i,
+      /order kaise/i,
+      /cod hai/i,
+      /\bcod\b/i,
+      /cash on delivery/i,
+      /genuine hai/i,
+      /original hai/i,
+      /deliver hota/i,
+      /delivery ho/i,
+      /interested/i,
     ],
     sentiment: 'positive',
   },
@@ -393,15 +415,20 @@ export function detectFeatureTheme(text) {
   return '';
 }
 
-export function buildAutoDmPreview(user, commentText) {
+export function buildAutoDmPreview(user, commentText, options = {}) {
   const dm = user?.autoDm || {};
+  const linkOverride = options.dmLink?.trim();
   const parts = [
-    `Thanks for your comment${commentText ? ` about “${String(commentText).slice(0, 40)}…”` : ''}!`,
+    `Thanks for your comment${commentText ? ` about "${String(commentText).slice(0, 40)}…"` : ''}!`,
   ];
-  if (dm.catalogueUrl) parts.push(`Catalogue: ${dm.catalogueUrl}`);
-  if (dm.couponCode) parts.push(`Use code ${dm.couponCode} for a limited offer.`);
-  if (dm.websiteUrl) parts.push(`Shop here: ${dm.websiteUrl}`);
-  if (!dm.catalogueUrl && !dm.couponCode && !dm.websiteUrl) {
+  if (linkOverride) {
+    parts.push(`Link: ${linkOverride}`);
+  } else {
+    if (dm.catalogueUrl) parts.push(`Catalogue: ${dm.catalogueUrl}`);
+    if (dm.couponCode) parts.push(`Use code ${dm.couponCode} for a limited offer.`);
+    if (dm.websiteUrl) parts.push(`Shop here: ${dm.websiteUrl}`);
+  }
+  if (!linkOverride && !dm.catalogueUrl && !dm.couponCode && !dm.websiteUrl) {
     parts.push('Dropping the details — happy to help you order.');
   }
   return parts.join('\n');
@@ -589,13 +616,16 @@ async function analyzeWithLLM(text, brandTone = 'friendly', avgOrderValue = 2499
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   const toneDesc = TONE_LABELS[brandTone] || TONE_LABELS.friendly;
 
-  const system = `You are Voxa, an AI Social Revenue Platform for Instagram & YouTube comments.
+  const system = `You are Voxa, an AI Sales Agent for social media comments (Instagram, YouTube) for Indian D2C brands.
+Comments may be in English, Hinglish, or Hindi (Roman script): e.g. "kitne ka hai?", "price batao", "COD hai?", "dm krdo", "genuine hai?", "deliver Haryana me hogi?".
+Classify purchase intent generously for these patterns.
 Classify each comment and draft a short reply in the brand's tone (${toneDesc}).
+For sales_opportunity, prefer public replies that mention sending details in DM.
 Return ONLY valid JSON with keys:
 category (one of: ${CATEGORIES.join(', ')}),
 purchaseProbability (0-100 integer; buying intent),
 sentiment (positive|neutral|negative),
-suggestedReply (string; empty string for spam; max 2 sentences; brand-tone),
+suggestedReply (string; empty string for spam; max 2 sentences; brand-tone; Hinglish OK if comment is Hinglish),
 competitorName (string; brand name if competitor_mention else ""),
 featureTheme (string; short product/theme label if feature_request else "").`;
 
@@ -834,6 +864,14 @@ export function buildDailyReport(comments, options = {}) {
     })),
     roi: {
       revenueGenerated,
+      salesInfluenced: revenueGenerated + pipelineValue,
+      buyingIntentComments: sales.length,
+      conversationsStarted: leadsSent.length,
+      qualifiedLeads: comments.filter(
+        (c) =>
+          c.category === 'sales_opportunity' &&
+          ['sent_to_sales', 'replied', 'converted'].includes(c.status)
+      ).length,
       leadsConverted: converted.length,
       leadsSentToSales: leadsSent.length,
       responseCoveragePct: avgResponseProxy,
@@ -846,10 +884,20 @@ export function buildDailyReport(comments, options = {}) {
 
 export function buildRoiSummary(comments, options = {}) {
   const report = buildDailyReport(comments, options);
+  const conv = options.conversationStats || {};
+  const commentRevenue = report.roi?.revenueGenerated || 0;
+  const conversationRevenue = conv.conversationRevenue || 0;
+  const revenueGenerated = commentRevenue + conversationRevenue;
   return {
     currency: report.currency,
     avgOrderValue: report.avgOrderValue,
     ...report.roi,
+    revenueGenerated,
+    salesInfluenced: revenueGenerated + report.pipelineValue,
+    conversationsStarted: conv.conversationsStarted ?? report.roi?.conversationsStarted,
+    qualifiedLeads: conv.qualifiedLeads ?? report.roi?.qualifiedLeads,
+    leadsConverted: Math.max(conv.leadsConverted ?? 0, report.roi?.leadsConverted ?? 0),
+    conversationRevenue,
     pipelineValue: report.pipelineValue,
     estimatedMissedRevenue: report.estimatedMissedRevenue,
     salesOpportunities: report.salesOpportunities,

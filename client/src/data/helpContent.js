@@ -1,7 +1,7 @@
 /** Main job of the product — shown on About and in-app Help. */
 export const MAIN_OBJECTIVE = {
-  title: 'Catch buying intent in comments before it disappears',
-  body: 'People ask “price?”, “do you deliver?”, and “where can I buy?” on YouTube, Instagram, Facebook, and WhatsApp. Those comments are leads. Voxa’s job is to pull them into one inbox, score how likely they are to buy, draft a reply in your brand tone, and send hot leads to sales — so revenue does not sit unread under a post.',
+  title: 'AI Sales Agent for Social Media',
+  body: 'Every comment is a potential customer. Voxa detects purchase intent in Instagram, YouTube, Facebook, and WhatsApp comments — including Hinglish like “kitne ka hai?” and “COD hai?” — replies in your brand tone, sends details in DM, qualifies the lead, and tracks ₹ sales influenced.',
 };
 
 export const OBJECTIVES = [
@@ -109,7 +109,15 @@ export const FAQS = [
   },
   {
     q: 'How does auto-reply on sync work?',
-    a: 'Settings → Auto-reply on YouTube, Facebook & Instagram. On sync, Voxa posts suggested replies for hot leads or sales comments above your threshold, up to the daily limit. Never applies to spam or complaints. If a lead was auto-routed to sales, status stays Sent to sales even when auto-reply posts on the platform.',
+    a: 'Settings → Auto-reply on YouTube & Facebook posts AI suggested replies for hot leads or sales comments above your threshold, up to the daily limit. Instagram uses the separate sales agent (public stub + DM) — not the long-form AI reply — to avoid double replies.',
+  },
+  {
+    q: 'How does the Instagram sales agent work (like Delulu)?',
+    a: 'Settings → Instagram sales agent. On sync, when a comment matches your global keywords (LINK, price, dm) or Hinglish AI intent (kitne ka, COD hai), Voxa posts your public reply template on the comment and sends catalogue/link details in DM. Per-reel keyword triggers: Insights → Set trigger. Requires Growth plan; real DMs need Meta App Review for instagram_business_manage_messages.',
+  },
+  {
+    q: 'What is the full Reel → Sale loop?',
+    a: 'Reel comment → AI intent → auto public reply → DM conversation → qualify (COD, city, pincode) → handoff to website, WhatsApp, or booking link based on campaign objective → mark converted to track ₹ sales influenced. Open Conversations to view threads and simulate DM replies before Instagram webhooks are live.',
   },
   {
     q: 'How do I export leads to Excel?',

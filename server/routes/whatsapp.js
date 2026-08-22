@@ -80,6 +80,9 @@ router.post('/webhook', async (req, res) => {
         if (!user) continue;
         try {
           await ingestRawComments(conn.user, 'whatsapp', raw, user);
+          await import('../services/conversationService.js').then(({ ingestWhatsAppToConversation }) =>
+            ingestWhatsAppToConversation(conn.user, raw, user)
+          );
           conn.lastSyncedAt = new Date();
           await conn.save();
         } catch (err) {

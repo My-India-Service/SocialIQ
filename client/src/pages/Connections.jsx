@@ -131,7 +131,7 @@ export default function Connections() {
             : '/api/connections/instagram/sync';
       const data = await api(path, { method: 'POST', token, body: {} });
       const summary = `${data.message} Analysis: ${data.analysisMode === 'llm' ? 'OpenAI LLM' : 'rules fallback'}.`;
-      if (platform === 'facebook' && data.fetched === 0) {
+      if ((platform === 'facebook' || platform === 'instagram') && data.fetched === 0) {
         setError(summary);
         setMessage('');
       } else {

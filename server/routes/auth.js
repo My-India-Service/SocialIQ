@@ -51,12 +51,26 @@ function publicUser(user) {
       catalogueUrl: user.autoDm?.catalogueUrl || '',
       couponCode: user.autoDm?.couponCode || '',
       websiteUrl: user.autoDm?.websiteUrl || '',
+      publicReplyTemplate: user.autoDm?.publicReplyTemplate || 'Sent you the details in DM ❤️',
+      keywords: user.autoDm?.keywords?.length
+        ? user.autoDm.keywords
+        : ['price', 'link', 'dm', 'info'],
+      bookingUrl: user.autoDm?.bookingUrl || '',
+      whatsappHandoffPhone: user.autoDm?.whatsappHandoffPhone || '',
+      qualificationQuestions: user.autoDm?.qualificationQuestions?.length
+        ? user.autoDm.qualificationQuestions
+        : ['COD available?', 'Delivery city?', 'Pincode?'],
     },
     subscription: {
       planId: user.subscription?.planId || 'starter',
       status: user.subscription?.status || 'trialing',
       updatedAt: user.subscription?.updatedAt || null,
     },
+    onboarding: {
+      platforms: user.onboarding?.platforms || [],
+      primaryGoal: user.onboarding?.primaryGoal || '',
+    },
+    onboardingCompletedAt: user.onboardingCompletedAt || null,
   };
 }
 
@@ -268,7 +282,69 @@ router.patch('/brand', async (req, res) => {
       if (autoDm.catalogueUrl !== undefined) user.autoDm.catalogueUrl = String(autoDm.catalogueUrl).trim();
       if (autoDm.couponCode !== undefined) user.autoDm.couponCode = String(autoDm.couponCode).trim();
       if (autoDm.websiteUrl !== undefined) user.autoDm.websiteUrl = String(autoDm.websiteUrl).trim();
+      if (autoDm.publicReplyTemplate !== undefined) {
+        user.autoDm.publicReplyTemplate = String(autoDm.publicReplyTemplate).trim();
+      }
+      if (autoDm.keywords !== undefined) {
+        user.autoDm.keywords = Array.isArray(autoDm.keywords)
+          ? autoDm.keywords.map((k) => String(k).trim()).filter(Boolean)
+          : String(autoDm.keywords)
+              .split(',')
+              .map((k) => k.trim())
+              .filter(Boolean);
+      }
+      if (autoDm.bookingUrl !== undefined) user.autoDm.bookingUrl = String(autoDm.bookingUrl).trim();
+      if (autoDm.whatsappHandoffPhone !== undefined) {
+        user.autoDm.whatsappHandoffPhone = String(autoDm.whatsappHandoffPhone).trim();
+      }
+      if (autoDm.qualificationQuestions !== undefined) {
+        user.autoDm.qualificationQuestions = Array.isArray(autoDm.qualificationQuestions)
+          ? autoDm.qualificationQuestions.map((q) => String(q).trim()).filter(Boolean)
+          : String(autoDm.qualificationQuestions)
+              .split('\n')
+              .map((q) => q.trim())
+              .filter(Boolean);
+      }
       user.markModified('autoDm');
+    }
+
+    await user.save();
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.patch('/onboarding', async (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    const user = await User.findById(payload.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const { brandName, brandTone, avgOrderValue, currency, onboarding, complete } = req.body || {};
+
+    if (brandName !== undefined) user.brandName = String(brandName).trim() || 'My Brand';
+    if (brandTone !== undefined) user.brandTone = brandTone;
+    if (avgOrderValue !== undefined) user.avgOrderValue = Math.max(0, Number(avgOrderValue) || 0);
+    if (currency !== undefined) user.currency = currency;
+
+    if (onboarding && typeof onboarding === 'object') {
+      user.onboarding = user.onboarding || {};
+      if (Array.isArray(onboarding.platforms)) {
+        user.onboarding.platforms = onboarding.platforms.filter(Boolean);
+      }
+      if (onboarding.primaryGoal !== undefined) {
+        user.onboarding.primaryGoal = onboarding.primaryGoal;
+      }
+      user.markModified('onboarding');
+    }
+
+    if (complete) {
+      user.onboardingCompletedAt = new Date();
     }
 
     await user.save();

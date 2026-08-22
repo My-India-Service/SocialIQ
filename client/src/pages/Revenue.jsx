@@ -30,7 +30,7 @@ export default function Revenue() {
       <div className="page-head">
         <div>
           <h1>Revenue & ROI</h1>
-          <p>Prove the subscription — revenue from comments, conversions, and recovered complaints.</p>
+          <p>Sales influenced through Voxa — conversions, pipeline, and recovered complaints.</p>
         </div>
       </div>
 
@@ -40,8 +40,12 @@ export default function Revenue() {
         <>
           <div className="stat-row">
             <div className="stat stat-emphasis">
+              <strong>{formatMoney(roi.salesInfluenced ?? roi.revenueGenerated + roi.pipelineValue, currency)}</strong>
+              <span>Sales influenced this month</span>
+            </div>
+            <div className="stat">
               <strong>{formatMoney(roi.revenueGenerated, currency)}</strong>
-              <span>Revenue from comments</span>
+              <span>Revenue attributed (converted)</span>
             </div>
             <div className="stat">
               <strong>{formatMoney(roi.estimatedMissedRevenue, currency)}</strong>
@@ -51,27 +55,52 @@ export default function Revenue() {
               <strong>{formatMoney(roi.pipelineValue, currency)}</strong>
               <span>Open sales pipeline</span>
             </div>
-            <div className="stat">
-              <strong>{roi.leadsConverted}</strong>
-              <span>Leads converted</span>
-            </div>
           </div>
+
+          <section className="panel" style={{ marginBottom: '1rem' }}>
+            <h2>Reel → Sale funnel</h2>
+            <p className="prob">
+              Comments → DMs started → Qualified → Converted → ₹ sales influenced
+            </p>
+            <div className="stat-row">
+              <div className="stat">
+                <strong>{roi.totalComments ?? 0}</strong>
+                <span>Comments</span>
+              </div>
+              <div className="stat">
+                <strong>{roi.conversationsStarted ?? 0}</strong>
+                <span>DMs started</span>
+              </div>
+              <div className="stat">
+                <strong>{roi.qualifiedLeads ?? 0}</strong>
+                <span>Qualified</span>
+              </div>
+              <div className="stat">
+                <strong>{roi.leadsConverted ?? 0}</strong>
+                <span>Converted</span>
+              </div>
+              <div className="stat stat-emphasis">
+                <strong>{formatMoney(roi.salesInfluenced ?? 0, currency)}</strong>
+                <span>Sales influenced</span>
+              </div>
+            </div>
+          </section>
 
           <div className="stat-row">
             <div className="stat">
-              <strong>{roi.leadsSentToSales}</strong>
+              <strong>{roi.buyingIntentComments ?? roi.salesOpportunities ?? 0}</strong>
+              <span>Buying-intent comments</span>
+            </div>
+            <div className="stat">
+              <strong>{roi.leadsSentToSales ?? 0}</strong>
               <span>Sent to sales / CRM</span>
             </div>
             <div className="stat">
-              <strong>{roi.responseCoveragePct}%</strong>
+              <strong>{roi.responseCoveragePct ?? 0}%</strong>
               <span>Response coverage</span>
             </div>
             <div className="stat">
-              <strong>{roi.customerSatisfactionProxy}%</strong>
-              <span>Customer satisfaction proxy</span>
-            </div>
-            <div className="stat">
-              <strong>{formatMoney(roi.moneyRecoveredEstimate, currency)}</strong>
+              <strong>{formatMoney(roi.moneyRecoveredEstimate ?? 0, currency)}</strong>
               <span>Est. recovered from complaints</span>
             </div>
           </div>

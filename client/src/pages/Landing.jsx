@@ -1,42 +1,51 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PLANS } from '../data/plans';
+import { FAQS } from '../data/helpContent';
+import {
+  BENEFITS,
+  HOW_IT_WORKS,
+  LANDING_FEATURES,
+  LANDING_STATS,
+  TESTIMONIALS,
+  TRUST_BADGE,
+} from '../data/landingContent';
+import PhoneMockup from '../components/landing/PhoneMockup';
 
-const STREAM = [
-  { tag: 'Hot lead · 95%', className: 'tag-sales', text: 'Do you deliver in Delhi?' },
-  { tag: 'Complaint', className: 'tag-complaint', text: 'Zipper broke after two days.' },
-  { tag: 'Feature · 512 users', className: 'tag-feature', text: 'Blue variant requested' },
-  { tag: 'Competitor', className: 'tag-sales', text: 'I switched from Adidas.' },
-  { tag: 'Sales · Auto DM', className: 'tag-sales', text: 'Price?' },
-  { tag: 'Complaint', className: 'tag-complaint', text: 'Battery drains too fast.' },
-  { tag: 'Hot lead · 98%', className: 'tag-sales', text: 'Where can I buy?' },
-  { tag: 'Feature', className: 'tag-feature', text: 'Need a vegan option under ₹999.' },
-];
+function LandingFaq({ items }) {
+  const [open, setOpen] = useState(0);
+  return (
+    <div className="faq-list">
+      {items.map((item, i) => {
+        const isOpen = open === i;
+        return (
+          <div className={`faq-item${isOpen ? ' is-open' : ''}`} key={item.q}>
+            <button
+              type="button"
+              className="faq-q"
+              aria-expanded={isOpen}
+              onClick={() => setOpen(isOpen ? -1 : i)}
+            >
+              {item.q}
+              <span aria-hidden="true">{isOpen ? '−' : '+'}</span>
+            </button>
+            {isOpen && <p className="faq-a">{item.a}</p>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Landing() {
-  return (
-    <div className="landing">
-      <header className="hero">
-        <div className="hero-canvas" aria-hidden="true">
-          <div className="stream-line">
-            {STREAM.map((item) => (
-              <div className="stream-chip" key={`${item.tag}-${item.text}`}>
-                <strong className={item.className}>{item.tag}</strong>
-                <p>{item.text}</p>
-              </div>
-            ))}
-          </div>
-          <div className="stream-line">
-            {[...STREAM].reverse().map((item) => (
-              <div className="stream-chip" key={`b-${item.text}`}>
-                <strong className={item.className}>{item.tag}</strong>
-                <p>{item.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+  const faqPreview = FAQS.slice(0, 6);
 
+  return (
+    <div className="landing landing-quittr">
+      <header className="lq-hero">
+        <div className="lq-hero-glow" aria-hidden="true" />
         <div className="container">
-          <nav className="nav">
+          <nav className="nav lq-nav">
             <Link to="/" className="logo">
               <span className="logo-mark" aria-hidden="true">
                 <span />
@@ -44,142 +53,138 @@ export default function Landing() {
               Voxa
             </Link>
             <div className="nav-links">
-              <Link to="/about" className="btn btn-ghost btn-sm">
-                About
-              </Link>
-              <Link to="/faq" className="btn btn-ghost btn-sm">
-                FAQ
-              </Link>
-              <Link to="/pricing" className="btn btn-ghost btn-sm">
+              <a href="#how" className="btn btn-ghost btn-sm lq-nav-link">
+                How it works
+              </a>
+              <a href="#features" className="btn btn-ghost btn-sm lq-nav-link">
+                Features
+              </a>
+              <Link to="/pricing" className="btn btn-ghost btn-sm lq-nav-link">
                 Pricing
               </Link>
-              <Link to="/login" className="btn btn-ghost btn-sm">
+              <Link to="/login" className="btn btn-ghost btn-sm lq-nav-link">
                 Log in
               </Link>
-              <Link to="/register" className="btn btn-primary btn-sm">
+              <Link to="/register" className="btn btn-citrus btn-sm">
                 Start free
               </Link>
             </div>
           </nav>
 
-          <div className="hero-grid">
-            <div className="hero-copy">
-              <p className="brand-hero">Voxa</p>
-              <h1>We turn every social media comment into revenue.</h1>
-              <p className="hero-lead">
-                AI reads Instagram & YouTube comments, finds sales leads and complaints, scores
-                buying intent, and drafts replies in your brand tone — built for Shopify brands
-                first.
+          <div className="lq-hero-grid">
+            <div className="lq-hero-copy">
+              <p className="lq-trust">{TRUST_BADGE}</p>
+              <h1>AI Sales Agent for Social Media</h1>
+              <p className="lq-lead">
+                Every comment is a potential customer. Voxa detects buying intent — including Hinglish —
+                replies publicly, sells in DM, qualifies leads, and tracks ₹ sales influenced.
               </p>
               <div className="hero-cta">
                 <Link to="/register" className="btn btn-citrus">
-                  Open the dashboard
+                  Start free
                 </Link>
-                <a href="#how" className="btn btn-ghost">
+                <a href="#how" className="btn btn-ghost lq-ghost-btn">
                   See how it works
                 </a>
               </div>
             </div>
+            <PhoneMockup variant="inbox" />
           </div>
         </div>
       </header>
 
-      <section className="section problem">
+      <section className="lq-stats">
+        <div className="container lq-stats-grid">
+          {LANDING_STATS.map((s) => (
+            <div className="lq-stat" key={s.label}>
+              <strong>{s.value}</strong>
+              <span>{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="lq-section" id="how">
         <div className="container">
-          <div className="section-head">
-            <h2>Thousands of comments. Hidden revenue. Slow replies.</h2>
-            <p>Sales opportunities bury in threads. Complaints damage reputation. Teams filter manually.</p>
+          <div className="lq-section-head">
+            <p className="lq-kicker">How it works</p>
+            <h2>How Voxa turns comments into revenue</h2>
           </div>
-          <ul className="problem-list">
-            <li>“Do you deliver in Delhi?” — 95% intent, never routed to sales</li>
-            <li>“Zipper broke.” — silent product issue, unpaid recovery</li>
-            <li>“Please launch in blue.” — 512 users asking, unread as noise</li>
+          <div className="lq-steps">
+            {HOW_IT_WORKS.map((step, i) => (
+              <article className={`lq-step${i % 2 ? ' lq-step-reverse' : ''}`} key={step.title}>
+                <div className="lq-step-copy">
+                  <span className="lq-step-num">{i + 1}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                </div>
+                <PhoneMockup variant={step.mockVariant} />
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="lq-section lq-section-dark" id="features">
+        <div className="container">
+          <div className="lq-section-head">
+            <p className="lq-kicker">Features</p>
+            <h2>Everything you need to capture comment revenue</h2>
+          </div>
+          <div className="lq-feature-grid">
+            {LANDING_FEATURES.map((f) => (
+              <article className="lq-feature-card" key={f.title}>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="lq-section">
+        <div className="container">
+          <div className="lq-section-head">
+            <p className="lq-kicker">Reviews</p>
+            <h2>What brands say about Voxa</h2>
+          </div>
+          <div className="lq-testimonials">
+            {TESTIMONIALS.map((t) => (
+              <blockquote className="lq-testimonial" key={t.name}>
+                <p>&ldquo;{t.quote}&rdquo;</p>
+                <footer>
+                  <strong>{t.name}</strong>
+                  <span>{t.role}</span>
+                  <span className="lq-stars" aria-label={`${t.rating} stars`}>
+                    {'★'.repeat(t.rating)}
+                  </span>
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="lq-section lq-benefits-band">
+        <div className="container lq-benefits-grid">
+          <div className="lq-section-head" style={{ marginBottom: 0, textAlign: 'left' }}>
+            <p className="lq-kicker">Benefits</p>
+            <h2>Experience revenue-changing results</h2>
+            <p>Unlock faster replies, clearer pipeline, and fewer missed opportunities.</p>
+          </div>
+          <ul className="lq-benefits-list">
+            {BENEFITS.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
           </ul>
         </div>
       </section>
 
-      <section className="section" id="how">
-        <div className="container feature-split">
-          <div className="section-head" style={{ marginBottom: 0 }}>
-            <h2>Not just classification — revenue detection.</h2>
-            <p>
-              Every sales comment gets a buying-intent score, expected order value, recommended
-              reply, and a one-click send to Slack, WhatsApp, or your CRM.
-            </p>
-          </div>
-          <div className="intent-demo">
-            <div className="intent-row">
-              <span>🔥 Hot lead · 95%</span>
-              <strong>“Do you deliver in Delhi?”</strong>
-            </div>
-            <div className="intent-row">
-              <span>Expected ₹2,374</span>
-              <strong>Suggested reply + Send to sales</strong>
-            </div>
-            <div className="intent-row">
-              <span>Auto DM</span>
-              <strong>Catalogue · coupon · Shopify link</strong>
-            </div>
-            <div className="intent-row">
-              <span>Feature research</span>
-              <strong>Blue variant requested by 512 users</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
+      <section className="lq-section" id="pricing">
         <div className="container">
-          <div className="section-head">
-            <h2>A CEO dashboard executives actually open.</h2>
-            <p>Lost revenue, missed comments, competitor mentions, product requests, complaints, viral posts.</p>
-          </div>
-          <div className="report-preview">
-            <h3>Yesterday’s Summary</h3>
-            <div className="report-grid">
-              <div className="report-metric">
-                <strong>12,347</strong>
-                <span>comments analyzed</span>
-              </div>
-              <div className="report-metric">
-                <strong>156</strong>
-                <span>sales opportunities</span>
-              </div>
-              <div className="report-metric">
-                <strong>₹3.8L</strong>
-                <span>lost revenue yesterday</span>
-              </div>
-              <div className="report-metric">
-                <strong>71%</strong>
-                <span>positive sentiment</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section shopify-band">
-        <div className="container feature-split">
-          <div className="section-head" style={{ marginBottom: 0 }}>
-            <h2>Built for Shopify brands first.</h2>
-            <p>
-              You already advertise. Comments are full of product intent. Voxa closes the path from
-              comment → DM → cart — and shows ROI that justifies the subscription.
-            </p>
-          </div>
-          <ul className="problem-list">
-            <li>Revenue generated from comments</li>
-            <li>Leads converted & response coverage</li>
-            <li>Money recovered from complaints</li>
-            <li>Competitor switch-away trends</li>
-          </ul>
-        </div>
-      </section>
-
-      <section className="section" id="pricing">
-        <div className="container">
-          <div className="section-head">
-            <h2>Priced by comments processed.</h2>
+          <div className="lq-section-head">
+            <p className="lq-kicker">Pricing</p>
+            <h2>Priced by comments processed</h2>
             <p>Enterprise pays for saved time and recovered revenue — not just AI replies.</p>
           </div>
           <div className="pricing-grid">
@@ -220,16 +225,30 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="cta-band">
+      <section className="lq-section lq-faq-section" id="faq">
         <div className="container">
-          <h2>Turn every comment into revenue.</h2>
+          <div className="lq-section-head">
+            <p className="lq-kicker">FAQ</p>
+            <h2>Frequently asked questions</h2>
+          </div>
+          <LandingFaq items={faqPreview} />
+          <p className="lq-faq-more">
+            <Link to="/faq">View all FAQ →</Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="lq-cta-band">
+        <div className="container">
+          <h2>Turn comments into revenue today</h2>
+          <p>Start with Voxa — connect channels, sync comments, and unlock your revenue inbox.</p>
           <Link to="/register" className="btn btn-citrus">
-            Try Voxa with demo data
+            Start free
           </Link>
         </div>
       </section>
 
-      <footer className="footer container">
+      <footer className="footer container lq-footer">
         <span>© {new Date().getFullYear()} Voxa</span>
         <span>
           <Link to="/about">About</Link>

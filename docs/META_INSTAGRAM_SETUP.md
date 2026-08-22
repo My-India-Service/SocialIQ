@@ -145,6 +145,53 @@ Expected: `appId: 1102250409082500`
 | Instagram Login Off on Connect | Missing env on API | Set `META_INSTAGRAM_*` on Render and redeploy |
 | Scope / permission denied | Scopes or account type | Enable scopes; IG must be Business/Creator |
 | Still fails | Page-linked IG path | Use **Connect via Facebook Page** |
+| **Sync returns 0 comments** | Dev mode hides public commenters; no comments on recent posts; missing scopes | Post test comment as app Admin/Developer/Tester → Sync. For public users: App Review + Live mode |
+| **Inbox empty for Instagram filter** | No `platform: instagram` comments in DB yet | Connect → Sync comments (see sync-0 row above) |
+| **WhatsApp Test send works but inbox empty** | Test send is outbound only | Enable inbox in Settings; send inbound message to business number |
+
+### Instagram sync returns 0 comments
+
+After **Connect with Instagram** → **Sync comments**, if the message says `from 0 fetched`:
+
+1. Confirm badge **Via Instagram login** on Connect
+2. Post a **test comment** on a recent IG post from an account that is **Admin/Developer/Tester** on Meta app My India Service
+3. Sync again — if 1 comment appears, Dev-mode filtering is confirmed for public commenters
+4. For public commenters: App Review for `instagram_business_basic` + `instagram_business_manage_comments`, set app **Live**, reconnect, sync
+5. Alternative: **Connect via Facebook Page** if IG is linked in Meta Business Suite
+
+### WhatsApp: inbound inbox vs outbound test send
+
+| Action | What it does |
+|--------|----------------|
+| **Test send** (Settings) | Outbound alert to your sales notify phone — proves send API works |
+| **Enable WhatsApp inbox** (Settings) | Creates connection so inbound webhooks are accepted |
+| **Customer messages business number** | Inbound webhook → appears in Inbox with WhatsApp filter |
+
+Test send does **not** create inbox items. Send a real message **to** your business WhatsApp number from your personal phone after enabling inbox.
+
+### Instagram DM sales agent (comment → private reply)
+
+Voxa can run the full sales loop: public reply ("Sent you the details in DM ❤️") + private DM catalogue message.
+
+| Requirement | Details |
+|-------------|---------|
+| OAuth scope | `instagram_business_manage_messages` (added to Instagram Login) |
+| App Review | Request messaging permission in Meta App Review |
+| Env flag | `META_INSTAGRAM_MESSAGING_ENABLED=true` after approval |
+| Plan | Growth+ (`salesAgent: true`) |
+
+Until App Review passes, the agent **queues** DM previews and creates conversation threads — real DMs are not sent. Use **Conversations → Simulate reply** to demo multi-turn qualification without webhooks.
+
+### Instagram DM webhook (multi-turn conversations)
+
+After messaging scope is approved, subscribe to the **messages** field in Meta Dashboard:
+
+| Setting | Value |
+|---------|--------|
+| Callback URL | `{SERVER_URL}/api/instagram/webhook` |
+| Verify token | Same as `META_INSTAGRAM_WEBHOOK_VERIFY_TOKEN` in API env |
+
+Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff to website, WhatsApp, or booking URL based on reel campaign objective.
 
 ### Meta Dashboard quick fix (Verify and save error)
 

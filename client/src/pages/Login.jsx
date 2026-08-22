@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { needsOnboarding, postAuthPath } from '../utils/onboarding';
 
 export default function Login() {
   const { user, loginSuccess } = useAuth();
@@ -15,7 +16,9 @@ export default function Login() {
   );
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/app" replace />;
+  if (user) {
+    return <Navigate to={needsOnboarding(user) ? '/onboarding' : '/app'} replace />;
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -27,7 +30,7 @@ export default function Login() {
         body: { email, password },
       });
       loginSuccess(data);
-      navigate('/app');
+      navigate(postAuthPath(data.user));
     } catch (err) {
       setError(err.message);
     } finally {

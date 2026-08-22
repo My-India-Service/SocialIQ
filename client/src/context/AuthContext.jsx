@@ -77,8 +77,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  async function refreshUser() {
+    if (!token) return null;
+    const data = await fetchMe(token);
+    setUser(data.user);
+    return data.user;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, loginSuccess, logout, setUser }}>
+    <AuthContext.Provider value={{ user, token, loading, loginSuccess, logout, setUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

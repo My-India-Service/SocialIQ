@@ -34,6 +34,20 @@ const userSchema = new mongoose.Schema(
       catalogueUrl: { type: String, default: '' },
       couponCode: { type: String, default: '' },
       websiteUrl: { type: String, default: '' },
+      publicReplyTemplate: {
+        type: String,
+        default: 'Sent you the details in DM ❤️',
+      },
+      keywords: {
+        type: [String],
+        default: ['price', 'link', 'dm', 'info'],
+      },
+      bookingUrl: { type: String, default: '' },
+      whatsappHandoffPhone: { type: String, default: '' },
+      qualificationQuestions: {
+        type: [String],
+        default: ['COD available?', 'Delivery city?', 'Pincode?'],
+      },
     },
     /** Mock subscription until Stripe. */
     subscription: {
@@ -49,6 +63,15 @@ const userSchema = new mongoose.Schema(
       },
       updatedAt: { type: Date, default: Date.now },
     },
+    onboarding: {
+      platforms: { type: [String], default: [] },
+      primaryGoal: {
+        type: String,
+        enum: ['sales', 'complaints', 'both', ''],
+        default: '',
+      },
+    },
+    onboardingCompletedAt: { type: Date, default: null },
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
   },

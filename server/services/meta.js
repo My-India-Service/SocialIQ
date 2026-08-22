@@ -598,6 +598,35 @@ function buildZeroCommentVisibilityWarning({
   );
 }
 
+function buildInstagramZeroCommentWarning({
+  mediaChecked,
+  mediaWithCommentSignal,
+  commentFetchFailures,
+  authType,
+}) {
+  const scopeHint =
+    authType === 'instagram_direct'
+      ? 'instagram_business_basic + instagram_business_manage_comments'
+      : 'instagram_manage_comments via Facebook Page';
+
+  if (mediaChecked === 0) {
+    return (
+      'No recent Instagram media found on this account. Confirm the connected account is Business/Creator and has published posts, then Sync again.'
+    );
+  }
+
+  let msg =
+    `Checked ${mediaChecked} recent posts (${mediaWithCommentSignal} with comment signal) but Graph returned no comment text. ` +
+    `Common in Meta Development mode — only comments from app Admin/Developer/Tester accounts may appear. ` +
+    `Fix: (1) Post a test comment as an app role user, then Sync. (2) For public commenters: App Review for ${scopeHint}, set app Live, Reconnect, Sync.`;
+
+  if (commentFetchFailures > 0) {
+    msg += ` ${commentFetchFailures} post(s) skipped due to comment API errors — check scopes and reconnect.`;
+  }
+
+  return msg;
+}
+
 /**
  * Facebook Page post comments (official Graph API).
  */
@@ -942,14 +971,22 @@ export async function fetchInstagramComments(connection, { maxMedia = 12, maxCom
     limit: maxMedia,
   });
 
-  const comments = [];
+  const mediaItems = media.data || [];
+  const mediaChecked = mediaItems.length;
+  const mediaWithCommentSignal = mediaItems.filter(
+    (item) => typeof item.comments_count === 'number' && item.comments_count > 0
+  ).length;
 
-  for (const item of media.data || []) {
+  const comments = [];
+  let commentFetchFailures = 0;
+
+  for (const item of mediaItems) {
     let fetched = 0;
     const res = await instagramGraphGet(connection, `${item.id}/comments`, {
       fields: 'id,text,username,timestamp,like_count,replies{count}',
       limit: Math.min(50, maxCommentsPerMedia),
     }).catch((err) => {
+      commentFetchFailures += 1;
       console.warn('IG comments skip media', item.id, err.message);
       return { data: [] };
     });
@@ -973,8 +1010,25 @@ export async function fetchInstagramComments(connection, { maxMedia = 12, maxCom
     }
   }
 
+  const authType = resolveInstagramMetaAuthType(connection);
+  let warning;
+  if (comments.length === 0) {
+    warning = buildInstagramZeroCommentWarning({
+      mediaChecked,
+      mediaWithCommentSignal,
+      commentFetchFailures,
+      authType,
+    });
+  } else if (commentFetchFailures > 0) {
+    warning = `Synced with ${commentFetchFailures} post(s) skipped due to comment API errors.`;
+  }
+
   return {
     accountName: connection.accountName,
     comments,
+    mediaChecked,
+    mediaWithCommentSignal,
+    commentFetchFailures,
+    warning,
   };
 }

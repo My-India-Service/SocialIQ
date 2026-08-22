@@ -48,6 +48,15 @@ function formatPlatform(p) {
   return PLATFORM_LABELS[p] || p;
 }
 
+const PLATFORM_EMPTY_HINTS = {
+  instagram:
+    'No Instagram comments yet. Connect → Sync comments. In Meta Development mode, only comments from app Admin/Developer/Tester accounts may appear until App Review.',
+  whatsapp:
+    'No WhatsApp messages yet. Enable inbox in Settings, then send a text message to your business WhatsApp number (Test send only sends outbound alerts — it does not fill the inbox).',
+  youtube: 'No YouTube comments yet. Connect YouTube on Connect, then Sync comments.',
+  facebook: 'No Facebook comments yet. Connect your Page on Connect, then Sync comments.',
+};
+
 function formatMoney(n, currency = 'INR') {
   if (currency === 'INR') return `₹${Number(n || 0).toLocaleString('en-IN')}`;
   return `${currency} ${Number(n || 0).toLocaleString()}`;
@@ -308,6 +317,16 @@ export default function Dashboard() {
   const filtersActive =
     category !== 'all' || platform !== 'all' || temperature !== 'all' || status !== 'all' || q;
 
+  const platformFilterCount =
+    platform !== 'all' && stats?.byPlatform ? stats.byPlatform[platform] ?? 0 : null;
+
+  const emptyStateHint =
+    platform !== 'all' && PLATFORM_EMPTY_HINTS[platform]
+      ? PLATFORM_EMPTY_HINTS[platform]
+      : filtersActive
+        ? 'Try clearing filters, or sync more comments from Connect.'
+        : 'Connect Facebook, Instagram, YouTube, or enable WhatsApp in Settings — then sync.';
+
   return (
     <div className="inbox-page">
       <div className="page-head">
@@ -319,7 +338,11 @@ export default function Dashboard() {
           {!loading && (
             <span className="page-head-meta">
               {comments.length} shown
-              {stats?.total != null ? ` · ${stats.total} total` : ''}
+              {platformFilterCount != null
+                ? ` · ${platformFilterCount} ${formatPlatform(platform)} · ${stats?.total ?? 0} total`
+                : stats?.total != null
+                  ? ` · ${stats.total} total`
+                  : ''}
             </span>
           )}
           <button
@@ -478,18 +501,16 @@ export default function Dashboard() {
         {!loading && comments.length === 0 && (
           <div className="empty-state">
             <h2>{filtersActive ? 'No matches' : 'Inbox is empty'}</h2>
-            <p>
-              {filtersActive
-                ? 'Try clearing filters, or sync more comments from Connect.'
-                : 'Connect Facebook, Instagram, YouTube, or enable WhatsApp in Settings — then sync.'}
-            </p>
+            <p>{emptyStateHint}</p>
             <div className="reply-actions">
               <Link className="btn btn-citrus btn-sm" to="/app/connections">
                 Open Connect
               </Link>
-              <Link className="btn btn-ghost btn-sm" to="/app/settings">
-                WhatsApp settings
-              </Link>
+              {(platform === 'whatsapp' || platform === 'all') && (
+                <Link className="btn btn-ghost btn-sm" to="/app/settings">
+                  WhatsApp settings
+                </Link>
+              )}
             </div>
           </div>
         )}

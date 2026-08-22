@@ -1,5 +1,6 @@
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { needsOnboarding } from '../utils/onboarding';
 
 export default function AppLayout() {
   const { user, token, loading, logout } = useAuth();
@@ -17,6 +18,10 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  if (needsOnboarding(user)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -32,6 +37,7 @@ export default function AppLayout() {
           </NavLink>
           <NavLink to="/app/report">CEO dashboard</NavLink>
           <NavLink to="/app/revenue">Revenue & ROI</NavLink>
+          <NavLink to="/app/conversations">Conversations</NavLink>
           <NavLink to="/app/insights">Insights</NavLink>
           <NavLink to="/app/connections">Connect</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>

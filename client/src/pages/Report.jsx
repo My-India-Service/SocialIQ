@@ -101,24 +101,30 @@ export default function Report() {
           <h3>{payload.brandName} — Yesterday’s Summary</h3>
           <div className="report-grid">
             <div className="report-metric">
-              <strong>{report.totalComments.toLocaleString()}</strong>
-              <span>comments analyzed</span>
+              <strong>
+                {formatMoney(
+                  report.roi?.salesInfluenced ??
+                    (report.roi?.revenueGenerated || 0) + (report.pipelineValue || 0),
+                  currency
+                )}
+              </strong>
+              <span>sales influenced</span>
             </div>
             <div className="report-metric">
-              <strong>{report.salesOpportunities}</strong>
-              <span>sales opportunities</span>
+              <strong>{report.roi?.buyingIntentComments ?? report.salesOpportunities}</strong>
+              <span>buying-intent comments</span>
+            </div>
+            <div className="report-metric">
+              <strong>{report.totalComments.toLocaleString()}</strong>
+              <span>comments analyzed</span>
             </div>
             <div className="report-metric">
               <strong>{formatMoney(report.estimatedMissedRevenue, currency)}</strong>
               <span>lost revenue yesterday</span>
             </div>
             <div className="report-metric">
-              <strong>{report.missedComments}</strong>
-              <span>missed / unreplied leads</span>
-            </div>
-            <div className="report-metric">
-              <strong>{report.complaints}</strong>
-              <span>complaints</span>
+              <strong>{report.roi?.leadsConverted ?? 0}</strong>
+              <span>purchases / converted</span>
             </div>
             <div className="report-metric">
               <strong>{report.sentiment.positive}%</strong>

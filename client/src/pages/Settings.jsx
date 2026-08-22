@@ -51,9 +51,14 @@ function buildFormSnapshot(values) {
     autoReplyThreshold: String(values.autoReplyThreshold ?? ''),
     autoReplyDailyLimit: String(values.autoReplyDailyLimit ?? ''),
     autoDmEnabled: Boolean(values.autoDmEnabled),
+    publicReplyTemplate: values.publicReplyTemplate,
+    globalKeywords: values.globalKeywords,
     catalogueUrl: values.catalogueUrl,
     couponCode: values.couponCode,
     websiteUrl: values.websiteUrl,
+    bookingUrl: values.bookingUrl,
+    whatsappHandoffPhone: values.whatsappHandoffPhone,
+    qualificationQuestions: values.qualificationQuestions,
   });
 }
 
@@ -141,9 +146,24 @@ export default function Settings() {
     user?.integrations?.autoReplyDailyLimit ?? 50
   );
   const [autoDmEnabled, setAutoDmEnabled] = useState(Boolean(user?.autoDm?.enabled));
+  const [publicReplyTemplate, setPublicReplyTemplate] = useState(
+    user?.autoDm?.publicReplyTemplate || 'Sent you the details in DM ❤️'
+  );
+  const [globalKeywords, setGlobalKeywords] = useState(
+    (user?.autoDm?.keywords || ['price', 'link', 'dm', 'info']).join(', ')
+  );
   const [catalogueUrl, setCatalogueUrl] = useState(user?.autoDm?.catalogueUrl || '');
   const [couponCode, setCouponCode] = useState(user?.autoDm?.couponCode || '');
   const [websiteUrl, setWebsiteUrl] = useState(user?.autoDm?.websiteUrl || '');
+  const [bookingUrl, setBookingUrl] = useState(user?.autoDm?.bookingUrl || '');
+  const [whatsappHandoffPhone, setWhatsappHandoffPhone] = useState(
+    user?.autoDm?.whatsappHandoffPhone || ''
+  );
+  const [qualificationQuestions, setQualificationQuestions] = useState(
+    (user?.autoDm?.qualificationQuestions || ['COD available?', 'Delivery city?', 'Pincode?']).join(
+      '\n'
+    )
+  );
   const [sample, setSample] = useState('Do you deliver in Delhi?');
   const [analysis, setAnalysis] = useState(null);
   const [waStatus, setWaStatus] = useState(null);
@@ -165,9 +185,16 @@ export default function Settings() {
       autoReplyThreshold: user?.integrations?.autoReplyThreshold ?? 80,
       autoReplyDailyLimit: user?.integrations?.autoReplyDailyLimit ?? 50,
       autoDmEnabled: Boolean(user?.autoDm?.enabled),
+      publicReplyTemplate: user?.autoDm?.publicReplyTemplate || 'Sent you the details in DM ❤️',
+      globalKeywords: (user?.autoDm?.keywords || ['price', 'link', 'dm', 'info']).join(', '),
       catalogueUrl: user?.autoDm?.catalogueUrl || '',
       couponCode: user?.autoDm?.couponCode || '',
       websiteUrl: user?.autoDm?.websiteUrl || '',
+      bookingUrl: user?.autoDm?.bookingUrl || '',
+      whatsappHandoffPhone: user?.autoDm?.whatsappHandoffPhone || '',
+      qualificationQuestions: (
+        user?.autoDm?.qualificationQuestions || ['COD available?', 'Delivery city?', 'Pincode?']
+      ).join('\n'),
     })
   );
   const [saveFeedback, setSaveFeedback] = useState(null);
@@ -189,9 +216,14 @@ export default function Settings() {
         autoReplyThreshold,
         autoReplyDailyLimit,
         autoDmEnabled,
+        publicReplyTemplate,
+        globalKeywords,
         catalogueUrl,
         couponCode,
         websiteUrl,
+        bookingUrl,
+        whatsappHandoffPhone,
+        qualificationQuestions,
       }),
     [
       autoDmEnabled,
@@ -200,14 +232,19 @@ export default function Settings() {
       autoReplyThreshold,
       autoReplyDailyLimit,
       avgOrderValue,
+      bookingUrl,
       brandName,
       brandTone,
       catalogueUrl,
       couponCode,
       crmWebhookUrl,
+      globalKeywords,
       hotLeadThreshold,
+      publicReplyTemplate,
+      qualificationQuestions,
       slackWebhookUrl,
       websiteUrl,
+      whatsappHandoffPhone,
       whatsappNotifyPhone,
     ]
   );
@@ -254,9 +291,17 @@ export default function Settings() {
           },
           autoDm: {
             enabled: autoDmEnabled,
+            publicReplyTemplate,
+            keywords: globalKeywords.split(',').map((k) => k.trim()).filter(Boolean),
             catalogueUrl,
             couponCode,
             websiteUrl,
+            bookingUrl,
+            whatsappHandoffPhone,
+            qualificationQuestions: qualificationQuestions
+              .split('\n')
+              .map((q) => q.trim())
+              .filter(Boolean),
           },
         },
       });
@@ -458,6 +503,14 @@ export default function Settings() {
             <li>Enable inbox here, then optionally set a sales notify phone for outbound alerts.</li>
           </ol>
 
+          <p className="prob">
+            <strong>Inbox vs Test send:</strong> <strong>Test send</strong> sends an outbound alert to
+            your sales notify phone — it proves Cloud API send works. The <strong>inbox</strong> fills
+            only when a customer sends a text message <em>to</em> your business WhatsApp number
+            (inbound webhook). After enabling inbox, message your business number from your personal
+            phone, then check Inbox → WhatsApp.
+          </p>
+
           {waLoading ? (
             <p className="prob wa-checking">Checking Cloud API…</p>
           ) : waStatus ? (
@@ -623,11 +676,10 @@ export default function Settings() {
         </div>
 
         <div className="panel">
-          <h2>Auto-reply on YouTube, Facebook & Instagram</h2>
+          <h2>Auto-reply on YouTube & Facebook</h2>
           <p className="prob">
-            On sync, post the suggested reply on the platform for hot leads or sales comments
-            above your threshold. Requires Meta reconnect for pages_manage_engagement and
-            instagram_manage_comments. Daily cap prevents spam.
+            On sync, post AI suggested replies for hot leads or sales comments above your
+            threshold. Instagram uses the sales agent below (public stub + DM).
           </p>
           <label className="check-row">
             <input
@@ -635,7 +687,7 @@ export default function Settings() {
               checked={autoReplyEnabled}
               onChange={(e) => setAutoReplyEnabled(e.target.checked)}
             />
-            Auto-reply on sync (YouTube + Facebook + Instagram)
+            Auto-reply on sync (YouTube + Facebook)
           </label>
           <label>
             Auto-reply intent threshold (%)
@@ -665,10 +717,11 @@ export default function Settings() {
         </div>
 
         <div className="panel">
-          <h2>Auto DM</h2>
+          <h2>Instagram sales agent on sync</h2>
           <p className="prob">
-            When someone comments “Price?”, queue a DM with catalogue, coupon, and store link.
-            Delivery uses Instagram Messaging once connected — preview works today.
+            Like Delulu: when someone comments a keyword (LINK, price) or Hinglish buying intent
+            (kitne ka, COD hai), Voxa posts your public reply on the comment and sends catalogue
+            details in DM. Requires Growth plan + Instagram Messaging after Meta App Review.
           </p>
           <label className="check-row">
             <input
@@ -676,7 +729,22 @@ export default function Settings() {
               checked={autoDmEnabled}
               onChange={(e) => setAutoDmEnabled(e.target.checked)}
             />
-            Enable Auto DM for sales comments
+            Enable Instagram sales agent
+          </label>
+          <label>
+            Public reply template (posted on comment)
+            <input
+              value={publicReplyTemplate}
+              onChange={(e) => setPublicReplyTemplate(e.target.value)}
+            />
+          </label>
+          <label>
+            Global keywords (comma-separated)
+            <input
+              value={globalKeywords}
+              onChange={(e) => setGlobalKeywords(e.target.value)}
+              placeholder="price, link, dm, info, LINK"
+            />
           </label>
           <label>
             Catalogue URL
@@ -687,9 +755,32 @@ export default function Settings() {
             <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
           </label>
           <label>
-            Website / Shopify URL
+            Website / Shopify URL (sell objective)
             <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />
           </label>
+          <label>
+            WhatsApp handoff phone (leads objective — wa.me link)
+            <input
+              value={whatsappHandoffPhone}
+              onChange={(e) => setWhatsappHandoffPhone(e.target.value)}
+              placeholder="+91..."
+            />
+          </label>
+          <label>
+            Booking URL (appointment objective — Calendly / Razorpay)
+            <input value={bookingUrl} onChange={(e) => setBookingUrl(e.target.value)} />
+          </label>
+          <label>
+            Qualification questions (one per line)
+            <textarea
+              value={qualificationQuestions}
+              onChange={(e) => setQualificationQuestions(e.target.value)}
+              rows={3}
+            />
+          </label>
+          <p className="prob">
+            Per-reel triggers: Insights → Set trigger. DM threads: Conversations.
+          </p>
         </div>
 
       </form>

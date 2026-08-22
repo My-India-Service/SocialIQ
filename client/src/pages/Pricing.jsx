@@ -54,8 +54,8 @@ export default function Pricing() {
 
       <main className="container pricing-page-body">
         <div className="section-head">
-          <h1>Priced by comments processed.</h1>
-          <p>Enterprise pays for saved time and recovered revenue — not just AI replies.</p>
+          <h1>India-first pricing for D2C brands.</h1>
+          <p>Pay by comments processed — from ₹999/mo for creators to ₹7,999 for high-volume brands.</p>
         </div>
 
         <div className="pricing-grid">
@@ -72,6 +72,9 @@ export default function Pricing() {
                   {plan.price}
                   <span>/mo</span>
                 </p>
+                {plan.priceUsd && plan.priceUsd !== 'Custom' ? (
+                  <p className="muted">≈ {plan.priceUsd}/mo USD</p>
+                ) : null}
                 <p className="prob">{plan.blurb}</p>
                 <ul>
                   {plan.perks.map((p) => (
@@ -93,8 +96,8 @@ export default function Pricing() {
         </div>
 
         <p className="pricing-footnote muted">
-          Prices in USD. Brand reporting defaults to INR in Settings. Payments coming soon — plans
-          can be switched in-app for demo.
+          Prices in INR (₹). Stripe checkout available when configured — otherwise switch plans
+          in-app for demo. Brand reporting defaults to INR in Settings.
         </p>
       </main>
 

@@ -64,6 +64,11 @@ async function seed() {
       autoRouteHotLeads: false,
       hotLeadThreshold: 80,
     },
+    onboarding: {
+      platforms: ['instagram', 'youtube', 'facebook'],
+      primaryGoal: 'both',
+    },
+    onboardingCompletedAt: new Date(),
   });
 
   const docs = SAMPLE_COMMENTS.map((c, i) => {

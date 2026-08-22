@@ -1,5 +1,6 @@
 import express from 'express';
 import Comment from '../models/Comment.js';
+import Conversation from '../models/Conversation.js';
 import User from '../models/User.js';
 import { authRequired } from '../middleware/auth.js';
 import { analyzeComment, buildAutoDmPreview, buildDailyReport, buildRoiSummary, regenerateSuggestedReply } from '../services/ai.js';
@@ -151,10 +152,21 @@ router.get('/stats', async (req, res) => {
       hot: comments.filter((c) => c.leadTemperature === 'hot').length,
       avgPurchaseProbability: 0,
       pipelineValue: 0,
+      byPlatform: {
+        youtube: 0,
+        instagram: 0,
+        facebook: 0,
+        whatsapp: 0,
+        tiktok: 0,
+        x: 0,
+      },
     };
 
     let probSum = 0;
     for (const c of comments) {
+      if (c.platform && stats.byPlatform[c.platform] != null) {
+        stats.byPlatform[c.platform] += 1;
+      }
       if (c.category === 'sales_opportunity') stats.sales_opportunity += 1;
       else if (c.category === 'feature_request') stats.feature_request += 1;
       else if (c.category === 'positive_feedback') stats.positive_feedback += 1;
@@ -204,9 +216,24 @@ router.get('/roi', async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     const comments = await Comment.find({ user: req.userId });
+    const [convTotal, convQualified, convConverted, convRevenueAgg] = await Promise.all([
+      Conversation.countDocuments({ user: req.userId }),
+      Conversation.countDocuments({ user: req.userId, stage: { $in: ['qualified', 'converted'] } }),
+      Conversation.countDocuments({ user: req.userId, stage: 'converted' }),
+      Conversation.aggregate([
+        { $match: { user: req.userId, stage: 'converted' } },
+        { $group: { _id: null, total: { $sum: '$orderValue' } } },
+      ]),
+    ]);
     const roi = buildRoiSummary(comments, {
       avgOrderValue: user?.avgOrderValue ?? 2499,
       currency: user?.currency || 'INR',
+      conversationStats: {
+        conversationsStarted: convTotal,
+        qualifiedLeads: convQualified,
+        leadsConverted: convConverted,
+        conversationRevenue: convRevenueAgg[0]?.total || 0,
+      },
     });
     res.json({ roi, brandName: user?.brandName });
   } catch (err) {
@@ -390,16 +417,38 @@ router.post('/:id/send-to-sales', async (req, res) => {
   }
 });
 
-/** Queue / preview Auto DM for a sales comment. */
+/** Queue / run AI sales agent (public reply + Instagram DM). */
 router.post('/:id/auto-dm', async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     const comment = await Comment.findOne({ _id: req.params.id, user: req.userId });
     if (!comment) return res.status(404).json({ message: 'Comment not found' });
 
-    const preview = buildAutoDmPreview(user, comment.text);
     const markSent = Boolean(req.body?.markSent);
+    const runAgent = Boolean(req.body?.runAgent ?? true);
 
+    if (runAgent && comment.platform === 'instagram') {
+      const { runInstagramSalesAgentFlow } = await import('../services/instagramMessaging.js');
+      const { findCampaignForComment } = await import('../services/campaignTriggers.js');
+      const campaign = await findCampaignForComment(req.userId, comment);
+      const result = await runInstagramSalesAgentFlow({ user, comment, campaign });
+      comment.autoDmPreview = result.dmText || buildAutoDmPreview(user, comment.text);
+      comment.autoDmStatus = result.dmSent || markSent ? 'sent' : 'queued';
+      await comment.save();
+      return res.json({
+        comment,
+        agent: result,
+        note: result.dmSent
+          ? 'Sales agent: public reply template + DM sent via Instagram Messaging API.'
+          : result.reason === 'plan_upgrade_required'
+            ? 'Upgrade to Growth plan for Instagram DM sales agent. Preview saved.'
+            : result.messagingEnabled
+              ? 'DM send failed — check Meta App Review for instagram_business_manage_messages.'
+              : 'Set META_INSTAGRAM_MESSAGING_ENABLED=true after Meta approves messaging scope.',
+      });
+    }
+
+    const preview = buildAutoDmPreview(user, comment.text);
     comment.autoDmPreview = preview;
     comment.autoDmStatus = markSent ? 'sent' : 'queued';
     await comment.save();
@@ -407,8 +456,8 @@ router.post('/:id/auto-dm', async (req, res) => {
     res.json({
       comment,
       note: markSent
-        ? 'Marked as sent. Connect Instagram Messaging API to deliver real DMs.'
-        : 'Auto DM queued. Preview ready — enable Instagram Messaging to deliver.',
+        ? 'Marked as sent. Enable Instagram Messaging for real DMs.'
+        : 'Auto DM queued. Preview ready.',
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -5,6 +5,13 @@ import { analyzeComment, buildAutoDmPreview } from './ai.js';
 import { fetchYouTubeComments } from './youtube.js';
 import { fetchFacebookComments, fetchInstagramComments } from './meta.js';
 import { routeLead } from './integrations.js';
+import { planCommentLimit } from '../config/plans.js';
+import { runInstagramSalesAgentFlow } from './instagramMessaging.js';
+import { appendConversationMessage } from './conversationService.js';
+import {
+  findCampaignForComment,
+  shouldTriggerSalesAgent,
+} from './campaignTriggers.js';
 import {
   canAutoReplyToday,
   postCommentReplyToPlatform,
@@ -19,6 +26,19 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
   let routed = 0;
   let autoReplied = 0;
   let autoReplyFailed = 0;
+
+  const planId = user?.subscription?.planId || 'starter';
+  const limit = planCommentLimit(planId);
+  if (limit != null) {
+    const currentCount = await Comment.countDocuments({ user: userId });
+    if (currentCount >= limit) {
+      const err = new Error(
+        `Comment limit reached (${limit}/mo on ${planId} plan). Upgrade in Billing to sync more.`
+      );
+      err.code = 'PLAN_LIMIT';
+      throw err;
+    }
+  }
 
   const brandTone = user?.brandTone || 'friendly';
   const avgOrderValue = user?.avgOrderValue ?? 2499;
@@ -44,9 +64,14 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
     const analysis = await analyzeComment(raw.text, brandTone, avgOrderValue);
     let autoDmStatus = 'none';
     let autoDmPreview = '';
-    if (user?.autoDm?.enabled && analysis.category === 'sales_opportunity') {
+    const campaign =
+      platform === 'instagram' ? await findCampaignForComment(userId, { platform, videoId: raw.videoId }) : null;
+    const willTriggerAgent =
+      platform === 'instagram' &&
+      shouldTriggerSalesAgent(user, { platform, text: raw.text, videoId: raw.videoId }, analysis, campaign);
+    if (willTriggerAgent) {
       autoDmStatus = 'queued';
-      autoDmPreview = buildAutoDmPreview(user, raw.text);
+      autoDmPreview = buildAutoDmPreview(user, raw.text, { dmLink: campaign?.dmLink });
     }
 
     const comment = await Comment.create({
@@ -68,6 +93,36 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
       ...analysis,
     });
 
+    let salesAgentHandled = false;
+
+    if (platform === 'instagram' && shouldTriggerSalesAgent(user, comment, analysis, campaign)) {
+      try {
+        const agentResult = await runInstagramSalesAgentFlow({ user, comment, campaign });
+        if (agentResult.ok && agentResult.dmSent) {
+          comment.autoDmStatus = 'sent';
+        } else if (agentResult.ok) {
+          comment.autoDmStatus = 'queued';
+        }
+        if (agentResult.dmText) comment.autoDmPreview = agentResult.dmText;
+        if (agentResult.publicReplyPosted || agentResult.ok) {
+          salesAgentHandled = true;
+        }
+        await comment.save();
+      } catch (err) {
+        console.warn('Sales agent flow failed:', err.message);
+      }
+    }
+
+    await appendConversationMessage({
+      userId,
+      platform,
+      commentId: comment._id,
+      role: 'customer',
+      text: comment.text,
+      customerHandle: comment.authorHandle || comment.author,
+      postTitle: comment.postTitle,
+    });
+
     if (
       autoRoute &&
       analysis.purchaseProbability >= threshold &&
@@ -87,7 +142,11 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
       }
     }
 
-    if (shouldAutoReply(user, comment) && canAutoReplyToday(user)) {
+    if (
+      !salesAgentHandled &&
+      shouldAutoReply(user, comment) &&
+      canAutoReplyToday(user)
+    ) {
       const keepSentToSales = comment.status === 'sent_to_sales';
       try {
         const { platformReplyId, message } = await postCommentReplyToPlatform(
@@ -211,7 +270,14 @@ export async function syncInstagramCommentsForUser(userId, options = {}) {
     'Click “Connect Instagram” first.'
   );
   const user = await User.findById(userId);
-  const { comments: rawComments, accountName } = await fetchInstagramComments(connection, options);
+  const {
+    comments: rawComments,
+    accountName,
+    mediaChecked,
+    mediaWithCommentSignal,
+    commentFetchFailures,
+    warning,
+  } = await fetchInstagramComments(connection, options);
   const stats = await ingestRawComments(userId, 'instagram', rawComments, user);
 
   connection.lastSyncedAt = new Date();
@@ -222,6 +288,10 @@ export async function syncInstagramCommentsForUser(userId, options = {}) {
     platform: 'instagram',
     channelTitle: connection.accountName,
     fetched: rawComments.length,
+    mediaChecked,
+    mediaWithCommentSignal,
+    commentFetchFailures,
+    warning,
     ...stats,
     lastSyncedAt: connection.lastSyncedAt,
   };

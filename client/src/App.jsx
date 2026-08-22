@@ -11,6 +11,7 @@ import Connections from './pages/Connections';
 import Report from './pages/Report';
 import Revenue from './pages/Revenue';
 import Insights from './pages/Insights';
+import Conversations from './pages/Conversations';
 import Settings from './pages/Settings';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
@@ -20,6 +21,7 @@ import Faq from './pages/Faq';
 import Help from './pages/Help';
 import Pricing from './pages/Pricing';
 import Billing from './pages/Billing';
+import Onboarding from './pages/Onboarding';
 
 export default function App() {
   return (
@@ -29,6 +31,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy" element={<Privacy />} />
@@ -43,6 +46,7 @@ export default function App() {
             <Route path="report" element={<Report />} />
             <Route path="revenue" element={<Revenue />} />
             <Route path="insights" element={<Insights />} />
+            <Route path="conversations" element={<Conversations />} />
             <Route path="settings" element={<Settings />} />
             <Route path="billing" element={<Billing />} />
             <Route path="help" element={<Help />} />

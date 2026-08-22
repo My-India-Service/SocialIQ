@@ -1,5 +1,6 @@
 import express from 'express';
 import Connection from '../models/Connection.js';
+import User from '../models/User.js';
 import { authRequired } from '../middleware/auth.js';
 import { isLLMConfigured } from '../services/ai.js';
 import {
@@ -37,6 +38,21 @@ function appendAutoReplySummary(message, result) {
     out += ` Auto-reply failed: ${result.autoReplyFailed} (check Connect permissions).`;
   }
   return out;
+}
+
+async function oauthSuccessRedirect(userId, platform) {
+  const clientUrl = getClientUrl();
+  const user = await User.findById(userId);
+  if (user && !user.onboardingCompletedAt) {
+    return `${clientUrl}/onboarding?connected=${encodeURIComponent(platform)}`;
+  }
+  if (platform === 'youtube') {
+    return `${clientUrl}/app/connections?youtube=connected`;
+  }
+  if (platform === 'instagram') {
+    return `${clientUrl}/app/connections?instagram=connected`;
+  }
+  return `${clientUrl}/app/connections?meta=connected&platform=${encodeURIComponent(platform)}`;
 }
 
 const router = express.Router();
@@ -108,7 +124,7 @@ router.get('/youtube/callback', async (req, res) => {
     }
 
     await saveYouTubeConnection(userId, result);
-    return res.redirect(`${clientUrl}/app/connections?youtube=connected`);
+    return res.redirect(await oauthSuccessRedirect(userId, 'youtube'));
   } catch (err) {
     console.error('YouTube OAuth callback failed:', err.message);
     return res.redirect(
@@ -170,9 +186,7 @@ router.get('/meta/callback', async (req, res) => {
     platform = parsed.platform;
     await exchangeMetaCodeAndSave(parsed.userId, platform, String(code));
 
-    return res.redirect(
-      `${clientUrl}/app/connections?meta=connected&platform=${encodeURIComponent(platform)}`
-    );
+    return res.redirect(await oauthSuccessRedirect(parsed.userId, platform));
   } catch (err) {
     console.error('Meta OAuth callback failed:', err.message);
     return res.redirect(
@@ -213,7 +227,7 @@ router.get('/instagram/callback', async (req, res) => {
     const userId = verifyInstagramOAuthState(String(state));
     await exchangeInstagramCodeAndSave(userId, String(code));
 
-    return res.redirect(`${clientUrl}/app/connections?instagram=connected`);
+    return res.redirect(await oauthSuccessRedirect(userId, 'instagram'));
   } catch (err) {
     console.error('Instagram OAuth callback failed:', err.message);
     return res.redirect(
@@ -257,13 +271,20 @@ router.post('/instagram/sync', authRequired, async (req, res) => {
       maxMedia: Number(req.body?.maxMedia) || 12,
       maxCommentsPerMedia: Number(req.body?.maxCommentsPerMedia) || 40,
     });
+    const scan =
+      typeof result.mediaChecked === 'number'
+        ? ` Checked ${result.mediaChecked} posts (${result.mediaWithCommentSignal ?? 0} with comment signal).`
+        : '';
+    const base = `Instagram: synced ${result.imported} new (${result.updated} updated) from ${result.fetched} fetched.${scan}`;
+    const hint = result.warning
+      ? ` ${result.warning}`
+      : result.fetched === 0
+        ? ' No comments imported — post a test comment as an app Admin/Developer/Tester, then Sync again. For public commenters, complete App Review and set the app Live.'
+        : '';
     res.json({
       ...result,
       analysisMode: isLLMConfigured() ? 'llm' : 'rules',
-      message: appendAutoReplySummary(
-        `Instagram: synced ${result.imported} new (${result.updated} updated).`,
-        result
-      ),
+      message: appendAutoReplySummary(`${base}${hint}`, result),
     });
   } catch (err) {
     res.status(400).json({ message: err.message });

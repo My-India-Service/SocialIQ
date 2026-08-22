@@ -7,6 +7,10 @@ import commentRoutes from './routes/comments.js';
 import connectionRoutes from './routes/connections.js';
 import reportRoutes from './routes/reports.js';
 import whatsappRoutes from './routes/whatsapp.js';
+import campaignRoutes from './routes/campaigns.js';
+import conversationRoutes from './routes/conversations.js';
+import billingRoutes from './routes/billing.js';
+import instagramMessagingRoutes from './routes/instagramMessaging.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,6 +43,9 @@ app.use(
       if (req.originalUrl?.startsWith('/api/whatsapp/webhook')) {
         req.rawBody = buf;
       }
+      if (req.originalUrl?.startsWith('/api/instagram/webhook')) {
+        req.rawBody = buf;
+      }
     },
   })
 );
@@ -52,6 +59,10 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/instagram', instagramMessagingRoutes);
 
 async function start() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/voxa';
