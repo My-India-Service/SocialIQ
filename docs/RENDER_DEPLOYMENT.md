@@ -62,8 +62,10 @@ In Render: **New → Web Service** → connect your GitHub repo.
 | `SERVER_URL` | OAuth + WhatsApp | `https://YOUR-API.onrender.com` (origin only). WhatsApp Callback URL = `{SERVER_URL}/api/whatsapp/webhook` — there is no separate callback env var |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | YouTube OAuth |
 | `GOOGLE_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/youtube/callback` |
-| `META_APP_ID` / `META_APP_SECRET` | Optional | Instagram + Facebook OAuth; App Secret also verifies WhatsApp webhooks |
-| `META_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/meta/callback` (Facebook Login — not the WhatsApp webhook) |
+| `META_APP_ID` / `META_APP_SECRET` | Optional | Facebook Login (Page comments) |
+| `META_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/meta/callback` |
+| `META_INSTAGRAM_APP_ID` / `META_INSTAGRAM_APP_SECRET` | Optional | Instagram Login — **separate Instagram App ID** from Meta Dashboard (e.g. `1102250409082500`, not always same as `META_APP_ID`) |
+| `META_INSTAGRAM_REDIRECT_URI` | Optional | `https://YOUR-API.onrender.com/api/connections/instagram/callback` |
 | `META_WHATSAPP_ACCESS_TOKEN` | WhatsApp | Cloud API permanent token |
 | `META_PHONE_NUMBER_ID` / `META_WABA_ID` | WhatsApp | From Meta WhatsApp → API setup |
 | `META_WEBHOOK_VERIFY_TOKEN` | WhatsApp | Same string as Meta Webhooks **Verify token** field |

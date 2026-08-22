@@ -33,7 +33,9 @@ export async function api(path, { method = 'GET', body, token } = {}) {
   return data;
 }
 
-/** Authenticated file download (CSV, etc.) — does not parse JSON. */
+/** Authenticated file download (CSV, etc.) — does not parse JSON.
+ * @returns {{ filename: string, exportCount: number|null }}
+ */
 export async function downloadFile(path, { token, fallbackFilename = 'download' } = {}) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -60,6 +62,8 @@ export async function downloadFile(path, { token, fallbackFilename = 'download' 
   const cd = res.headers.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/i.exec(cd);
   const filename = match?.[1] || fallbackFilename;
+  const countHeader = res.headers.get('X-Export-Count');
+  const exportCount = countHeader != null && countHeader !== '' ? Number(countHeader) : null;
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -69,4 +73,6 @@ export async function downloadFile(path, { token, fallbackFilename = 'download' 
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+
+  return { filename, exportCount: Number.isFinite(exportCount) ? exportCount : null };
 }

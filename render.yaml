@@ -34,6 +34,12 @@ services:
         sync: false
       - key: META_REDIRECT_URI
         sync: false
+      - key: META_INSTAGRAM_APP_ID
+        sync: false
+      - key: META_INSTAGRAM_APP_SECRET
+        sync: false
+      - key: META_INSTAGRAM_REDIRECT_URI
+        sync: false
       - key: META_WHATSAPP_ACCESS_TOKEN
         sync: false
       - key: META_WABA_ID

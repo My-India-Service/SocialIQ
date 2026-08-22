@@ -12,6 +12,12 @@ const PLATFORMS = [
   { id: 'x', label: 'X', ready: false, mvp: false },
 ];
 
+function instagramAuthLabel(metaAuthType) {
+  if (metaAuthType === 'instagram_direct') return 'Via Instagram login';
+  if (metaAuthType === 'facebook_page') return 'Via Facebook Page';
+  return '';
+}
+
 export default function Connections() {
   const { token } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,6 +25,7 @@ export default function Connections() {
   const [integration, setIntegration] = useState({
     youtubeOAuth: false,
     metaOAuth: false,
+    instagramDirectOAuth: false,
     llm: false,
   });
   const [message, setMessage] = useState('');
@@ -42,7 +49,8 @@ export default function Connections() {
   useEffect(() => {
     const yt = searchParams.get('youtube');
     const meta = searchParams.get('meta');
-    if (!yt && !meta) return;
+    const instagram = searchParams.get('instagram');
+    if (!yt && !meta && !instagram) return;
 
     if (yt === 'connected') {
       setMessage('YouTube connected. Click Sync comments to pull real comments.');
@@ -54,11 +62,18 @@ export default function Connections() {
     if (meta === 'connected') {
       const platform = searchParams.get('platform') || 'facebook';
       setMessage(
-        `${platform === 'instagram' ? 'Instagram' : 'Facebook'} connected via Meta. Linked Page/IG saved when available. Click Sync.`
+        `${platform === 'instagram' ? 'Instagram (via Facebook Page)' : 'Facebook'} connected via Meta. Click Sync.`
       );
       load().catch(() => {});
     } else if (meta === 'error') {
       setError(searchParams.get('reason') || 'Meta connection failed');
+    }
+
+    if (instagram === 'connected') {
+      setMessage('Instagram connected via Instagram login. No Facebook Page required. Click Sync.');
+      load().catch(() => {});
+    } else if (instagram === 'error') {
+      setError(searchParams.get('reason') || 'Instagram connection failed');
     }
 
     setSearchParams({}, { replace: true });
@@ -70,6 +85,19 @@ export default function Connections() {
     setBusy('youtube');
     try {
       const data = await api('/api/connections/youtube/auth', { token });
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err.message);
+      setBusy('');
+    }
+  }
+
+  async function connectInstagramDirect() {
+    setError('');
+    setMessage('');
+    setBusy('instagram-direct');
+    try {
+      const data = await api('/api/connections/instagram/auth', { token });
       window.location.href = data.url;
     } catch (err) {
       setError(err.message);
@@ -129,6 +157,7 @@ export default function Connections() {
   const yt = statusFor('youtube');
   const ig = statusFor('instagram');
   const fb = statusFor('facebook');
+  const igAuthLabel = instagramAuthLabel(ig?.metaAuthType);
 
   return (
     <div>
@@ -146,7 +175,11 @@ export default function Connections() {
         </div>
         <div className="stat">
           <strong>{integration.metaOAuth ? 'On' : 'Off'}</strong>
-          <span>Meta OAuth</span>
+          <span>Meta (Facebook Login)</span>
+        </div>
+        <div className="stat">
+          <strong>{integration.instagramDirectOAuth ? 'On' : 'Off'}</strong>
+          <span>Instagram Login</span>
         </div>
         <div className="stat">
           <strong>{integration.llm ? 'On' : 'Rules'}</strong>
@@ -212,21 +245,24 @@ export default function Connections() {
       <div className="panel stack-gap">
         <h2>Instagram</h2>
         <p className="prob" style={{ marginTop: 0 }}>
-          Needs an Instagram Business/Creator account linked to a Facebook Page. Meta Login → Sync
-          media comments.
+          <strong>Recommended:</strong> Connect with Instagram — log in at instagram.com with your
+          Business/Creator account. No Facebook Page required.
+          <br />
+          <strong>Alternative:</strong> Connect via Facebook Page if your IG is already linked to a
+          Page in Meta Business Suite (uses facebook.com login).
         </p>
         <div className="reply-actions">
           <button
             type="button"
             className="btn btn-citrus"
-            onClick={() => connectMeta('instagram')}
-            disabled={Boolean(busy) || !integration.metaOAuth}
+            onClick={connectInstagramDirect}
+            disabled={Boolean(busy) || !integration.instagramDirectOAuth}
           >
-            {busy === 'instagram'
+            {busy === 'instagram-direct'
               ? 'Redirecting…'
-              : ig?.hasOAuth
-                ? 'Reconnect Instagram'
-                : 'Connect Instagram'}
+              : ig?.hasOAuth && ig?.metaAuthType === 'instagram_direct'
+                ? 'Reconnect with Instagram'
+                : 'Connect with Instagram'}
           </button>
           {ig?.hasOAuth && (
             <button
@@ -238,14 +274,37 @@ export default function Connections() {
               {syncing === 'instagram' ? 'Syncing…' : 'Sync comments'}
             </button>
           )}
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => connectMeta('instagram')}
+            disabled={Boolean(busy) || !integration.metaOAuth}
+          >
+            {busy === 'instagram' ? 'Redirecting…' : 'Connect via Facebook Page'}
+          </button>
           {ig && !ig.hasOAuth && (
             <button type="button" className="btn btn-ghost" onClick={() => disconnect('instagram')}>
               Remove stub
             </button>
           )}
         </div>
-        {!integration.metaOAuth && (
-          <p className="prob">Add META_APP_ID / META_APP_SECRET to server/.env</p>
+        {!integration.instagramDirectOAuth && (
+          <p className="prob">
+            Add META_INSTAGRAM_APP_ID / META_INSTAGRAM_APP_SECRET to server/.env, or reuse existing
+            META_APP_ID / META_APP_SECRET (same Meta app). See docs/META_INSTAGRAM_SETUP.md. Also
+            enable Instagram → API setup with Instagram login in Meta App Dashboard.
+          </p>
+        )}
+        {ig?.hasOAuth && (
+          <p className="prob">
+            Connected: <strong>{ig.accountName || 'Unknown'}</strong>
+            {igAuthLabel ? (
+              <>
+                {' '}
+                <span className="pill wa-pill-ready">{igAuthLabel}</span>
+              </>
+            ) : null}
+          </p>
         )}
         {ig?.hasOAuth && ig?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(ig.lastSyncedAt).toLocaleString()}</p>
@@ -261,7 +320,8 @@ export default function Connections() {
           admin must be Admin/Developer/Tester on the Meta app. (2) Post a test comment as that
           role user, then Sync. (3) For public commenters: App Review for{' '}
           <code>pages_read_engagement</code> + <code>pages_read_user_content</code>, set App{' '}
-          <strong>Live</strong>, Reconnect, Sync. If IG is linked, Meta also connects Instagram.
+          <strong>Live</strong>, Reconnect, Sync. Connecting Facebook also links Instagram if IG is
+          attached to that Page.
         </p>
         <div className="reply-actions">
           <button
@@ -314,6 +374,7 @@ export default function Connections() {
         <div className="connect-grid">
           {PLATFORMS.map((p) => {
             const conn = statusFor(p.id);
+            const igVia = p.id === 'instagram' ? instagramAuthLabel(conn?.metaAuthType) : '';
             return (
               <div className="connect-row" key={p.id}>
                 <div>
@@ -336,7 +397,7 @@ export default function Connections() {
                         : 'Configure in Settings'
                       : conn
                         ? conn.hasOAuth
-                          ? `OAuth · ${conn.accountName}`
+                          ? `OAuth · ${conn.accountName}${igVia ? ` · ${igVia}` : ''}`
                           : `Stub · ${conn.accountName}`
                         : p.ready
                           ? 'Not connected'

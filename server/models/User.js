@@ -19,9 +19,15 @@ const userSchema = new mongoose.Schema(
       /** E.164 sales phone for Meta WhatsApp Cloud API lead alerts (not a Zapier URL). */
       whatsappNotifyPhone: { type: String, default: '' },
       crmWebhookUrl: { type: String, default: '' },
-      /** Auto-route hot leads (purchaseProbability >= threshold) on sync. */
+    /** Auto-route hot leads (purchaseProbability >= threshold) on sync. */
       autoRouteHotLeads: { type: Boolean, default: false },
       hotLeadThreshold: { type: Number, default: 80, min: 0, max: 100 },
+      /** Post suggested reply on YouTube/Facebook when rules match (sync ingest). */
+      autoReplyEnabled: { type: Boolean, default: false },
+      autoReplyThreshold: { type: Number, default: 80, min: 0, max: 100 },
+      autoReplyDailyLimit: { type: Number, default: 50, min: 1, max: 500 },
+      autoReplyTodayCount: { type: Number, default: 0, min: 0 },
+      autoReplyTodayDate: { type: String, default: '' },
     },
     autoDm: {
       enabled: { type: Boolean, default: false },

@@ -33,6 +33,15 @@ function publicUser(user) {
       crmWebhookUrl: user.integrations?.crmWebhookUrl || '',
       autoRouteHotLeads: Boolean(user.integrations?.autoRouteHotLeads),
       hotLeadThreshold: user.integrations?.hotLeadThreshold ?? 80,
+      autoReplyEnabled: Boolean(user.integrations?.autoReplyEnabled),
+      autoReplyThreshold: user.integrations?.autoReplyThreshold ?? 80,
+      autoReplyDailyLimit: user.integrations?.autoReplyDailyLimit ?? 50,
+      autoReplyRemainingToday: (() => {
+        const limit = user.integrations?.autoReplyDailyLimit ?? 50;
+        const today = new Date().toISOString().slice(0, 10);
+        if (user.integrations?.autoReplyTodayDate !== today) return limit;
+        return Math.max(0, limit - (user.integrations?.autoReplyTodayCount || 0));
+      })(),
       hasSlack: Boolean(user.integrations?.slackWebhookUrl),
       hasWhatsapp: Boolean(user.integrations?.whatsappNotifyPhone),
       hasCrm: Boolean(user.integrations?.crmWebhookUrl),
@@ -233,6 +242,21 @@ router.patch('/brand', async (req, res) => {
         user.integrations.hotLeadThreshold = Math.max(
           0,
           Math.min(100, Number(integrations.hotLeadThreshold) || 80)
+        );
+      }
+      if (integrations.autoReplyEnabled !== undefined) {
+        user.integrations.autoReplyEnabled = Boolean(integrations.autoReplyEnabled);
+      }
+      if (integrations.autoReplyThreshold !== undefined) {
+        user.integrations.autoReplyThreshold = Math.max(
+          0,
+          Math.min(100, Number(integrations.autoReplyThreshold) || 80)
+        );
+      }
+      if (integrations.autoReplyDailyLimit !== undefined) {
+        user.integrations.autoReplyDailyLimit = Math.max(
+          1,
+          Math.min(500, Number(integrations.autoReplyDailyLimit) || 50)
         );
       }
       user.markModified('integrations');

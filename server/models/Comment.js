@@ -75,6 +75,9 @@ const commentSchema = new mongoose.Schema(
     autoDmPreview: { type: String, default: '' },
     /** Attribution when marked converted. */
     revenueAttributed: { type: Number, default: 0, min: 0 },
+    /** Platform comment id after a successful post-reply. */
+    platformReplyId: { type: String, default: '' },
+    postedReplyAt: { type: Date },
     postedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

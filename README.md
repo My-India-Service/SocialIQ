@@ -41,8 +41,10 @@ Copy `server/.env.example` → `server/.env` and fill keys:
 |----------|---------|
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | YouTube OAuth |
 | `GOOGLE_REDIRECT_URI` | `http://localhost:5000/api/connections/youtube/callback` |
-| `META_APP_ID` / `META_APP_SECRET` | Instagram + Facebook OAuth |
-| `META_REDIRECT_URI` | `http://localhost:5000/api/connections/meta/callback` |
+| `META_APP_ID` / `META_APP_SECRET` | Facebook Login (Page comments) |
+| `META_REDIRECT_URI` | `http://localhost:5001/api/connections/meta/callback` |
+| `META_INSTAGRAM_APP_ID` / `META_INSTAGRAM_APP_SECRET` | Instagram Login (Business Login for Instagram — separate credentials in Meta App Dashboard) |
+| `META_INSTAGRAM_REDIRECT_URI` | `http://localhost:5001/api/connections/instagram/callback` |
 | `OPENAI_API_KEY` | LLM intent categorization (optional) |
 
 ### 4. Google Cloud (YouTube)
@@ -52,27 +54,22 @@ Copy `server/.env.example` → `server/.env` and fill keys:
 3. Create Web OAuth client  
 4. Redirect URI: `http://localhost:5000/api/connections/youtube/callback`
 
-### 5. Meta App (Instagram + Facebook)
+### 5. Meta App (Facebook + Instagram)
 
 1. Create an app at [Meta for Developers](https://developers.facebook.com/)
-2. Add products: **Facebook Login** + **Instagram Graph API** (and Pages if prompted)
-3. Facebook Login → Settings → Valid OAuth Redirect URIs:
-   `http://localhost:5000/api/connections/meta/callback`  
-   (production: `https://YOUR-API.onrender.com/api/connections/meta/callback`)
-4. App settings → copy **App ID** + **App Secret** into `.env`
+2. **Facebook Login** — Page comments: copy App ID + Secret → `META_APP_ID` / `META_APP_SECRET`
+3. **Instagram → API setup with Instagram login** — use **Instagram App ID** (`1102250409082500` for My India Service — may differ from `META_APP_ID`). See [`docs/META_INSTAGRAM_SETUP.md`](docs/META_INSTAGRAM_SETUP.md).
+4. Valid OAuth redirect URIs:
+   - `{SERVER_URL}/api/connections/meta/callback` (Facebook Login)
+   - `{SERVER_URL}/api/connections/instagram/callback` (Instagram Login)
 5. Roles → add yourself as developer/tester
-6. **App Review → Permissions and features** (or Use cases → Customize): set these to **Ready for testing**, then **Reconnect** in Voxa so the token picks them up:
-   - `pages_show_list`
-   - `pages_read_engagement`
-   - `pages_read_user_content` (required to sync Page post comments)
-   - `pages_manage_metadata`
-   - `instagram_basic` / `instagram_manage_comments` (for Instagram)
-7. Requirements for real data:
-   - A **Facebook Page** you admin
-   - Instagram **Business/Creator** account linked to that Page
+6. Permissions (Development: reconnect after enabling):
+   - Facebook Login: `pages_read_engagement`, `pages_read_user_content`, `pages_manage_engagement`
+   - Instagram Login: `instagram_business_basic`, `instagram_business_manage_comments`
+7. Facebook Page path only: Instagram Business/Creator linked to that Page. Instagram Login path: no Page required.
 8. Restart the server after saving `.env`
 
-If Sync shows Meta `(#100)` / missing permission: enable `pages_read_engagement` + `pages_read_user_content`, Reconnect Facebook, Sync again. You do **not** need Page Public Content Access for your own Page.
+If Sync shows Meta `(#100)` / missing permission: enable the permissions above, Reconnect, Sync again.
 
 ### 6. Seed demo data (optional)
 
@@ -110,5 +107,5 @@ npm run dev
 
 1. Log in → **Connect**
 2. **YouTube** → Connect with Google → Sync  
-3. **Instagram** → Connect with Meta → Sync  
+3. **Instagram** → Connect with Instagram (recommended) or via Facebook Page → Sync  
 4. Open **Inbox** — filter Hot leads · Send to sales (after adding webhooks in Settings)

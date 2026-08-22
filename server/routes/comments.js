@@ -5,10 +5,32 @@ import { authRequired } from '../middleware/auth.js';
 import { analyzeComment, buildAutoDmPreview, buildDailyReport, buildRoiSummary, regenerateSuggestedReply } from '../services/ai.js';
 import { hasAnyIntegration, routeLead } from '../services/integrations.js';
 import { csvDateStamp, rowsToCsv } from '../utils/csv.js';
+import {
+  canPostReplyToPlatform,
+  postCommentReplyToPlatform,
+} from '../services/postReply.js';
 
 const router = express.Router();
 
 router.use(authRequired);
+
+function postReplyHttpStatus(err) {
+  const code = err.status || err.code;
+  if (typeof code === 'number' && code >= 400 && code < 600) return code;
+  return 500;
+}
+
+function formatPostReplyError(err) {
+  let message = err.message || 'Post failed';
+  const status = postReplyHttpStatus(err);
+  if (
+    (status === 403 || status === 401) &&
+    !/connect/i.test(message)
+  ) {
+    message += ' Open Connect to reconnect your account.';
+  }
+  return { message, status };
+}
 
 function commentListFilter(userId, query) {
   const { category, platform, status, q, temperature } = query;
@@ -21,25 +43,62 @@ function commentListFilter(userId, query) {
   return filter;
 }
 
-const EXPORT_COLUMNS = [
-  'postedAt',
-  'platform',
-  'author',
-  'authorHandle',
-  'text',
-  'category',
-  'purchaseProbability',
-  'leadTemperature',
-  'expectedOrderValue',
-  'sentiment',
-  'status',
-  'suggestedReply',
-  'postTitle',
-  'routedTo',
-  'sentToSalesAt',
-  'revenueAttributed',
-  'analysisSource',
+const LEAD_EXPORT_COLUMNS = [
+  'Date',
+  'Platform',
+  'Name',
+  'Handle',
+  'Comment',
+  'Category',
+  'Intent %',
+  'Temperature',
+  'Est. value',
+  'Status',
+  'Suggested reply',
+  'Post',
+  'Routed to',
+  'Sent to sales at',
+  'Revenue',
 ];
+
+const ALL_EXPORT_COLUMNS = [...LEAD_EXPORT_COLUMNS, 'Sentiment', 'Analysis source'];
+
+function applyLeadScope(filter, scope) {
+  if (scope === 'all') return filter;
+  return {
+    ...filter,
+    $or: [
+      { category: 'sales_opportunity' },
+      { leadTemperature: { $in: ['hot', 'warm'] } },
+      { status: { $in: ['sent_to_sales', 'converted'] } },
+    ],
+  };
+}
+
+function commentToExportRow(c, { includeExtras = false } = {}) {
+  const row = {
+    Date: c.postedAt ? new Date(c.postedAt).toISOString() : '',
+    Platform: c.platform || '',
+    Name: c.author || '',
+    Handle: c.authorHandle || '',
+    Comment: c.text || '',
+    Category: c.category || '',
+    'Intent %': c.purchaseProbability ?? '',
+    Temperature: c.leadTemperature || '',
+    'Est. value': c.expectedOrderValue ?? '',
+    Status: c.status || '',
+    'Suggested reply': c.suggestedReply || '',
+    Post: c.postTitle || '',
+    'Routed to': Array.isArray(c.routedTo) ? c.routedTo.join('|') : '',
+    'Sent to sales at': c.sentToSalesAt ? new Date(c.sentToSalesAt).toISOString() : '',
+    Revenue: c.revenueAttributed ?? '',
+  };
+  if (includeExtras) {
+    row.Sentiment = c.sentiment || '';
+    row['Analysis source'] = c.analysisSource || '';
+  }
+  return row;
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -53,32 +112,23 @@ router.get('/', async (req, res) => {
 
 router.get('/export.csv', async (req, res) => {
   try {
-    const filter = commentListFilter(req.userId, req.query);
+    const scope = req.query.scope === 'all' ? 'all' : 'leads';
+    const base = commentListFilter(req.userId, req.query);
+    const filter = applyLeadScope(base, scope);
     const comments = await Comment.find(filter).sort({ postedAt: -1 }).limit(5000);
-    const rows = comments.map((c) => ({
-      postedAt: c.postedAt ? new Date(c.postedAt).toISOString() : '',
-      platform: c.platform || '',
-      author: c.author || '',
-      authorHandle: c.authorHandle || '',
-      text: c.text || '',
-      category: c.category || '',
-      purchaseProbability: c.purchaseProbability ?? '',
-      leadTemperature: c.leadTemperature || '',
-      expectedOrderValue: c.expectedOrderValue ?? '',
-      sentiment: c.sentiment || '',
-      status: c.status || '',
-      suggestedReply: c.suggestedReply || '',
-      postTitle: c.postTitle || '',
-      routedTo: Array.isArray(c.routedTo) ? c.routedTo.join('|') : '',
-      sentToSalesAt: c.sentToSalesAt ? new Date(c.sentToSalesAt).toISOString() : '',
-      revenueAttributed: c.revenueAttributed ?? '',
-      analysisSource: c.analysisSource || '',
-    }));
+    const includeExtras = scope === 'all';
+    const columns = includeExtras ? ALL_EXPORT_COLUMNS : LEAD_EXPORT_COLUMNS;
+    const rows = comments.map((c) => commentToExportRow(c, { includeExtras }));
 
-    const csv = rowsToCsv(EXPORT_COLUMNS, rows, { bom: true });
-    const filename = `voxa-leads-${csvDateStamp()}.csv`;
+    const csv = rowsToCsv(columns, rows, { bom: true });
+    const filename =
+      scope === 'all'
+        ? `voxa-comments-${csvDateStamp()}.csv`
+        : `voxa-leads-${csvDateStamp()}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Export-Count', String(comments.length));
+    res.setHeader('Access-Control-Expose-Headers', 'X-Export-Count, Content-Disposition');
     res.send(csv);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -268,6 +318,38 @@ router.post('/:id/regenerate-reply', async (req, res) => {
     res.json({ comment });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+/** Post reply on YouTube/Facebook/Instagram and mark Voxa status replied. */
+router.post('/:id/post-reply', async (req, res) => {
+  try {
+    const comment = await Comment.findOne({ _id: req.params.id, user: req.userId });
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+    if (!canPostReplyToPlatform(comment.platform)) {
+      return res.status(400).json({
+        message: `Posting replies is not supported for ${comment.platform} yet. Use Copy reply.`,
+      });
+    }
+
+    const message = req.body?.message ?? comment.suggestedReply;
+    const { platformReplyId } = await postCommentReplyToPlatform(
+      req.userId,
+      comment,
+      message
+    );
+
+    comment.suggestedReply = String(message).trim();
+    comment.status = 'replied';
+    comment.platformReplyId = platformReplyId;
+    comment.postedReplyAt = new Date();
+    await comment.save();
+
+    res.json({ comment, posted: true, platformReplyId });
+  } catch (err) {
+    const { message, status } = formatPostReplyError(err);
+    res.status(status).json({ message });
   }
 });
 

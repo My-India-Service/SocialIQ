@@ -5,12 +5,20 @@ import { analyzeComment, buildAutoDmPreview } from './ai.js';
 import { fetchYouTubeComments } from './youtube.js';
 import { fetchFacebookComments, fetchInstagramComments } from './meta.js';
 import { routeLead } from './integrations.js';
+import {
+  canAutoReplyToday,
+  postCommentReplyToPlatform,
+  recordAutoReplySuccess,
+  shouldAutoReply,
+} from './postReply.js';
 
 export async function ingestRawComments(userId, platform, rawComments, user) {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
   let routed = 0;
+  let autoReplied = 0;
+  let autoReplyFailed = 0;
 
   const brandTone = user?.brandTone || 'friendly';
   const avgOrderValue = user?.avgOrderValue ?? 2499;
@@ -79,10 +87,34 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
       }
     }
 
+    if (shouldAutoReply(user, comment) && canAutoReplyToday(user)) {
+      const keepSentToSales = comment.status === 'sent_to_sales';
+      try {
+        const { platformReplyId, message } = await postCommentReplyToPlatform(
+          userId,
+          comment,
+          comment.suggestedReply
+        );
+        comment.suggestedReply = message;
+        if (!keepSentToSales) {
+          comment.status = 'replied';
+        }
+        comment.platformReplyId = platformReplyId;
+        comment.postedReplyAt = new Date();
+        await comment.save();
+        recordAutoReplySuccess(user);
+        await user.save();
+        autoReplied += 1;
+      } catch (err) {
+        autoReplyFailed += 1;
+        console.warn('Auto-reply failed:', err.message);
+      }
+    }
+
     imported += 1;
   }
 
-  return { imported, updated, skipped, routed };
+  return { imported, updated, skipped, routed, autoReplied, autoReplyFailed };
 }
 
 async function getOAuthConnection(userId, platform, connectHint) {

@@ -1131,6 +1131,13 @@ button.stat:hover {
   font-weight: 400;
 }
 
+.reply-platform-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .reply-actions {
   display: flex;
   flex-wrap: wrap;

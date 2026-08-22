@@ -30,7 +30,7 @@ export const GUIDE_STEPS = [
   },
   {
     title: '2. Connect YouTube, Instagram, Facebook',
-    body: 'Open Connect. Google OAuth for YouTube. Meta Login for a Facebook Page you admin (Instagram must be a Business/Creator account linked to that Page). After connect, click Sync comments. Inbox only fills after a successful sync.',
+    body: 'Open Connect. Google OAuth for YouTube. For Instagram: use Connect with Instagram (instagram.com login — no Facebook Page required) or Connect via Facebook Page if IG is linked to your Page. Facebook Page connect uses Meta Login for Page comments. After connect, click Sync comments. Inbox only fills after a successful sync.',
   },
   {
     title: '3. Connect WhatsApp (optional)',
@@ -38,7 +38,7 @@ export const GUIDE_STEPS = [
   },
   {
     title: '4. Work the Revenue inbox (main screen)',
-    body: 'This is the daily workspace. Click the stat cards to filter Hot leads, Sales, Complaints, or Needs review. Open a comment: read intent %, expected value, and the suggested reply. Regenerate cycles a new draft reply. Approve & mark replied, Send to sales, or set status to Converted when they buy.',
+    body: 'This is the daily workspace. Click the stat cards to filter Hot leads, Sales, Complaints, or Needs review. Open a comment: read intent %, expected value, and the suggested reply. Regenerate cycles a new draft reply. Post reply & mark done (YouTube/Facebook/Instagram), Copy reply, Save without posting, Send to sales, or set status to Converted when they buy.',
   },
   {
     title: '5. Route hot leads automatically',
@@ -73,7 +73,7 @@ export const FAQS = [
   },
   {
     q: 'How do I connect Facebook or Instagram?',
-    a: 'Connect → Connect Facebook or Instagram as a Page admin. Then Sync. If Inbox is empty, the connected Page must match Comments Manager, and you must be a tester/admin on the Meta app while it is in Development.',
+    a: 'Facebook: Connect → Connect Facebook (Page admin, facebook.com login) → Sync. Instagram (recommended): Connect with Instagram (instagram.com login, Business/Creator account, no Page required). Alternative: Connect via Facebook Page if IG is linked in Meta Business Suite. In Development mode you must be a tester/admin on the Meta app.',
   },
   {
     q: 'How do I set the WhatsApp webhook?',
@@ -97,10 +97,22 @@ export const FAQS = [
   },
   {
     q: 'What does Regenerate do on a suggested reply?',
-    a: 'It drafts a new suggested reply only (does not change category). Without OPENAI_API_KEY it cycles brand-tone templates; with OpenAI it asks for a different AI draft. Approve still only marks replied — it does not post to YouTube/IG/WhatsApp.',
+    a: 'It drafts a new suggested reply only (does not change category). Without OPENAI_API_KEY it cycles brand-tone templates; with OpenAI it asks for a different AI draft. Save reply & mark done still only updates Voxa — it does not post to YouTube/IG/WhatsApp.',
+  },
+  {
+    q: 'What does Save reply & mark done / Replied status mean?',
+    a: 'Internal team tracking only. It saves your draft and sets status to Replied in Voxa. Use Post reply & mark done to publish on YouTube, Facebook, or Instagram in one click — or Copy reply and paste manually. Save without posting updates Voxa only.',
+  },
+  {
+    q: 'What does Post reply & mark done do?',
+    a: 'Posts your suggested reply on YouTube, Facebook, or Instagram via official APIs, then marks Replied in Voxa. WhatsApp still needs manual copy. If Meta rejects the post, reconnect on Connect (pages_manage_engagement / instagram_manage_comments). You cannot post twice — use Copy reply to edit on the platform.',
+  },
+  {
+    q: 'How does auto-reply on sync work?',
+    a: 'Settings → Auto-reply on YouTube, Facebook & Instagram. On sync, Voxa posts suggested replies for hot leads or sales comments above your threshold, up to the daily limit. Never applies to spam or complaints. If a lead was auto-routed to sales, status stays Sent to sales even when auto-reply posts on the platform.',
   },
   {
     q: 'How do I export leads to Excel?',
-    a: 'Inbox → Export CSV. The file uses your current filters (category, platform, intent, status, search) and opens in Excel or Google Sheets. Up to 5,000 rows.',
+    a: 'Inbox → Export leads CSV: only sales opportunities, hot/warm intent, or already sent/converted leads — with sales-friendly columns for Excel/Zoho. Use Export all comments for the full dump (praise/other included). Current filters still apply; try Sales or Hot to narrow further. Up to 5,000 rows.',
   },
 ];

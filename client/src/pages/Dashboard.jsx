@@ -25,6 +25,21 @@ const PLATFORM_LABELS = {
   x: 'X',
 };
 
+const STATUS_LABELS = {
+  new: 'New',
+  reviewed: 'Reviewed',
+  replied: 'Replied',
+  sent_to_sales: 'Sent to sales',
+  converted: 'Converted',
+  ignored: 'Ignored',
+};
+
+const POST_REPLY_PLATFORMS = ['youtube', 'facebook', 'instagram'];
+
+function isAlreadyPosted(comment) {
+  return Boolean(comment?.postedReplyAt || comment?.platformReplyId);
+}
+
 function formatCategory(c) {
   return CATEGORY_LABELS[c] || c;
 }
@@ -59,6 +74,9 @@ export default function Dashboard() {
   const [busyId, setBusyId] = useState(null);
   const [regeneratingId, setRegeneratingId] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [savingId, setSavingId] = useState(null);
+  const [postingId, setPostingId] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   const currency = user?.currency || 'INR';
 
@@ -124,13 +142,73 @@ export default function Dashboard() {
     }
   }
 
-  async function updateComment(id, patch) {
-    const data = await api(`/api/comments/${id}`, {
-      method: 'PATCH',
-      token,
-      body: patch,
-    });
-    setComments((prev) => prev.map((c) => (c._id === id ? data.comment : c)));
+  async function refreshStats() {
+    try {
+      const statsData = await api('/api/comments/stats', { token });
+      setStats(statsData.stats);
+    } catch {
+      /* stats refresh is best-effort */
+    }
+  }
+
+  async function updateComment(id, patch, { successMessage } = {}) {
+    setSavingId(id);
+    setError('');
+    setNotice('');
+    try {
+      const data = await api(`/api/comments/${id}`, {
+        method: 'PATCH',
+        token,
+        body: patch,
+      });
+      setComments((prev) => prev.map((c) => (c._id === id ? data.comment : c)));
+      if (successMessage) {
+        setNotice(successMessage);
+      } else if (patch.status) {
+        setNotice(`Status updated to ${STATUS_LABELS[patch.status] || patch.status}`);
+      }
+      await refreshStats();
+      return data.comment;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function copyReply(id, text) {
+    const reply = String(text || '').trim();
+    if (!reply) return;
+    setError('');
+    try {
+      await navigator.clipboard.writeText(reply);
+      setCopiedId(id);
+      setNotice('Reply copied — paste on the platform, or use Post reply for YouTube/Facebook/Instagram');
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setError('Could not copy to clipboard');
+    }
+  }
+
+  async function postReply(id, message) {
+    setPostingId(id);
+    setError('');
+    setNotice('');
+    try {
+      const data = await api(`/api/comments/${id}/post-reply`, {
+        method: 'POST',
+        token,
+        body: { message },
+      });
+      setComments((prev) => prev.map((c) => (c._id === id ? data.comment : c)));
+      setNotice('Reply posted on platform & marked done in Voxa');
+      await refreshStats();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPostingId(null);
+    }
   }
 
   async function regenerate(id) {
@@ -190,17 +268,36 @@ export default function Dashboard() {
     }
   }
 
-  async function exportCsv() {
+  async function exportCsv(scope = 'leads') {
     setExporting(true);
     setError('');
     setNotice('');
     try {
-      const params = new URLSearchParams({ category, platform, q, temperature, status });
-      await downloadFile(`/api/comments/export.csv?${params}`, {
-        token,
-        fallbackFilename: 'voxa-leads.csv',
+      const params = new URLSearchParams({
+        category,
+        platform,
+        q,
+        temperature,
+        status,
+        scope,
       });
-      setNotice('CSV downloaded — opens in Excel or Google Sheets');
+      const result = await downloadFile(`/api/comments/export.csv?${params}`, {
+        token,
+        fallbackFilename: scope === 'all' ? 'voxa-comments.csv' : 'voxa-leads.csv',
+      });
+      if (scope === 'leads' && result.exportCount === 0) {
+        setNotice(
+          'No sales leads in this filter — try Sales / Hot, or Export all comments'
+        );
+      } else if (scope === 'leads') {
+        setNotice(
+          `Downloaded ${result.exportCount} sales leads CSV — opens in Excel or Google Sheets`
+        );
+      } else {
+        setNotice(
+          `Downloaded ${result.exportCount ?? 0} comments CSV — opens in Excel or Google Sheets`
+        );
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -227,11 +324,19 @@ export default function Dashboard() {
           )}
           <button
             type="button"
+            className="btn btn-primary btn-sm"
+            disabled={exporting || loading}
+            onClick={() => exportCsv('leads')}
+          >
+            {exporting ? 'Exporting…' : 'Export leads CSV'}
+          </button>
+          <button
+            type="button"
             className="btn btn-ghost btn-sm"
             disabled={exporting || loading}
-            onClick={exportCsv}
+            onClick={() => exportCsv('all')}
           >
-            {exporting ? 'Exporting…' : 'Export CSV'}
+            Export all comments
           </button>
         </div>
       </div>
@@ -349,7 +454,16 @@ export default function Dashboard() {
         )}
       </form>
 
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner">
+          <div>{error}</div>
+          {(error.includes('Connect') || error.includes('connect') || error.includes('Reconnect')) && (
+            <p className="prob" style={{ margin: '0.5rem 0 0' }}>
+              <Link to="/app/connections">Open Connect →</Link>
+            </p>
+          )}
+        </div>
+      )}
       {notice && <div className="success-banner">{notice}</div>}
 
       {loading && (
@@ -426,7 +540,9 @@ export default function Dashboard() {
               <select
                 className="comment-status"
                 value={c.status}
-                aria-label="Comment status"
+                aria-label="Voxa team status (does not post to the platform — use Post reply for that)"
+                title="Voxa team tracking only — use Post reply & mark done to publish on the platform"
+                disabled={savingId === c._id || postingId === c._id}
                 onChange={(e) => {
                   const next = e.target.value;
                   if (next === 'converted') {
@@ -451,24 +567,35 @@ export default function Dashboard() {
             {(c.suggestedReply || c.category === 'sales_opportunity') && (
               <div className="reply-box">
                 {c.suggestedReply && (
-                  <label>
-                    Suggested reply
-                    <textarea
-                      value={c.suggestedReply}
-                      onChange={(e) =>
-                        setComments((prev) =>
-                          prev.map((x) =>
-                            x._id === c._id ? { ...x, suggestedReply: e.target.value } : x
+                  <>
+                    <label>
+                      Suggested reply
+                      <textarea
+                        value={c.suggestedReply}
+                        disabled={savingId === c._id}
+                        onChange={(e) =>
+                          setComments((prev) =>
+                            prev.map((x) =>
+                              x._id === c._id ? { ...x, suggestedReply: e.target.value } : x
+                            )
                           )
-                        )
-                      }
-                    />
-                    {c.analysisSource === 'rules' ? (
-                      <span className="reply-source-hint">
-                        Template reply (add OPENAI_API_KEY for AI variations)
-                      </span>
-                    ) : null}
-                  </label>
+                        }
+                      />
+                      {c.analysisSource === 'rules' ? (
+                        <span className="reply-source-hint">
+                          Template reply (add OPENAI_API_KEY for AI variations)
+                        </span>
+                      ) : null}
+                    </label>
+                    <p className="reply-platform-hint">
+                      {POST_REPLY_PLATFORMS.includes(c.platform)
+                        ? 'Post reply sends to YouTube/Facebook/Instagram and marks done in Voxa. Or copy & paste manually.'
+                        : 'Copy the reply to the platform yourself, then Save without posting in Voxa.'}
+                      {c.postedReplyAt
+                        ? ` · Posted ${new Date(c.postedReplyAt).toLocaleString()}`
+                        : null}
+                    </p>
+                  </>
                 )}
                 {c.autoDmPreview && (
                   <div className="auto-dm-preview">
@@ -477,18 +604,47 @@ export default function Dashboard() {
                   </div>
                 )}
                 <div className="reply-actions">
+                  {c.suggestedReply && POST_REPLY_PLATFORMS.includes(c.platform) && (
+                    isAlreadyPosted(c) ? (
+                      <span className="pill wa-pill-ready">Posted on platform</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-citrus btn-sm"
+                        disabled={postingId === c._id || savingId === c._id}
+                        onClick={() => postReply(c._id, c.suggestedReply)}
+                      >
+                        {postingId === c._id ? 'Posting…' : 'Post reply & mark done'}
+                      </button>
+                    )
+                  )}
                   {c.suggestedReply && (
                     <button
                       type="button"
-                      className="btn btn-citrus btn-sm"
+                      className="btn btn-ghost btn-sm"
+                      disabled={postingId === c._id || savingId === c._id}
+                      onClick={() => copyReply(c._id, c.suggestedReply)}
+                    >
+                      {copiedId === c._id ? 'Copied' : 'Copy reply'}
+                    </button>
+                  )}
+                  {c.suggestedReply && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      disabled={postingId === c._id || savingId === c._id}
                       onClick={() =>
-                        updateComment(c._id, {
-                          suggestedReply: c.suggestedReply,
-                          status: 'replied',
-                        })
+                        updateComment(
+                          c._id,
+                          {
+                            suggestedReply: c.suggestedReply,
+                            status: 'replied',
+                          },
+                          { successMessage: 'Reply saved & marked done (Voxa only)' }
+                        )
                       }
                     >
-                      Approve & mark replied
+                      {savingId === c._id ? 'Saving…' : 'Save without posting'}
                     </button>
                   )}
                   {(c.leadTemperature === 'hot' ||

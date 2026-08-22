@@ -1,7 +1,9 @@
 import jwt from 'jsonwebtoken';
 import Connection from '../models/Connection.js';
+import { getValidInstagramDirectAccessToken } from './instagramLogin.js';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
+const IG_GRAPH = 'https://graph.instagram.com/v21.0';
 
 const SCOPES = [
   'public_profile',
@@ -9,6 +11,7 @@ const SCOPES = [
   'pages_show_list',
   'pages_read_engagement',
   'pages_manage_metadata',
+  'pages_manage_engagement',
   'pages_read_user_content',
   'instagram_basic',
   'instagram_manage_comments',
@@ -64,6 +67,16 @@ export function verifyMetaOAuthState(state) {
   return { userId: payload.id, platform: payload.platform };
 }
 
+/** Legacy empty metaAuthType = Facebook Page token path. */
+export function resolveInstagramMetaAuthType(connection) {
+  if (connection?.metaAuthType === 'instagram_direct') return 'instagram_direct';
+  return 'facebook_page';
+}
+
+export function getInstagramGraphBase(connection) {
+  return resolveInstagramMetaAuthType(connection) === 'instagram_direct' ? IG_GRAPH : GRAPH;
+}
+
 async function graphGet(path, accessToken, params = {}) {
   const url = new URL(path.startsWith('http') ? path : `${GRAPH}/${path}`);
   url.searchParams.set('access_token', accessToken);
@@ -74,9 +87,176 @@ async function graphGet(path, accessToken, params = {}) {
   const res = await fetch(url);
   const data = await res.json();
   if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `Meta Graph API error (${res.status})`);
+    const err = new Error(data.error?.message || `Meta Graph API error (${res.status})`);
+    err.code = data.error?.code || res.status;
+    throw err;
   }
   return data;
+}
+
+async function graphPost(path, accessToken, body = {}) {
+  const url = new URL(path.startsWith('http') ? path : `${GRAPH}/${path}`);
+  url.searchParams.set('access_token', accessToken);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    const err = new Error(data.error?.message || `Meta Graph API error (${res.status})`);
+    err.code = data.error?.code || res.status;
+    throw err;
+  }
+  return data;
+}
+
+function isMetaTokenError(message = '', code) {
+  const m = String(message).toLowerCase();
+  return (
+    code === 190 ||
+    code === 102 ||
+    m.includes('expired') ||
+    m.includes('session has expired') ||
+    m.includes('invalid oauth')
+  );
+}
+
+/** Re-list Pages with the stored user token and refresh the Page access token. */
+async function refreshPageAccessToken(connection) {
+  if (!connection.refreshToken || !connection.channelId) {
+    throw new Error('Meta token expired — reconnect on Connect');
+  }
+  const pages = await getManagedPages(connection.refreshToken);
+  const page = pages.find((p) => p.id === connection.channelId) || pages[0];
+  if (!page?.access_token) {
+    throw new Error('Could not refresh Page token — reconnect Facebook on Connect');
+  }
+  connection.accessToken = page.access_token;
+  await connection.save();
+  return page.access_token;
+}
+
+async function graphPostWithConnection(connection, path, body = {}) {
+  try {
+    return await graphPost(path, connection.accessToken, body);
+  } catch (err) {
+    if (isMetaTokenError(err.message, err.code) && connection.refreshToken) {
+      const token = await refreshPageAccessToken(connection);
+      return await graphPost(path, token, body);
+    }
+    throw err;
+  }
+}
+
+async function instagramGraphGetRaw(base, path, accessToken, params = {}) {
+  const url = new URL(path.startsWith('http') ? path : `${base}/${path}`);
+  url.searchParams.set('access_token', accessToken);
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+  }
+
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    const err = new Error(data.error?.message || `Instagram Graph API error (${res.status})`);
+    err.code = data.error?.code || res.status;
+    throw err;
+  }
+  return data;
+}
+
+async function instagramGraphPostRaw(base, path, accessToken, body = {}) {
+  const url = new URL(path.startsWith('http') ? path : `${base}/${path}`);
+  url.searchParams.set('access_token', accessToken);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    const err = new Error(data.error?.message || `Instagram Graph API error (${res.status})`);
+    err.code = data.error?.code || res.status;
+    throw err;
+  }
+  return data;
+}
+
+async function instagramGraphGet(connection, path, params = {}) {
+  const base = getInstagramGraphBase(connection);
+  if (resolveInstagramMetaAuthType(connection) === 'instagram_direct') {
+    const token = await getValidInstagramDirectAccessToken(connection);
+    return instagramGraphGetRaw(base, path, token, params);
+  }
+  return graphGet(path, connection.accessToken, params);
+}
+
+async function instagramGraphPost(connection, path, body = {}) {
+  const base = getInstagramGraphBase(connection);
+  if (resolveInstagramMetaAuthType(connection) === 'instagram_direct') {
+    const token = await getValidInstagramDirectAccessToken(connection);
+    return instagramGraphPostRaw(base, path, token, body);
+  }
+  return graphPostWithConnection(connection, path, body);
+}
+
+function isMetaReplyPermissionError(message = '') {
+  const m = String(message).toLowerCase();
+  return (
+    m.includes('pages_manage_engagement') ||
+    m.includes('instagram_manage_comments') ||
+    m.includes('permission') ||
+    m.includes('insufficient') ||
+    m.includes('(#200)') ||
+    m.includes('(#10)')
+  );
+}
+
+function wrapMetaReplyError(err, platform) {
+  let message = err.message || 'Meta reply failed';
+  if (isMetaReplyPermissionError(message)) {
+    const perm =
+      platform === 'instagram' ? 'instagram_manage_comments' : 'pages_manage_engagement';
+    message = `${message} Reconnect ${platform === 'instagram' ? 'Instagram' : 'Facebook'} on Connect and ensure ${perm} is granted.`;
+  }
+  const wrapped = new Error(message);
+  wrapped.code = err.code;
+  return wrapped;
+}
+
+/** Reply to a Facebook Page comment (requires pages_manage_engagement — reconnect Meta if missing). */
+export async function postFacebookCommentReply(connection, commentId, message) {
+  if (!commentId) throw new Error('Facebook comment id missing — re-sync comments');
+  const text = String(message || '').trim();
+  if (!text) throw new Error('Reply message is required');
+
+  try {
+    const data = await graphPostWithConnection(connection, `${commentId}/comments`, {
+      message: text,
+    });
+    return data.id || '';
+  } catch (err) {
+    throw wrapMetaReplyError(err, 'facebook');
+  }
+}
+
+/** Reply to an Instagram comment (requires instagram_manage_comments — reconnect Meta if missing). */
+export async function postInstagramCommentReply(connection, commentId, message) {
+  if (!commentId) throw new Error('Instagram comment id missing — re-sync comments');
+  const text = String(message || '').trim();
+  if (!text) throw new Error('Reply message is required');
+
+  try {
+    const data = await instagramGraphPost(connection, `${commentId}/replies`, {
+      message: text,
+    });
+    return data.id || '';
+  } catch (err) {
+    throw wrapMetaReplyError(err, 'instagram');
+  }
 }
 
 const COMMENT_READ_SCOPES = ['pages_read_engagement', 'pages_read_user_content'];
@@ -687,6 +867,7 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
           accountName: page.name || `Page ${page.id}`,
           channelId: page.id,
           status: 'connected',
+          metaAuthType: 'facebook_page',
           accessToken: pageToken,
           refreshToken: tokens.access_token, // keep user token for refresh/page re-list
           tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
@@ -705,6 +886,7 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
             accountName: ig.username ? `@${ig.username}` : ig.name || ig.id,
             channelId: ig.id,
             status: 'connected',
+            metaAuthType: 'facebook_page',
             accessToken: pageToken,
             refreshToken: tokens.access_token,
             tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
@@ -724,6 +906,7 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
           accountName: ig.username ? `@${ig.username}` : ig.name || ig.id,
           channelId: ig.id,
           status: 'connected',
+          metaAuthType: 'facebook_page',
           accessToken: pageToken,
           refreshToken: tokens.access_token,
           tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
@@ -732,22 +915,6 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
       results.push(igConn);
-
-      // Also save the linked Facebook page
-      const fb = await Connection.findOneAndUpdate(
-        { user: userId, platform: 'facebook' },
-        {
-          accountName: page.name || `Page ${page.id}`,
-          channelId: page.id,
-          status: 'connected',
-          accessToken: pageToken,
-          refreshToken: tokens.access_token,
-          tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
-          connectedAt: new Date(),
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-      results.push(fb);
     }
   }
 
@@ -763,14 +930,14 @@ export async function exchangeMetaCodeAndSave(userId, platform, code) {
 }
 
 /**
- * Instagram media comments (Instagram Graph API via Page token).
+ * Instagram media comments — Page token (Facebook Login) or Instagram User token (direct login).
  */
 export async function fetchInstagramComments(connection, { maxMedia = 12, maxCommentsPerMedia = 50 } = {}) {
   if (!connection.accessToken || !connection.channelId) {
-    throw new Error('Instagram account token missing. Reconnect with Meta.');
+    throw new Error('Instagram account token missing. Reconnect with Instagram login or Meta.');
   }
 
-  const media = await graphGet(`${connection.channelId}/media`, connection.accessToken, {
+  const media = await instagramGraphGet(connection, `${connection.channelId}/media`, {
     fields: 'id,caption,timestamp,permalink,comments_count',
     limit: maxMedia,
   });
@@ -779,7 +946,7 @@ export async function fetchInstagramComments(connection, { maxMedia = 12, maxCom
 
   for (const item of media.data || []) {
     let fetched = 0;
-    const res = await graphGet(`${item.id}/comments`, connection.accessToken, {
+    const res = await instagramGraphGet(connection, `${item.id}/comments`, {
       fields: 'id,text,username,timestamp,like_count,replies{count}',
       limit: Math.min(50, maxCommentsPerMedia),
     }).catch((err) => {

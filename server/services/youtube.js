@@ -136,6 +136,47 @@ async function youtubeGet(accessToken, path, params = {}) {
   return data;
 }
 
+async function youtubePost(accessToken, path, body, params = {}) {
+  const url = new URL(`https://www.googleapis.com/youtube/v3/${path}`);
+  url.searchParams.set('part', 'snippet');
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.error?.message || `YouTube API ${res.status}`;
+    const err = new Error(msg);
+    err.code = res.status;
+    throw err;
+  }
+  return data;
+}
+
+/** Reply to a YouTube top-level comment (parentId = comment id from sync). */
+export async function postYouTubeCommentReply(connection, parentCommentId, message) {
+  if (!parentCommentId) throw new Error('YouTube comment id missing — re-sync comments');
+  const text = String(message || '').trim();
+  if (!text) throw new Error('Reply message is required');
+
+  const accessToken = await getValidAccessToken(connection);
+  const data = await youtubePost(accessToken, 'comments', {
+    snippet: {
+      parentId: parentCommentId,
+      textOriginal: text,
+    },
+  });
+  return data.id || '';
+}
+
 export async function exchangeYouTubeCode(code) {
   const tokens = await exchangeCodeForTokens(code);
   const channelData = await youtubeGet(tokens.access_token, 'channels', {

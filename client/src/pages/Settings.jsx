@@ -47,6 +47,9 @@ function buildFormSnapshot(values) {
     crmWebhookUrl: values.crmWebhookUrl,
     autoRouteHotLeads: Boolean(values.autoRouteHotLeads),
     hotLeadThreshold: String(values.hotLeadThreshold ?? ''),
+    autoReplyEnabled: Boolean(values.autoReplyEnabled),
+    autoReplyThreshold: String(values.autoReplyThreshold ?? ''),
+    autoReplyDailyLimit: String(values.autoReplyDailyLimit ?? ''),
     autoDmEnabled: Boolean(values.autoDmEnabled),
     catalogueUrl: values.catalogueUrl,
     couponCode: values.couponCode,
@@ -128,6 +131,15 @@ export default function Settings() {
   const [hotLeadThreshold, setHotLeadThreshold] = useState(
     user?.integrations?.hotLeadThreshold ?? 80
   );
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(
+    Boolean(user?.integrations?.autoReplyEnabled)
+  );
+  const [autoReplyThreshold, setAutoReplyThreshold] = useState(
+    user?.integrations?.autoReplyThreshold ?? 80
+  );
+  const [autoReplyDailyLimit, setAutoReplyDailyLimit] = useState(
+    user?.integrations?.autoReplyDailyLimit ?? 50
+  );
   const [autoDmEnabled, setAutoDmEnabled] = useState(Boolean(user?.autoDm?.enabled));
   const [catalogueUrl, setCatalogueUrl] = useState(user?.autoDm?.catalogueUrl || '');
   const [couponCode, setCouponCode] = useState(user?.autoDm?.couponCode || '');
@@ -149,6 +161,9 @@ export default function Settings() {
       crmWebhookUrl: user?.integrations?.crmWebhookUrl || '',
       autoRouteHotLeads: Boolean(user?.integrations?.autoRouteHotLeads),
       hotLeadThreshold: user?.integrations?.hotLeadThreshold ?? 80,
+      autoReplyEnabled: Boolean(user?.integrations?.autoReplyEnabled),
+      autoReplyThreshold: user?.integrations?.autoReplyThreshold ?? 80,
+      autoReplyDailyLimit: user?.integrations?.autoReplyDailyLimit ?? 50,
       autoDmEnabled: Boolean(user?.autoDm?.enabled),
       catalogueUrl: user?.autoDm?.catalogueUrl || '',
       couponCode: user?.autoDm?.couponCode || '',
@@ -170,6 +185,9 @@ export default function Settings() {
         crmWebhookUrl,
         autoRouteHotLeads,
         hotLeadThreshold,
+        autoReplyEnabled,
+        autoReplyThreshold,
+        autoReplyDailyLimit,
         autoDmEnabled,
         catalogueUrl,
         couponCode,
@@ -178,6 +196,9 @@ export default function Settings() {
     [
       autoDmEnabled,
       autoRouteHotLeads,
+      autoReplyEnabled,
+      autoReplyThreshold,
+      autoReplyDailyLimit,
       avgOrderValue,
       brandName,
       brandTone,
@@ -227,6 +248,9 @@ export default function Settings() {
             crmWebhookUrl,
             autoRouteHotLeads,
             hotLeadThreshold: Number(hotLeadThreshold),
+            autoReplyEnabled,
+            autoReplyThreshold: Number(autoReplyThreshold),
+            autoReplyDailyLimit: Number(autoReplyDailyLimit),
           },
           autoDm: {
             enabled: autoDmEnabled,
@@ -596,6 +620,48 @@ export default function Settings() {
               onChange={(e) => setHotLeadThreshold(e.target.value)}
             />
           </label>
+        </div>
+
+        <div className="panel">
+          <h2>Auto-reply on YouTube, Facebook & Instagram</h2>
+          <p className="prob">
+            On sync, post the suggested reply on the platform for hot leads or sales comments
+            above your threshold. Requires Meta reconnect for pages_manage_engagement and
+            instagram_manage_comments. Daily cap prevents spam.
+          </p>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={autoReplyEnabled}
+              onChange={(e) => setAutoReplyEnabled(e.target.checked)}
+            />
+            Auto-reply on sync (YouTube + Facebook + Instagram)
+          </label>
+          <label>
+            Auto-reply intent threshold (%)
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={autoReplyThreshold}
+              onChange={(e) => setAutoReplyThreshold(e.target.value)}
+            />
+          </label>
+          <label>
+            Daily auto-reply limit
+            <input
+              type="number"
+              min="1"
+              max="500"
+              value={autoReplyDailyLimit}
+              onChange={(e) => setAutoReplyDailyLimit(e.target.value)}
+            />
+          </label>
+          {user?.integrations?.autoReplyRemainingToday != null ? (
+            <p className="prob">
+              Remaining today: {user.integrations.autoReplyRemainingToday} auto-replies
+            </p>
+          ) : null}
         </div>
 
         <div className="panel">

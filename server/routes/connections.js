@@ -20,7 +20,24 @@ import {
   isMetaConfigured,
   verifyMetaOAuthState,
 } from '../services/meta.js';
+import {
+  exchangeInstagramCodeAndSave,
+  getInstagramAuthUrl,
+  isInstagramDirectOAuthConfigured,
+  verifyInstagramOAuthState,
+} from '../services/instagramLogin.js';
 import { getClientUrl } from '../utils/clientUrl.js';
+
+function appendAutoReplySummary(message, result) {
+  let out = message;
+  if (result.autoReplied > 0) {
+    out += ` Auto-replied on platform: ${result.autoReplied}.`;
+  }
+  if (result.autoReplyFailed > 0) {
+    out += ` Auto-reply failed: ${result.autoReplyFailed} (check Connect permissions).`;
+  }
+  return out;
+}
 
 const router = express.Router();
 
@@ -28,6 +45,7 @@ router.get('/status', authRequired, async (_req, res) => {
   res.json({
     youtubeOAuth: isYouTubeConfigured(),
     metaOAuth: isMetaConfigured(),
+    instagramDirectOAuth: isInstagramDirectOAuthConfigured(),
     llm: isLLMConfigured(),
   });
 });
@@ -43,6 +61,7 @@ router.get('/', authRequired, async (req, res) => {
       status: c.status,
       lastSyncedAt: c.lastSyncedAt,
       connectedAt: c.connectedAt,
+      metaAuthType: c.metaAuthType || '',
       hasOAuth: Boolean(c.accessToken || c.refreshToken),
     }));
     res.json({ connections });
@@ -107,7 +126,10 @@ router.post('/youtube/sync', authRequired, async (req, res) => {
     res.json({
       ...result,
       analysisMode: isLLMConfigured() ? 'llm' : 'rules',
-      message: `YouTube: synced ${result.imported} new (${result.updated} updated).`,
+      message: appendAutoReplySummary(
+        `YouTube: synced ${result.imported} new (${result.updated} updated).`,
+        result
+      ),
     });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -159,6 +181,47 @@ router.get('/meta/callback', async (req, res) => {
   }
 });
 
+/** Start Instagram Business Login (instagram.com OAuth — no Facebook Page required) */
+router.get('/instagram/auth', authRequired, async (req, res) => {
+  try {
+    if (!isInstagramDirectOAuthConfigured()) {
+      return res.status(503).json({
+        message:
+          'Instagram Login not configured. Add META_INSTAGRAM_APP_ID and META_INSTAGRAM_APP_SECRET to server/.env (Meta App Dashboard → Instagram → API setup with Instagram login).',
+      });
+    }
+    const url = getInstagramAuthUrl(req.userId);
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/instagram/callback', async (req, res) => {
+  const clientUrl = getClientUrl();
+  try {
+    const { code, state, error } = req.query;
+    if (error) {
+      return res.redirect(
+        `${clientUrl}/app/connections?instagram=error&reason=${encodeURIComponent(String(error))}`
+      );
+    }
+    if (!code || !state) {
+      return res.redirect(`${clientUrl}/app/connections?instagram=error&reason=missing_code`);
+    }
+
+    const userId = verifyInstagramOAuthState(String(state));
+    await exchangeInstagramCodeAndSave(userId, String(code));
+
+    return res.redirect(`${clientUrl}/app/connections?instagram=connected`);
+  } catch (err) {
+    console.error('Instagram OAuth callback failed:', err.message);
+    return res.redirect(
+      `${clientUrl}/app/connections?instagram=error&reason=${encodeURIComponent(err.message)}`
+    );
+  }
+});
+
 router.post('/facebook/sync', authRequired, async (req, res) => {
   try {
     const result = await syncFacebookCommentsForUser(req.userId, {
@@ -181,7 +244,7 @@ router.post('/facebook/sync', authRequired, async (req, res) => {
     res.json({
       ...result,
       analysisMode: isLLMConfigured() ? 'llm' : 'rules',
-      message: `${base}${hint}`,
+      message: appendAutoReplySummary(`${base}${hint}`, result),
     });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -197,7 +260,10 @@ router.post('/instagram/sync', authRequired, async (req, res) => {
     res.json({
       ...result,
       analysisMode: isLLMConfigured() ? 'llm' : 'rules',
-      message: `Instagram: synced ${result.imported} new (${result.updated} updated).`,
+      message: appendAutoReplySummary(
+        `Instagram: synced ${result.imported} new (${result.updated} updated).`,
+        result
+      ),
     });
   } catch (err) {
     res.status(400).json({ message: err.message });

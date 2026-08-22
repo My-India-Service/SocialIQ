@@ -18,6 +18,12 @@ const connectionSchema = new mongoose.Schema(
     accessToken: { type: String, default: '' },
     refreshToken: { type: String, default: '' },
     tokenExpiry: { type: Date },
+    /** facebook_page = via Meta Facebook Login; instagram_direct = Business Login for Instagram */
+    metaAuthType: {
+      type: String,
+      enum: ['facebook_page', 'instagram_direct', ''],
+      default: '',
+    },
     lastSyncedAt: { type: Date },
     connectedAt: { type: Date, default: Date.now },
   },

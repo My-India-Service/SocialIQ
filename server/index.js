@@ -28,6 +28,7 @@ app.use(
   cors({
     origin: corsOrigins(),
     credentials: true,
+    exposedHeaders: ['X-Export-Count', 'Content-Disposition'],
   })
 );
 
