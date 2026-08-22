@@ -248,8 +248,12 @@ export default function Connections() {
           <strong>Recommended:</strong> Connect with Instagram — log in at instagram.com with your
           Business/Creator account. No Facebook Page required.
           <br />
-          <strong>Alternative:</strong> Connect via Facebook Page if your IG is already linked to a
-          Page in Meta Business Suite (uses facebook.com login).
+          <strong>Meta setup:</strong> Add the OAuth redirect URI in Instagram → Business login
+          (Section 3). Do <strong>not</strong> use Verify and save in Configure webhooks (Section 2)
+          — that URL is for login return, not webhooks. See docs/META_INSTAGRAM_SETUP.md.
+          <br />
+          <strong>Alternative:</strong> Connect via Facebook Page if your IG is linked in Meta
+          Business Suite.
         </p>
         <div className="reply-actions">
           <button

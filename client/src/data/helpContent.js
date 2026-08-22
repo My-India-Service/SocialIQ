@@ -73,7 +73,7 @@ export const FAQS = [
   },
   {
     q: 'How do I connect Facebook or Instagram?',
-    a: 'Facebook: Connect → Connect Facebook (Page admin, facebook.com login) → Sync. Instagram (recommended): Connect with Instagram (instagram.com login, Business/Creator account, no Page required). Alternative: Connect via Facebook Page if IG is linked in Meta Business Suite. In Development mode you must be a tester/admin on the Meta app.',
+    a: 'Facebook: Connect → Connect Facebook (Page admin, facebook.com login) → Sync. Instagram (recommended): Connect with Instagram (instagram.com login, Business/Creator account, no Page required). Add the OAuth redirect URI in Meta → Instagram → Business login (Section 3), not Configure webhooks (Section 2). Alternative: Connect via Facebook Page if IG is linked in Meta Business Suite. In Development mode you must be a tester/admin on the Meta app.',
   },
   {
     q: 'How do I set the WhatsApp webhook?',
