@@ -51,7 +51,7 @@ For shared inbox threads, reply-to-customer, contacts, pipelines, broadcasts, an
 ## Environment (Render API / `server/.env`)
 
 ```env
-SERVER_URL=https://YOUR-API.onrender.com
+SERVER_URL=https://api.socialaidigital.com
 META_APP_ID=
 META_APP_SECRET=
 META_WHATSAPP_ACCESS_TOKEN=
@@ -66,7 +66,7 @@ META_WHATSAPP_LEAD_TEMPLATE_LANG=en
 
 Never put the access token, app secret, or verify token in React / `VITE_*` vars.
 
-`SERVER_URL` must be the **API origin only** (e.g. `https://socialiq-37aa.onrender.com`). Do not put `/api/connections/meta/callback` in `SERVER_URL` — that belongs in `META_REDIRECT_URI`. Wrong `SERVER_URL` produces a broken WhatsApp Callback URL.
+`SERVER_URL` must be the **API origin only** (e.g. `https://api.socialaidigital.com`). Do not put `/api/connections/meta/callback` in `SERVER_URL` — that belongs in `META_REDIRECT_URI`. Wrong `SERVER_URL` produces a broken WhatsApp Callback URL.
 
 ### Render: which env for the WhatsApp Callback URL?
 
@@ -83,7 +83,7 @@ Webhook URL Voxa exposes:
 
 `{SERVER_URL}/api/whatsapp/webhook`
 
-Example: `https://socialiq-37aa.onrender.com/api/whatsapp/webhook`
+Example: `https://api.socialaidigital.com/api/whatsapp/webhook`
 
 Sales notify phones: bare 10-digit Indian mobiles (`9696187534`) are auto-prefixed with `91` before Graph send.
 

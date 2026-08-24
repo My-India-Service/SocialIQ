@@ -73,7 +73,7 @@ Always: **Reconnect Facebook** → **Sync comments** → Inbox filter **Facebook
 
 Deploy note: Graph/sync logic lives on the **API** service. Redeploy the API on Render after code pushes; the static client alone is not enough.
 
-After Connect, you must stay logged in: on the Render API set `CLIENT_URL=https://socialiq-client.onrender.com` (not localhost first) and redeploy the API so OAuth returns to the live site with your JWT.
+After Connect, you must stay logged in: on the Render API set `CLIENT_URL=https://www.socialaidigital.com` (not localhost first) and redeploy the API so OAuth returns to the live site with your JWT.
 
 ---
 
@@ -112,11 +112,11 @@ Then ask the agent to list apps and show basic settings. Cross-check against liv
 
 | Setting | Expected |
 |--------|----------|
-| Privacy Policy | `https://socialiq-client.onrender.com/privacy` |
-| Terms of Service | `https://socialiq-client.onrender.com/terms` |
-| User data deletion | `https://socialiq-client.onrender.com/data-deletion` |
-| Valid OAuth Redirect URI | `https://socialiq-37aa.onrender.com/api/connections/meta/callback` |
-| App Domains | `socialiq-37aa.onrender.com`, `socialiq-client.onrender.com` |
+| Privacy Policy | `https://www.socialaidigital.com/privacy` |
+| Terms of Service | `https://www.socialaidigital.com/terms` |
+| User data deletion | `https://www.socialaidigital.com/data-deletion` |
+| Valid OAuth Redirect URI | `https://api.socialaidigital.com/api/connections/meta/callback` |
+| App Domains | `socialaidigital.com`, `api.socialaidigital.com` |
 
 If redirect URI or domains do not match, fix them in [Meta Developer Console](https://developers.facebook.com/apps) — not via MCP.
 
@@ -140,7 +140,7 @@ node scripts/cursor-mcp-ipv4-proxy.mjs
 3. Facebook → **Continue**. The proxy forwards IPv4 to Cursor.
 4. Stop the proxy with Ctrl+C after MCP shows connected.
 
-This does not change Voxa’s Render callback (`https://socialiq-37aa.onrender.com/api/connections/meta/callback`).
+This does not change Voxa’s API callback (`https://api.socialaidigital.com/api/connections/meta/callback`).
 
 ---
 

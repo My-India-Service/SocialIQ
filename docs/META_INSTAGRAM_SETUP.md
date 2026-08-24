@@ -20,7 +20,7 @@ META_APP_SECRET=<Facebook app secret>
 
 META_INSTAGRAM_APP_ID=1102250409082500
 META_INSTAGRAM_APP_SECRET=<Instagram app secret from dashboard>
-META_INSTAGRAM_REDIRECT_URI=https://socialiq-37aa.onrender.com/api/connections/instagram/callback
+META_INSTAGRAM_REDIRECT_URI=https://api.socialaidigital.com/api/connections/instagram/callback
 ```
 
 For local OAuth testing, also allow:
@@ -35,13 +35,14 @@ Restart API after changes: `cd server && npm run dev`
 
 ## 2. Render (production)
 
-**Render → voxa-api → Environment:**
+**Render → API service → Environment:**
 
 | Key | Value |
 |-----|--------|
 | `META_INSTAGRAM_APP_ID` | `1102250409082500` |
 | `META_INSTAGRAM_APP_SECRET` | Full Instagram app secret (from Meta Dashboard) |
-| `META_INSTAGRAM_REDIRECT_URI` | `https://socialiq-37aa.onrender.com/api/connections/instagram/callback` |
+| `META_INSTAGRAM_REDIRECT_URI` | `https://api.socialaidigital.com/api/connections/instagram/callback` |
+| `SERVER_URL` | `https://api.socialaidigital.com` |
 
 Keep `META_APP_ID` / `META_APP_SECRET` unchanged for Facebook Page connect.
 
@@ -92,7 +93,7 @@ Comment sync uses **Sync comments** on Connect, not Instagram webhooks.
 
 Add OAuth redirect URIs here (Business login settings / OAuth redirect URIs):
 
-- `https://socialiq-37aa.onrender.com/api/connections/instagram/callback`
+- `https://api.socialaidigital.com/api/connections/instagram/callback`
 - `http://localhost:5001/api/connections/instagram/callback` (local dev)
 
 Voxa route: `GET /api/connections/instagram/callback` — OAuth return after user logs in at instagram.com.
@@ -197,7 +198,7 @@ Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff 
 
 1. Instagram → API setup with Instagram login
 2. **Section 2 — Configure webhooks:** clear Callback URL and Verify token; do not click Verify and save
-3. **Section 3 — Set up Instagram business login:** add OAuth redirect URI `https://socialiq-37aa.onrender.com/api/connections/instagram/callback`
+3. **Section 3 — Set up Instagram business login:** add OAuth redirect URI `https://api.socialaidigital.com/api/connections/instagram/callback`
 4. In Voxa → Connect → **Connect with Instagram** (not Meta Verify)
 
 ## What NOT to do
