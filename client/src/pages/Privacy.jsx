@@ -7,9 +7,9 @@ export default function Privacy() {
   return (
     <LegalPage title="Privacy Policy" updated="16 August 2026">
       <p>
-        Voxa (“we”, “our”) is a revenue intelligence dashboard that helps brands read, categorize,
+        SocialAiDigital (“we”, “our”) is a revenue intelligence dashboard that helps brands read, categorize,
         and reply to comments from connected social accounts. This policy explains what we collect
-        and how we use it when you use Voxa, including Facebook Login and related Meta APIs.
+        and how we use it when you use SocialAiDigital, including Facebook Login and related Meta APIs.
       </p>
 
       <h2>Information we collect</h2>
@@ -42,7 +42,7 @@ export default function Privacy() {
       </ul>
 
       <h2>Sharing</h2>
-      <p>We do not sell your personal data. We share data only as needed to run Voxa:</p>
+      <p>We do not sell your personal data. We share data only as needed to run SocialAiDigital:</p>
       <ul>
         <li>Meta (Facebook/Instagram APIs) and Google (YouTube) when you connect those accounts.</li>
         <li>OpenAI, if an API key is configured, for comment analysis.</li>

@@ -47,7 +47,7 @@ export default function ResetPassword() {
             <span className="logo-mark" aria-hidden="true">
               <span />
             </span>
-            Voxa
+            SocialAiDigital
           </Link>
           <h1>Invalid reset link</h1>
           <p>This password reset link is missing or incomplete.</p>
@@ -66,7 +66,7 @@ export default function ResetPassword() {
           <span className="logo-mark" aria-hidden="true">
             <span />
           </span>
-          Voxa
+          SocialAiDigital
         </Link>
         <h1>Set a new password</h1>
         <p>Choose a new password for your account.</p>

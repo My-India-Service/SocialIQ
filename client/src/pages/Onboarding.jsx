@@ -162,13 +162,13 @@ export default function Onboarding() {
           <span className="logo-mark" aria-hidden="true">
             <span />
           </span>
-          Voxa
+          SocialAiDigital
         </Link>
         <OnboardingShell
           step={1}
           totalSteps={ONBOARDING_STEPS}
           title="Your AI Sales Agent"
-          subtitle="Voxa turns Instagram & YouTube comments into DM conversations, qualified leads, and tracked sales."
+          subtitle="SocialAiDigital turns Instagram & YouTube comments into DM conversations, qualified leads, and tracked sales."
           onContinue={handleContinue}
           busy={busy}
         >

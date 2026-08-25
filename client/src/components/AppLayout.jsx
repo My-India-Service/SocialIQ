@@ -6,7 +6,7 @@ export default function AppLayout() {
   const { user, token, loading, logout } = useAuth();
 
   if (loading) {
-    return <div className="loading-screen">Loading Voxa…</div>;
+    return <div className="loading-screen">Loading SocialAiDigital…</div>;
   }
 
   // JWT still present (e.g. after OAuth return) but /me briefly failed — do not send to login.
@@ -29,7 +29,7 @@ export default function AppLayout() {
           <span className="logo-mark" aria-hidden="true">
             <span />
           </span>
-          Voxa
+          SocialAiDigital
         </NavLink>
         <nav className="side-nav">
           <NavLink to="/app" end>

@@ -50,7 +50,7 @@ export default function Landing() {
               <span className="logo-mark" aria-hidden="true">
                 <span />
               </span>
-              Voxa
+              SocialAiDigital
             </Link>
             <div className="nav-links">
               <a href="#how" className="btn btn-ghost btn-sm lq-nav-link">
@@ -76,7 +76,7 @@ export default function Landing() {
               <p className="lq-trust">{TRUST_BADGE}</p>
               <h1>AI Sales Agent for Social Media</h1>
               <p className="lq-lead">
-                Every comment is a potential customer. Voxa detects buying intent — including Hinglish —
+                Every comment is a potential customer. SocialAiDigital detects buying intent — including Hinglish —
                 replies publicly, sells in DM, qualifies leads, and tracks ₹ sales influenced.
               </p>
               <div className="hero-cta">
@@ -108,7 +108,7 @@ export default function Landing() {
         <div className="container">
           <div className="lq-section-head">
             <p className="lq-kicker">How it works</p>
-            <h2>How Voxa turns comments into revenue</h2>
+            <h2>How SocialAiDigital turns comments into revenue</h2>
           </div>
           <div className="lq-steps">
             {HOW_IT_WORKS.map((step, i) => (
@@ -146,7 +146,7 @@ export default function Landing() {
         <div className="container">
           <div className="lq-section-head">
             <p className="lq-kicker">Reviews</p>
-            <h2>What brands say about Voxa</h2>
+            <h2>What brands say about SocialAiDigital</h2>
           </div>
           <div className="lq-testimonials">
             {TESTIMONIALS.map((t) => (
@@ -241,7 +241,7 @@ export default function Landing() {
       <section className="lq-cta-band">
         <div className="container">
           <h2>Turn comments into revenue today</h2>
-          <p>Start with Voxa — connect channels, sync comments, and unlock your revenue inbox.</p>
+          <p>Start with SocialAiDigital — connect channels, sync comments, and unlock your revenue inbox.</p>
           <Link to="/register" className="btn btn-citrus">
             Start free
           </Link>
@@ -249,7 +249,7 @@ export default function Landing() {
       </section>
 
       <footer className="footer container lq-footer">
-        <span>© {new Date().getFullYear()} Voxa</span>
+        <span>© {new Date().getFullYear()} SocialAiDigital</span>
         <span>
           <Link to="/about">About</Link>
           {' · '}

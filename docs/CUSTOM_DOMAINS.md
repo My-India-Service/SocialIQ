@@ -105,5 +105,36 @@ https://api.socialaidigital.com/api/instagram/webhook
 - [ ] Login works (no CORS errors)
 - [ ] Connect YouTube / Instagram returns to **www** with session
 - [ ] Settings → WhatsApp Callback URL shows `https://api.socialaidigital.com/api/whatsapp/webhook`
+- [ ] Google OAuth branding verified (see section 7)
 
 See also: [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md), [META_INSTAGRAM_SETUP.md](./META_INSTAGRAM_SETUP.md), [WHATSAPP_WEBHOOK.md](./WHATSAPP_WEBHOOK.md).
+
+---
+
+## 7. Google OAuth branding (Search Console + app name)
+
+Google rejects verification if the **OAuth app name** does not match the **homepage**, or if the homepage domain is not verified to your Google account.
+
+### App name (must match exactly)
+
+| Place | Value |
+|-------|-------|
+| Google Cloud → Auth → Branding → App name | `SocialAiDigital` (not "Social AI Digital") |
+| Live homepage wordmark / title | `SocialAiDigital` |
+| Application home page | `https://www.socialaidigital.com` |
+| Privacy policy | `https://www.socialaidigital.com/privacy` |
+
+### Verify domain ownership
+
+1. Open [Google Search Console](https://search.google.com/search-console)
+2. Add property: domain `socialaidigital.com` **or** URL prefix `https://www.socialaidigital.com`
+3. Prefer **DNS TXT** verification in Cloudflare (same zone as your CNAMEs)
+4. Wait until Search Console shows **Verified**
+5. Redeploy the static site so Google can crawl the updated SocialAiDigital homepage
+6. Google Cloud → Branding → **I have fixed the issues** → Proceed / re-verify
+
+Authorized YouTube redirect URI (separate from branding):
+
+```
+https://api.socialaidigital.com/api/connections/youtube/callback
+```

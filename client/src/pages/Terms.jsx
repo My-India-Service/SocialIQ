@@ -7,14 +7,14 @@ export default function Terms() {
   return (
     <LegalPage title="Terms of Service" updated="16 August 2026">
       <p>
-        These terms govern your use of Voxa, including connecting social accounts through Facebook
+        These terms govern your use of SocialAiDigital, including connecting social accounts through Facebook
         Login, Instagram, and YouTube. By creating an account or using the product, you agree to
         them.
       </p>
 
       <h2>The service</h2>
       <p>
-        Voxa helps you ingest comments from connected Pages and channels, categorize buying intent,
+        SocialAiDigital helps you ingest comments from connected Pages and channels, categorize buying intent,
         and draft replies. Features depend on third-party APIs remaining available and on the
         permissions you grant.
       </p>
@@ -29,7 +29,7 @@ export default function Terms() {
       <h2>OAuth and permissions</h2>
       <p>
         When you click Connect, Meta or Google may ask for scopes such as reading Page comments or
-        YouTube comment threads. You can revoke access in those platforms and in Voxa Connect.
+        YouTube comment threads. You can revoke access in those platforms and in SocialAiDigital Connect.
         Tokens are stored only to sync data you requested.
       </p>
 
@@ -37,20 +37,20 @@ export default function Terms() {
       <p>
         Facebook, Instagram, and YouTube are operated by Meta and Google. Graph or YouTube APIs may
         return incomplete data (for example comments visible in Comments Manager but not via Graph
-        while an app is in Development mode or before App Review). Voxa does not guarantee that
+        while an app is in Development mode or before App Review). SocialAiDigital does not guarantee that
         every comment on a platform will appear in the inbox.
       </p>
 
       <h2>Acceptable use</h2>
       <ul>
-        <li>Do not use Voxa to spam, harass, or violate platform policies.</li>
+        <li>Do not use SocialAiDigital to spam, harass, or violate platform policies.</li>
         <li>Do not attempt to access other customers’ workspaces or bypass authentication.</li>
-        <li>Do not scrape or resell data obtained through Voxa except as allowed for your own brand operations.</li>
+        <li>Do not scrape or resell data obtained through SocialAiDigital except as allowed for your own brand operations.</li>
       </ul>
 
       <h2>Limitation of liability</h2>
       <p>
-        Voxa is provided as-is. We are not liable for outages, Meta/Google API changes, missed
+        SocialAiDigital is provided as-is. We are not liable for outages, Meta/Google API changes, missed
         comments, or business results from suggested replies. To the extent permitted by law,
         liability is limited to fees you paid us in the prior three months (if any).
       </p>

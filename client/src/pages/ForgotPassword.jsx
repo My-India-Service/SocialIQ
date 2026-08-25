@@ -37,7 +37,7 @@ export default function ForgotPassword() {
           <span className="logo-mark" aria-hidden="true">
             <span />
           </span>
-          Voxa
+          SocialAiDigital
         </Link>
         <h1>Forgot password</h1>
         <p>Enter your email and we will send you a reset link.</p>

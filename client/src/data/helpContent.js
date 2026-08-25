@@ -1,7 +1,7 @@
 /** Main job of the product — shown on About and in-app Help. */
 export const MAIN_OBJECTIVE = {
   title: 'AI Sales Agent for Social Media',
-  body: 'Every comment is a potential customer. Voxa detects purchase intent in Instagram, YouTube, Facebook, and WhatsApp comments — including Hinglish like “kitne ka hai?” and “COD hai?” — replies in your brand tone, sends details in DM, qualifies the lead, and tracks ₹ sales influenced.',
+  body: 'Every comment is a potential customer. SocialAiDigital detects purchase intent in Instagram, YouTube, Facebook, and WhatsApp comments — including Hinglish like “kitne ka hai?” and “COD hai?” — replies in your brand tone, sends details in DM, qualifies the lead, and tracks ₹ sales influenced.',
 };
 
 export const OBJECTIVES = [

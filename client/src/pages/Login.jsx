@@ -45,7 +45,7 @@ export default function Login() {
           <span className="logo-mark" aria-hidden="true">
             <span />
           </span>
-          Voxa
+          SocialAiDigital
         </Link>
         <h1>Welcome back</h1>
         <p>Log in to your revenue intelligence dashboard.</p>

@@ -9,7 +9,7 @@ export default function LegalPage({ title, updated, children }) {
             <span className="logo-mark" aria-hidden="true">
               <span />
             </span>
-            Voxa
+            SocialAiDigital
           </Link>
           <div className="nav-links">
             <Link to="/about">About</Link>
@@ -32,7 +32,7 @@ export default function LegalPage({ title, updated, children }) {
       </main>
 
       <footer className="footer container">
-        <span>© {new Date().getFullYear()} Voxa</span>
+        <span>© {new Date().getFullYear()} SocialAiDigital</span>
         <span>
           <Link to="/about">About</Link>
           {' · '}

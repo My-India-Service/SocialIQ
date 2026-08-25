@@ -50,9 +50,9 @@ export default function Register() {
           <span className="logo-mark" aria-hidden="true">
             <span />
           </span>
-          Voxa
+          SocialAiDigital
         </Link>
-        <h1>Start with Voxa</h1>
+        <h1>Start with SocialAiDigital</h1>
         <p>Connect social comments. Capture sales. Catch complaints early.</p>
         {error && <div className="error-banner">{error}</div>}
         <form className="form-stack" onSubmit={onSubmit}>
