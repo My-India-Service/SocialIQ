@@ -1,6 +1,7 @@
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { needsOnboarding } from '../utils/onboarding';
+import BrandLogo from './BrandLogo';
 
 export default function AppLayout() {
   const { user, token, loading, logout } = useAuth();
@@ -26,10 +27,7 @@ export default function AppLayout() {
     <div className="app-shell">
       <aside className="sidebar">
         <NavLink to="/app" className="logo" end>
-          <span className="logo-mark" aria-hidden="true">
-            <span />
-          </span>
-          SocialAiDigital
+          <BrandLogo />
         </NavLink>
         <nav className="side-nav">
           <NavLink to="/app" end>

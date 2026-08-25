@@ -11,6 +11,7 @@ import {
   TRUST_BADGE,
 } from '../data/landingContent';
 import PhoneMockup from '../components/landing/PhoneMockup';
+import BrandLogo from '../components/BrandLogo';
 
 function LandingFaq({ items }) {
   const [open, setOpen] = useState(0);
@@ -47,10 +48,7 @@ export default function Landing() {
         <div className="container">
           <nav className="nav lq-nav">
             <Link to="/" className="logo">
-              <span className="logo-mark" aria-hidden="true">
-                <span />
-              </span>
-              SocialAiDigital
+              <BrandLogo />
             </Link>
             <div className="nav-links">
               <a href="#how" className="btn btn-ghost btn-sm lq-nav-link">

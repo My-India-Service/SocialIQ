@@ -56,7 +56,7 @@ export const GUIDE_STEPS = [
 
 export const FAQS = [
   {
-    q: 'What is the main objective of Voxa?',
+    q: 'What is the main objective of SocialAiDigital?',
     a: 'Turn social comments into revenue: find people who want to buy, reply fast in brand voice, and send hot leads to sales before the thread goes cold.',
   },
   {
@@ -77,10 +77,10 @@ export const FAQS = [
   },
   {
     q: 'How do I set the WhatsApp webhook?',
-    a: 'You paste Voxa’s Callback URL into Meta (API host + /api/whatsapp/webhook). The verify token is a string you invent — same in META_WEBHOOK_VERIFY_TOKEN and the Meta form. Then Enable inbox in Settings.',
+    a: 'You paste SocialAiDigital’s Callback URL into Meta (API host + /api/whatsapp/webhook). The verify token is a string you invent — same in META_WEBHOOK_VERIFY_TOKEN and the Meta form. Then Enable inbox in Settings.',
   },
   {
-    q: 'Is WhatsApp a CRM in Voxa?',
+    q: 'Is WhatsApp a CRM in SocialAiDigital?',
     a: 'No. WhatsApp is (1) inbound messages into the shared Inbox and (2) outbound hot-lead alerts to your sales notify phone. CRM is a separate webhook URL that receives a JSON lead payload — there is no contacts/deals pipeline in the app.',
   },
   {
@@ -89,7 +89,7 @@ export const FAQS = [
   },
   {
     q: 'How is purchase intent calculated?',
-    a: 'Each new comment is categorized (sales, complaint, feature, etc.) with a 0–100 purchase probability. With OPENAI_API_KEY Voxa uses an LLM; otherwise rules.',
+    a: 'Each new comment is categorized (sales, complaint, feature, etc.) with a 0–100 purchase probability. With OPENAI_API_KEY SocialAiDigital uses an LLM; otherwise rules.',
   },
   {
     q: 'Where do I change my plan?',
@@ -97,15 +97,15 @@ export const FAQS = [
   },
   {
     q: 'What does Regenerate do on a suggested reply?',
-    a: 'It drafts a new suggested reply only (does not change category). Without OPENAI_API_KEY it cycles brand-tone templates; with OpenAI it asks for a different AI draft. Save reply & mark done still only updates Voxa — it does not post to YouTube/IG/WhatsApp.',
+    a: 'It drafts a new suggested reply only (does not change category). Without OPENAI_API_KEY it cycles brand-tone templates; with OpenAI it asks for a different AI draft. Save reply & mark done still only updates SocialAiDigital — it does not post to YouTube/IG/WhatsApp.',
   },
   {
     q: 'What does Save reply & mark done / Replied status mean?',
-    a: 'Internal team tracking only. It saves your draft and sets status to Replied in Voxa. Use Post reply & mark done to publish on YouTube, Facebook, or Instagram in one click — or Copy reply and paste manually. Save without posting updates Voxa only.',
+    a: 'Internal team tracking only. It saves your draft and sets status to Replied in SocialAiDigital. Use Post reply & mark done to publish on YouTube, Facebook, or Instagram in one click — or Copy reply and paste manually. Save without posting updates SocialAiDigital only.',
   },
   {
     q: 'What does Post reply & mark done do?',
-    a: 'Posts your suggested reply on YouTube, Facebook, or Instagram via official APIs, then marks Replied in Voxa. WhatsApp still needs manual copy. If Meta rejects the post, reconnect on Connect (pages_manage_engagement / instagram_manage_comments). You cannot post twice — use Copy reply to edit on the platform.',
+    a: 'Posts your suggested reply on YouTube, Facebook, or Instagram via official APIs, then marks Replied in SocialAiDigital. WhatsApp still needs manual copy. If Meta rejects the post, reconnect on Connect (pages_manage_engagement / instagram_manage_comments). You cannot post twice — use Copy reply to edit on the platform.',
   },
   {
     q: 'How does auto-reply on sync work?',
@@ -113,7 +113,7 @@ export const FAQS = [
   },
   {
     q: 'How does the Instagram sales agent work (like Delulu)?',
-    a: 'Settings → Instagram sales agent. On sync, when a comment matches your global keywords (LINK, price, dm) or Hinglish AI intent (kitne ka, COD hai), Voxa posts your public reply template on the comment and sends catalogue/link details in DM. Per-reel keyword triggers: Insights → Set trigger. Requires Growth plan; real DMs need Meta App Review for instagram_business_manage_messages.',
+    a: 'Settings → Instagram sales agent. On sync, when a comment matches your global keywords (LINK, price, dm) or Hinglish AI intent (kitne ka, COD hai), SocialAiDigital posts your public reply template on the comment and sends catalogue/link details in DM. Per-reel keyword triggers: Insights → Set trigger. Requires Growth plan; real DMs need Meta App Review for instagram_business_manage_messages.',
   },
   {
     q: 'What is the full Reel → Sale loop?',

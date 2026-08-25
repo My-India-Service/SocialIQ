@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import BrandLogo from '../components/BrandLogo';
 
 export default function ResetPassword() {
   const { user } = useAuth();
@@ -44,10 +45,7 @@ export default function ResetPassword() {
       <div className="auth-page">
         <div className="auth-panel">
           <Link to="/" className="logo">
-            <span className="logo-mark" aria-hidden="true">
-              <span />
-            </span>
-            SocialAiDigital
+            <BrandLogo />
           </Link>
           <h1>Invalid reset link</h1>
           <p>This password reset link is missing or incomplete.</p>
@@ -63,10 +61,7 @@ export default function ResetPassword() {
     <div className="auth-page">
       <div className="auth-panel">
         <Link to="/" className="logo">
-          <span className="logo-mark" aria-hidden="true">
-            <span />
-          </span>
-          SocialAiDigital
+          <BrandLogo />
         </Link>
         <h1>Set a new password</h1>
         <p>Choose a new password for your account.</p>

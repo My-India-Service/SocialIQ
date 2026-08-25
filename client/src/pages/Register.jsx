@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { postAuthPath, needsOnboarding } from '../utils/onboarding';
+import BrandLogo from '../components/BrandLogo';
 
 export default function Register() {
   const { user, loginSuccess } = useAuth();
@@ -47,10 +48,7 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-panel">
         <Link to="/" className="logo">
-          <span className="logo-mark" aria-hidden="true">
-            <span />
-          </span>
-          SocialAiDigital
+          <BrandLogo />
         </Link>
         <h1>Start with SocialAiDigital</h1>
         <p>Connect social comments. Capture sales. Catch complaints early.</p>

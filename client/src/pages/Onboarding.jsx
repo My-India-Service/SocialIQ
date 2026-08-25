@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import OnboardingShell from '../components/onboarding/OnboardingShell';
 import PhoneMockup from '../components/landing/PhoneMockup';
+import BrandLogo from '../components/BrandLogo';
 import {
   GOAL_OPTIONS,
   ONBOARDING_STEPS,
@@ -159,10 +160,7 @@ export default function Onboarding() {
     return (
       <div className="onboarding-page">
         <Link to="/" className="logo onboarding-logo">
-          <span className="logo-mark" aria-hidden="true">
-            <span />
-          </span>
-          SocialAiDigital
+          <BrandLogo />
         </Link>
         <OnboardingShell
           step={1}

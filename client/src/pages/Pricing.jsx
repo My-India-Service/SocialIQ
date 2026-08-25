@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PLANS } from '../data/plans';
+import BrandLogo from '../components/BrandLogo';
 
 function planCta(plan, loggedIn) {
   if (plan.contactSales) {
@@ -25,10 +26,7 @@ export default function Pricing() {
       <header className="legal-top">
         <div className="container legal-nav">
           <Link to="/" className="logo">
-            <span className="logo-mark" aria-hidden="true">
-              <span />
-            </span>
-            SocialAiDigital
+            <BrandLogo />
           </Link>
           <div className="nav-links">
             <Link to="/about">About</Link>

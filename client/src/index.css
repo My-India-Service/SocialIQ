@@ -132,6 +132,28 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-logo-img {
+  height: 2rem;
+  width: auto;
+  max-width: 11rem;
+  object-fit: contain;
+  display: block;
+}
+
+.sidebar .brand-logo-img,
+.onboarding-logo .brand-logo-img {
+  height: 2.25rem;
+  max-width: 12rem;
+}
+
+.auth-panel .brand-logo-img {
+  height: 2.5rem;
+  max-width: 13rem;
+  margin-bottom: 0.25rem;
 }
 
 .logo-mark {
@@ -2026,11 +2048,20 @@ button.stat:hover {
 }
 
 .lq-faq-section .faq-item {
+  background: #fff;
   border-color: rgba(255, 255, 255, 0.1);
 }
 
 .lq-faq-section .faq-q {
-  color: #f5f5f7;
+  color: var(--ink);
+}
+
+.lq-faq-section .faq-q span {
+  color: var(--muted);
+}
+
+.lq-faq-section .faq-a {
+  color: var(--ink-soft);
 }
 
 .lq-faq-more {

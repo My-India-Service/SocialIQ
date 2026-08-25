@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import BrandLogo from '../components/BrandLogo';
 
 export default function ForgotPassword() {
   const { user } = useAuth();
@@ -34,10 +35,7 @@ export default function ForgotPassword() {
     <div className="auth-page">
       <div className="auth-panel">
         <Link to="/" className="logo">
-          <span className="logo-mark" aria-hidden="true">
-            <span />
-          </span>
-          SocialAiDigital
+          <BrandLogo />
         </Link>
         <h1>Forgot password</h1>
         <p>Enter your email and we will send you a reset link.</p>

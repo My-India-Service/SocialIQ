@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { needsOnboarding, postAuthPath } from '../utils/onboarding';
+import BrandLogo from '../components/BrandLogo';
 
 export default function Login() {
   const { user, loginSuccess } = useAuth();
@@ -42,10 +43,7 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-panel">
         <Link to="/" className="logo">
-          <span className="logo-mark" aria-hidden="true">
-            <span />
-          </span>
-          SocialAiDigital
+          <BrandLogo />
         </Link>
         <h1>Welcome back</h1>
         <p>Log in to your revenue intelligence dashboard.</p>

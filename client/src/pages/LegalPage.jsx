@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BrandLogo from '../components/BrandLogo';
 
 export default function LegalPage({ title, updated, children }) {
   return (
@@ -6,10 +7,7 @@ export default function LegalPage({ title, updated, children }) {
       <header className="legal-top">
         <div className="container legal-nav">
           <Link to="/" className="logo">
-            <span className="logo-mark" aria-hidden="true">
-              <span />
-            </span>
-            SocialAiDigital
+            <BrandLogo />
           </Link>
           <div className="nav-links">
             <Link to="/about">About</Link>
