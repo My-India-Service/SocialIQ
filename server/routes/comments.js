@@ -24,13 +24,17 @@ function postReplyHttpStatus(err) {
 function formatPostReplyError(err) {
   let message = err.message || 'Post failed';
   const status = postReplyHttpStatus(err);
-  if (
-    (status === 403 || status === 401) &&
-    !/connect/i.test(message)
-  ) {
+  const code = err.code;
+  if (status === 429 || code === 429 || code === 4 || code === 17 || code === 32) {
+    message = 'Meta rate limit — wait a minute and try again.';
+  } else if (status === 409) {
+    message =
+      err.message ||
+      'Reply already posted on this comment — use Copy reply to edit on the platform.';
+  } else if ((status === 403 || status === 401) && !/connect/i.test(message)) {
     message += ' Open Connect to reconnect your account.';
   }
-  return { message, status };
+  return { message, status: status === 429 ? 429 : status };
 }
 
 function commentListFilter(userId, query) {
@@ -364,13 +368,15 @@ router.post('/:id/post-reply', async (req, res) => {
     const { platformReplyId } = await postCommentReplyToPlatform(
       req.userId,
       comment,
-      message
+      message,
+      { pace: false }
     );
 
     comment.suggestedReply = String(message).trim();
     comment.status = 'replied';
     comment.platformReplyId = platformReplyId;
     comment.postedReplyAt = new Date();
+    comment.replyClaimedAt = undefined;
     await comment.save();
 
     res.json({ comment, posted: true, platformReplyId });

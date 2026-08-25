@@ -139,7 +139,8 @@ export default function Connections() {
       }
       await load();
     } catch (err) {
-      setError(err.message);
+      const msg = err.message || 'Sync failed';
+      setError(err.status === 429 || /cooldown/i.test(msg) ? `Sync paused — ${msg}` : msg);
     } finally {
       setSyncing('');
     }

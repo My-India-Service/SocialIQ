@@ -6,10 +6,12 @@ import { buildAutoDmPreview } from './ai.js';
 import { planHasSalesAgent } from '../config/plans.js';
 import {
   canAutoReplyToday,
+  dailyAutoReplyLimitMessage,
   isAlreadyPosted,
   postCommentReplyToPlatform,
   recordAutoReplySuccess,
 } from './postReply.js';
+import { paceOutboundMetaWrite, fetchGraphWithBackoff } from './metaSafe.js';
 import { incrementCampaignTrigger } from './campaignTriggers.js';
 
 export function isInstagramMessagingConfigured() {
@@ -32,18 +34,13 @@ async function instagramGraphPost(connection, path, body = {}) {
   const url = new URL(`${base}/${path}`);
   url.searchParams.set('access_token', token);
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    const err = new Error(data.error?.message || `Instagram API error (${res.status})`);
-    err.code = data.error?.code || res.status;
-    throw err;
-  }
-  return data;
+  return fetchGraphWithBackoff(() =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  );
 }
 
 /**
@@ -118,6 +115,7 @@ export async function runInstagramSalesAgentFlow({ user, comment, connection, ca
       comment.suggestedReply = message;
       comment.platformReplyId = platformReplyId;
       comment.postedReplyAt = new Date();
+      comment.replyClaimedAt = undefined;
       if (comment.status !== 'sent_to_sales') comment.status = 'replied';
       publicReplyPosted = true;
       recordAutoReplySuccess(user);
@@ -129,11 +127,20 @@ export async function runInstagramSalesAgentFlow({ user, comment, connection, ca
   }
 
   if (isInstagramMessagingConfigured() && comment.externalId && comment.platform === 'instagram') {
-    try {
-      dmResult = await sendPrivateReplyToComment(connection, comment.externalId, dmText);
-    } catch (err) {
-      dmError = err.message;
-      console.warn('[instagramMessaging] private reply failed:', err.message);
+    if (!canAutoReplyToday(user)) {
+      dmError = dailyAutoReplyLimitMessage(user);
+    } else {
+      try {
+        await paceOutboundMetaWrite();
+        dmResult = await sendPrivateReplyToComment(connection, comment.externalId, dmText);
+        if (dmResult) {
+          recordAutoReplySuccess(user);
+          await user.save();
+        }
+      } catch (err) {
+        dmError = err.message;
+        console.warn('[instagramMessaging] private reply failed:', err.message);
+      }
     }
   }
 

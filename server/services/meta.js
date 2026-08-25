@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import Connection from '../models/Connection.js';
 import { getValidInstagramDirectAccessToken } from './instagramLogin.js';
+import { fetchGraphWithBackoff } from './metaSafe.js';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const IG_GRAPH = 'https://graph.instagram.com/v21.0';
@@ -84,32 +85,20 @@ async function graphGet(path, accessToken, params = {}) {
     if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   }
 
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    const err = new Error(data.error?.message || `Meta Graph API error (${res.status})`);
-    err.code = data.error?.code || res.status;
-    throw err;
-  }
-  return data;
+  return fetchGraphWithBackoff(() => fetch(url));
 }
 
 async function graphPost(path, accessToken, body = {}) {
   const url = new URL(path.startsWith('http') ? path : `${GRAPH}/${path}`);
   url.searchParams.set('access_token', accessToken);
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    const err = new Error(data.error?.message || `Meta Graph API error (${res.status})`);
-    err.code = data.error?.code || res.status;
-    throw err;
-  }
-  return data;
+  return fetchGraphWithBackoff(() =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  );
 }
 
 function isMetaTokenError(message = '', code) {
@@ -157,32 +146,20 @@ async function instagramGraphGetRaw(base, path, accessToken, params = {}) {
     if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   }
 
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    const err = new Error(data.error?.message || `Instagram Graph API error (${res.status})`);
-    err.code = data.error?.code || res.status;
-    throw err;
-  }
-  return data;
+  return fetchGraphWithBackoff(() => fetch(url));
 }
 
 async function instagramGraphPostRaw(base, path, accessToken, body = {}) {
   const url = new URL(path.startsWith('http') ? path : `${base}/${path}`);
   url.searchParams.set('access_token', accessToken);
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok || data.error) {
-    const err = new Error(data.error?.message || `Instagram Graph API error (${res.status})`);
-    err.code = data.error?.code || res.status;
-    throw err;
-  }
-  return data;
+  return fetchGraphWithBackoff(() =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  );
 }
 
 async function instagramGraphGet(connection, path, params = {}) {

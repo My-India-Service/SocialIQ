@@ -77,6 +77,8 @@ const commentSchema = new mongoose.Schema(
     revenueAttributed: { type: Number, default: 0, min: 0 },
     /** Platform comment id after a successful post-reply. */
     platformReplyId: { type: String, default: '' },
+    /** When platformReplyId was set to "pending" for idempotent claim. */
+    replyClaimedAt: { type: Date },
     postedReplyAt: { type: Date },
     postedAt: { type: Date, default: Date.now },
   },

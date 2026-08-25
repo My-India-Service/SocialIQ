@@ -6,6 +6,12 @@ import {
   resolveHandoff,
 } from './handoff.js';
 import { sendInstagramDm, findInstagramConnection } from './instagramMessaging.js';
+import {
+  canAutoReplyToday,
+  dailyAutoReplyLimitMessage,
+  recordAutoReplySuccess,
+} from './postReply.js';
+import { paceOutboundMetaWrite } from './metaSafe.js';
 
 const COD_YES = /\b(cod|cash on delivery)\b/i;
 const COD_NO = /\b(prepaid|online pay|upi only|no cod)\b/i;
@@ -157,15 +163,22 @@ export async function processInboundDmMessage({ user, conversation, text, sendDm
     conversation.instagramUserId &&
     process.env.META_INSTAGRAM_MESSAGING_ENABLED === 'true'
   ) {
-    try {
-      const connection = await findInstagramConnection(user._id || user.id);
-      if (connection) {
-        await sendInstagramDm(connection, conversation.instagramUserId, agentReply);
-        dmSent = true;
+    if (!canAutoReplyToday(user)) {
+      dmError = dailyAutoReplyLimitMessage(user);
+    } else {
+      try {
+        const connection = await findInstagramConnection(user._id || user.id);
+        if (connection) {
+          await paceOutboundMetaWrite();
+          await sendInstagramDm(connection, conversation.instagramUserId, agentReply);
+          dmSent = true;
+          recordAutoReplySuccess(user);
+          await user.save();
+        }
+      } catch (err) {
+        dmError = err.message;
+        console.warn('[conversationAgent] DM send failed:', err.message);
       }
-    } catch (err) {
-      dmError = err.message;
-      console.warn('[conversationAgent] DM send failed:', err.message);
     }
   }
 
@@ -193,19 +206,32 @@ export async function sendHandoffNow({ user, conversation }) {
   await conversation.save();
 
   let dmSent = false;
+  let dmError = null;
   if (
     conversation.platform === 'instagram' &&
     conversation.instagramUserId &&
     process.env.META_INSTAGRAM_MESSAGING_ENABLED === 'true'
   ) {
-    const connection = await findInstagramConnection(user._id || user.id);
-    if (connection) {
-      await sendInstagramDm(connection, conversation.instagramUserId, agentReply);
-      dmSent = true;
+    if (!canAutoReplyToday(user)) {
+      dmError = dailyAutoReplyLimitMessage(user);
+    } else {
+      try {
+        const connection = await findInstagramConnection(user._id || user.id);
+        if (connection) {
+          await paceOutboundMetaWrite();
+          await sendInstagramDm(connection, conversation.instagramUserId, agentReply);
+          dmSent = true;
+          recordAutoReplySuccess(user);
+          await user.save();
+        }
+      } catch (err) {
+        dmError = err.message;
+        console.warn('[conversationAgent] handoff DM failed:', err.message);
+      }
     }
   }
 
-  return { conversation, agentReply, dmSent, handoff };
+  return { conversation, agentReply, dmSent, dmError, handoff };
 }
 
 export async function convertConversation({ user, conversation, orderValue }) {

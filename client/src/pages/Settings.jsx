@@ -143,7 +143,7 @@ export default function Settings() {
     user?.integrations?.autoReplyThreshold ?? 80
   );
   const [autoReplyDailyLimit, setAutoReplyDailyLimit] = useState(
-    user?.integrations?.autoReplyDailyLimit ?? 50
+    user?.integrations?.autoReplyDailyLimit ?? 20
   );
   const [autoDmEnabled, setAutoDmEnabled] = useState(Boolean(user?.autoDm?.enabled));
   const [publicReplyTemplate, setPublicReplyTemplate] = useState(
@@ -183,7 +183,7 @@ export default function Settings() {
       hotLeadThreshold: user?.integrations?.hotLeadThreshold ?? 80,
       autoReplyEnabled: Boolean(user?.integrations?.autoReplyEnabled),
       autoReplyThreshold: user?.integrations?.autoReplyThreshold ?? 80,
-      autoReplyDailyLimit: user?.integrations?.autoReplyDailyLimit ?? 50,
+      autoReplyDailyLimit: user?.integrations?.autoReplyDailyLimit ?? 20,
       autoDmEnabled: Boolean(user?.autoDm?.enabled),
       publicReplyTemplate: user?.autoDm?.publicReplyTemplate || 'Sent you the details in DM ❤️',
       globalKeywords: (user?.autoDm?.keywords || ['price', 'link', 'dm', 'info']).join(', '),
@@ -679,7 +679,9 @@ export default function Settings() {
           <h2>Auto-reply on YouTube & Facebook</h2>
           <p className="prob">
             On sync, post AI suggested replies for hot leads or sales comments above your
-            threshold. Instagram uses the sales agent below (public stub + DM).
+            threshold. Instagram uses the sales agent below (public stub + DM). Keep this{' '}
+            <strong>off</strong> unless needed — burst auto-replies can look automated to Meta and
+            risk Page/account restrictions. Prefer manual Post reply while cooling down.
           </p>
           <label className="check-row">
             <input
@@ -709,6 +711,15 @@ export default function Settings() {
               onChange={(e) => setAutoReplyDailyLimit(e.target.value)}
             />
           </label>
+          <p className="prob">
+            Public replies and Instagram DMs each count as 1 toward this daily budget.
+          </p>
+          {Number(autoReplyDailyLimit) > 50 ? (
+            <p className="prob" style={{ color: '#a35b00' }}>
+              High daily limits increase Meta automation risk. Prefer 20 or lower while cooling
+              down a warned account.
+            </p>
+          ) : null}
           {user?.integrations?.autoReplyRemainingToday != null ? (
             <p className="prob">
               Remaining today: {user.integrations.autoReplyRemainingToday} auto-replies

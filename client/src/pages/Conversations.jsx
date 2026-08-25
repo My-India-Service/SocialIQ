@@ -49,7 +49,13 @@ export default function Conversations() {
     setBusy(true);
     setError('');
     try {
-      await fn();
+      const result = await fn();
+      if (result?.dmError) {
+        setError(result.dmError);
+      }
+      if (result?.message && /limit|cooldown|rate/i.test(result.message) && !result.dmError) {
+        setError(result.message);
+      }
       await loadList();
       if (selectedId) await loadDetail(selectedId);
     } catch (err) {

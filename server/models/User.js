@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
       /** Post suggested reply on YouTube/Facebook when rules match (sync ingest). */
       autoReplyEnabled: { type: Boolean, default: false },
       autoReplyThreshold: { type: Number, default: 80, min: 0, max: 100 },
-      autoReplyDailyLimit: { type: Number, default: 50, min: 1, max: 500 },
+      autoReplyDailyLimit: { type: Number, default: 20, min: 1, max: 500 },
       autoReplyTodayCount: { type: Number, default: 0, min: 0 },
       autoReplyTodayDate: { type: String, default: '' },
     },

@@ -14,9 +14,11 @@ import {
 } from './campaignTriggers.js';
 import {
   canAutoReplyToday,
+  MAX_AUTO_REPLIES_PER_SYNC,
   postCommentReplyToPlatform,
   recordAutoReplySuccess,
   shouldAutoReply,
+  assertMetaSyncCooldown,
 } from './postReply.js';
 
 export async function ingestRawComments(userId, platform, rawComments, user) {
@@ -26,6 +28,9 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
   let routed = 0;
   let autoReplied = 0;
   let autoReplyFailed = 0;
+  let autoRepliesThisSync = 0;
+  let autoReplySkippedDaily = 0;
+  let autoReplySkippedSyncCap = 0;
 
   const planId = user?.subscription?.planId || 'starter';
   const limit = planCommentLimit(planId);
@@ -95,7 +100,15 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
 
     let salesAgentHandled = false;
 
-    if (platform === 'instagram' && shouldTriggerSalesAgent(user, comment, analysis, campaign)) {
+    if (
+      platform === 'instagram' &&
+      shouldTriggerSalesAgent(user, comment, analysis, campaign)
+    ) {
+      if (autoRepliesThisSync >= MAX_AUTO_REPLIES_PER_SYNC) {
+        autoReplySkippedSyncCap += 1;
+      } else if (!canAutoReplyToday(user)) {
+        autoReplySkippedDaily += 1;
+      } else {
       try {
         const agentResult = await runInstagramSalesAgentFlow({ user, comment, campaign });
         if (agentResult.ok && agentResult.dmSent) {
@@ -104,12 +117,24 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
           comment.autoDmStatus = 'queued';
         }
         if (agentResult.dmText) comment.autoDmPreview = agentResult.dmText;
-        if (agentResult.publicReplyPosted || agentResult.ok) {
+        // Only block fallback when a real Meta write happened
+        if (agentResult.publicReplyPosted || agentResult.dmSent) {
           salesAgentHandled = true;
+        }
+        if (agentResult.publicReplyPosted) {
+          autoRepliesThisSync += 1;
+          autoReplied += 1;
+        }
+        if (agentResult.dmSent) {
+          autoRepliesThisSync += 1;
+        }
+        if (agentResult.dmError && /daily auto-reply limit/i.test(agentResult.dmError)) {
+          autoReplySkippedDaily += 1;
         }
         await comment.save();
       } catch (err) {
         console.warn('Sales agent flow failed:', err.message);
+      }
       }
     }
 
@@ -142,11 +167,12 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
       }
     }
 
-    if (
-      !salesAgentHandled &&
-      shouldAutoReply(user, comment) &&
-      canAutoReplyToday(user)
-    ) {
+    if (!salesAgentHandled && shouldAutoReply(user, comment)) {
+      if (autoRepliesThisSync >= MAX_AUTO_REPLIES_PER_SYNC) {
+        autoReplySkippedSyncCap += 1;
+      } else if (!canAutoReplyToday(user)) {
+        autoReplySkippedDaily += 1;
+      } else {
       const keepSentToSales = comment.status === 'sent_to_sales';
       try {
         const { platformReplyId, message } = await postCommentReplyToPlatform(
@@ -160,20 +186,32 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
         }
         comment.platformReplyId = platformReplyId;
         comment.postedReplyAt = new Date();
+        comment.replyClaimedAt = undefined;
         await comment.save();
         recordAutoReplySuccess(user);
         await user.save();
         autoReplied += 1;
+        autoRepliesThisSync += 1;
       } catch (err) {
         autoReplyFailed += 1;
         console.warn('Auto-reply failed:', err.message);
+      }
       }
     }
 
     imported += 1;
   }
 
-  return { imported, updated, skipped, routed, autoReplied, autoReplyFailed };
+  return {
+    imported,
+    updated,
+    skipped,
+    routed,
+    autoReplied,
+    autoReplyFailed,
+    autoReplySkippedDaily,
+    autoReplySkippedSyncCap,
+  };
 }
 
 async function getOAuthConnection(userId, platform, connectHint) {
@@ -225,6 +263,7 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     'facebook',
     'Click “Connect Facebook” first.'
   );
+  assertMetaSyncCooldown(connection);
   const user = await User.findById(userId);
   const {
     comments: rawComments,
@@ -269,6 +308,7 @@ export async function syncInstagramCommentsForUser(userId, options = {}) {
     'instagram',
     'Click “Connect Instagram” first.'
   );
+  assertMetaSyncCooldown(connection);
   const user = await User.findById(userId);
   const {
     comments: rawComments,

@@ -35,9 +35,9 @@ function publicUser(user) {
       hotLeadThreshold: user.integrations?.hotLeadThreshold ?? 80,
       autoReplyEnabled: Boolean(user.integrations?.autoReplyEnabled),
       autoReplyThreshold: user.integrations?.autoReplyThreshold ?? 80,
-      autoReplyDailyLimit: user.integrations?.autoReplyDailyLimit ?? 50,
+      autoReplyDailyLimit: user.integrations?.autoReplyDailyLimit ?? 20,
       autoReplyRemainingToday: (() => {
-        const limit = user.integrations?.autoReplyDailyLimit ?? 50;
+        const limit = user.integrations?.autoReplyDailyLimit ?? 20;
         const today = new Date().toISOString().slice(0, 10);
         if (user.integrations?.autoReplyTodayDate !== today) return limit;
         return Math.max(0, limit - (user.integrations?.autoReplyTodayCount || 0));
@@ -270,7 +270,7 @@ router.patch('/brand', async (req, res) => {
       if (integrations.autoReplyDailyLimit !== undefined) {
         user.integrations.autoReplyDailyLimit = Math.max(
           1,
-          Math.min(500, Number(integrations.autoReplyDailyLimit) || 50)
+          Math.min(500, Number(integrations.autoReplyDailyLimit) || 20)
         );
       }
       user.markModified('integrations');

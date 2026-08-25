@@ -12,7 +12,7 @@ const baseUser = {
   integrations: {
     autoReplyEnabled: true,
     autoReplyThreshold: 80,
-    autoReplyDailyLimit: 50,
+    autoReplyDailyLimit: 20,
   },
 };
 
@@ -37,6 +37,20 @@ test('isAlreadyPosted detects postedReplyAt or platformReplyId', () => {
   assert.equal(isAlreadyPosted({}), false);
   assert.equal(isAlreadyPosted({ postedReplyAt: new Date() }), true);
   assert.equal(isAlreadyPosted({ platformReplyId: 'abc' }), true);
+  assert.equal(
+    isAlreadyPosted({
+      platformReplyId: 'pending',
+      replyClaimedAt: new Date(),
+    }),
+    true
+  );
+  assert.equal(
+    isAlreadyPosted({
+      platformReplyId: 'pending',
+      replyClaimedAt: new Date(Date.now() - 3 * 60 * 1000),
+    }),
+    false
+  );
 });
 
 test('assertNotAlreadyPosted throws 409 when already posted', () => {

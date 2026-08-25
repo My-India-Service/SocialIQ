@@ -1,5 +1,7 @@
 # Meta Instagram Login setup — My India Service
 
+> **Automation safety / Live go-live:** see [META_AUTOMATION_SAFETY.md](./META_AUTOMATION_SAFETY.md) (sync cooldown, auto-reply caps, Dev vs Live).
+
 Meta app **My India Service** uses **two different App IDs**:
 
 | Credential | Value | Env var |

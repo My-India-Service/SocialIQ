@@ -37,6 +37,12 @@ function appendAutoReplySummary(message, result) {
   if (result.autoReplyFailed > 0) {
     out += ` Auto-reply failed: ${result.autoReplyFailed} (check Connect permissions).`;
   }
+  if (result.autoReplySkippedDaily > 0) {
+    out += ` Auto-reply stopped: daily limit reached (${result.autoReplySkippedDaily} skipped). Raise the limit in Settings or try tomorrow.`;
+  }
+  if (result.autoReplySkippedSyncCap > 0) {
+    out += ` Auto-reply capped at 5 per sync for Meta safety (${result.autoReplySkippedSyncCap} skipped). Sync again later for more.`;
+  }
   return out;
 }
 
@@ -239,9 +245,9 @@ router.get('/instagram/callback', async (req, res) => {
 router.post('/facebook/sync', authRequired, async (req, res) => {
   try {
     const result = await syncFacebookCommentsForUser(req.userId, {
-      maxPosts: Number(req.body?.maxPosts) || 50,
-      maxCommentsPerPost: Number(req.body?.maxCommentsPerPost) || 40,
-      maxScan: Number(req.body?.maxScan) || 250,
+      maxPosts: Number(req.body?.maxPosts) || 20,
+      maxCommentsPerPost: Number(req.body?.maxCommentsPerPost) || 25,
+      maxScan: Number(req.body?.maxScan) || 80,
     });
     const scan =
       typeof result.scannedPosts === 'number'
@@ -261,15 +267,16 @@ router.post('/facebook/sync', authRequired, async (req, res) => {
       message: appendAutoReplySummary(`${base}${hint}`, result),
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    const status = err.status || (err.code === 'SYNC_COOLDOWN' ? 429 : 400);
+    res.status(status).json({ message: err.message, code: err.code });
   }
 });
 
 router.post('/instagram/sync', authRequired, async (req, res) => {
   try {
     const result = await syncInstagramCommentsForUser(req.userId, {
-      maxMedia: Number(req.body?.maxMedia) || 12,
-      maxCommentsPerMedia: Number(req.body?.maxCommentsPerMedia) || 40,
+      maxMedia: Number(req.body?.maxMedia) || 10,
+      maxCommentsPerMedia: Number(req.body?.maxCommentsPerMedia) || 25,
     });
     const scan =
       typeof result.mediaChecked === 'number'
@@ -287,7 +294,8 @@ router.post('/instagram/sync', authRequired, async (req, res) => {
       message: appendAutoReplySummary(`${base}${hint}`, result),
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    const status = err.status || (err.code === 'SYNC_COOLDOWN' ? 429 : 400);
+    res.status(status).json({ message: err.message, code: err.code });
   }
 });
 

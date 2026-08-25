@@ -211,10 +211,10 @@ export default function Dashboard() {
         body: { message },
       });
       setComments((prev) => prev.map((c) => (c._id === id ? data.comment : c)));
-      setNotice('Reply posted on platform & marked done in Voxa');
+      setNotice('Reply posted on platform & marked done');
       await refreshStats();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Post failed');
     } finally {
       setPostingId(null);
     }
