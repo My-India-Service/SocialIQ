@@ -1,4 +1,4 @@
-/** SocialAiDigital brand mark (wordmark included in image). */
+/** SocialAiDigital brand mark (wordmark + tagline included in image). */
 export default function BrandLogo({ className = '', variant = 'default' }) {
   const img = (
     <img

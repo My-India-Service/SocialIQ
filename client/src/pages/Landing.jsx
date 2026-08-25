@@ -40,6 +40,8 @@ function LandingFaq({ items }) {
 
 export default function Landing() {
   const faqPreview = FAQS.slice(0, 6);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <div className="landing landing-quittr">
@@ -47,23 +49,43 @@ export default function Landing() {
         <div className="lq-hero-glow" aria-hidden="true" />
         <div className="container">
           <nav className="nav lq-nav">
-            <Link to="/" className="logo">
-              <BrandLogo variant="onDark" />
+            <Link to="/" className="logo" onClick={closeMenu}>
+              <BrandLogo />
             </Link>
-            <div className="nav-links">
-              <a href="#how" className="btn btn-ghost btn-sm lq-nav-link">
+            <div className="lq-nav-bar-end">
+              <Link to="/register" className="btn btn-citrus btn-sm">
+                Start free
+              </Link>
+              <button
+                type="button"
+                className={`lq-menu-toggle${menuOpen ? ' is-open' : ''}`}
+                aria-expanded={menuOpen}
+                aria-controls="lq-nav-menu"
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+            </div>
+            <div
+              className={`nav-links${menuOpen ? ' is-open' : ''}`}
+              id="lq-nav-menu"
+            >
+              <a href="#how" className="btn btn-ghost btn-sm lq-nav-link" onClick={closeMenu}>
                 How it works
               </a>
-              <a href="#features" className="btn btn-ghost btn-sm lq-nav-link">
+              <a href="#features" className="btn btn-ghost btn-sm lq-nav-link" onClick={closeMenu}>
                 Features
               </a>
-              <Link to="/pricing" className="btn btn-ghost btn-sm lq-nav-link">
+              <Link to="/pricing" className="btn btn-ghost btn-sm lq-nav-link" onClick={closeMenu}>
                 Pricing
               </Link>
-              <Link to="/login" className="btn btn-ghost btn-sm lq-nav-link">
+              <Link to="/login" className="btn btn-ghost btn-sm lq-nav-link" onClick={closeMenu}>
                 Log in
               </Link>
-              <Link to="/register" className="btn btn-citrus btn-sm">
+              <Link to="/register" className="btn btn-citrus btn-sm lq-nav-cta-desktop" onClick={closeMenu}>
                 Start free
               </Link>
             </div>
