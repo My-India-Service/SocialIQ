@@ -48,7 +48,7 @@ export default function Landing() {
         <div className="container">
           <nav className="nav lq-nav">
             <Link to="/" className="logo">
-              <BrandLogo />
+              <BrandLogo variant="onDark" />
             </Link>
             <div className="nav-links">
               <a href="#how" className="btn btn-ghost btn-sm lq-nav-link">

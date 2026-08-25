@@ -27,7 +27,7 @@ export default function AppLayout() {
     <div className="app-shell">
       <aside className="sidebar">
         <NavLink to="/app" className="logo" end>
-          <BrandLogo />
+          <BrandLogo variant="onDark" />
         </NavLink>
         <nav className="side-nav">
           <NavLink to="/app" end>

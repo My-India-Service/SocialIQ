@@ -1,6 +1,6 @@
 /** SocialAiDigital brand mark (wordmark included in image). */
-export default function BrandLogo({ className = '' }) {
-  return (
+export default function BrandLogo({ className = '', variant = 'default' }) {
+  const img = (
     <img
       src="/socialAiLogo.png?v=2"
       alt="SocialAiDigital"
@@ -10,4 +10,10 @@ export default function BrandLogo({ className = '' }) {
       decoding="async"
     />
   );
+
+  if (variant === 'onDark') {
+    return <span className="brand-logo brand-logo--on-dark">{img}</span>;
+  }
+
+  return img;
 }
