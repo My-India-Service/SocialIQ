@@ -1,4 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE =
+  (typeof window !== 'undefined' && window.__SOCIALIQ_API_URL__) ||
+  import.meta.env.VITE_API_URL ||
+  '';
 
 export async function api(path, { method = 'GET', body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -13,7 +16,7 @@ export async function api(path, { method = 'GET', body, token } = {}) {
     });
   } catch {
     const err = new Error(
-      'Cannot reach the API. Start the Voxa server (cd server && npm start) and refresh.'
+      'Cannot reach the API. Check that the server is running and try again.'
     );
     err.status = 0;
     throw err;
@@ -24,7 +27,7 @@ export async function api(path, { method = 'GET', body, token } = {}) {
     const err = new Error(
       data.message ||
         (res.status === 404
-          ? 'API route not found — is the Voxa server running on the correct port?'
+          ? 'API route not found — is the server running on the correct port?'
           : `Request failed (${res.status})`)
     );
     err.status = res.status;
@@ -45,7 +48,7 @@ export async function downloadFile(path, { token, fallbackFilename = 'download' 
     res = await fetch(`${API_BASE}${path}`, { headers });
   } catch {
     const err = new Error(
-      'Cannot reach the API. Start the Voxa server (cd server && npm start) and refresh.'
+      'Cannot reach the API. Check that the server is running and try again.'
     );
     err.status = 0;
     throw err;

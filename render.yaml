@@ -19,27 +19,27 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL
-        sync: false
+        value: https://www.socialaidigital.com,https://socialaidigital.com
       - key: SERVER_URL
-        sync: false
+        value: https://socialiq-37aa.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        sync: false
+        value: https://socialiq-37aa.onrender.com/api/connections/youtube/callback
       - key: META_APP_ID
         sync: false
       - key: META_APP_SECRET
         sync: false
       - key: META_REDIRECT_URI
-        sync: false
+        value: https://socialiq-37aa.onrender.com/api/connections/meta/callback
       - key: META_INSTAGRAM_APP_ID
         sync: false
       - key: META_INSTAGRAM_APP_SECRET
         sync: false
       - key: META_INSTAGRAM_REDIRECT_URI
-        sync: false
+        value: https://socialiq-37aa.onrender.com/api/connections/instagram/callback
       - key: META_WHATSAPP_ACCESS_TOKEN
         sync: false
       - key: META_WABA_ID
@@ -79,4 +79,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        sync: false
+        value: https://socialiq-37aa.onrender.com

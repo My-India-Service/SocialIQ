@@ -518,7 +518,7 @@ export default function Settings() {
               {webhookUrlLooksWrong(waStatus.webhookUrl) && (
                 <div className="wa-warn">
                   <code>SERVER_URL</code> must be the API origin only (e.g.{' '}
-                  <code>https://api.socialaidigital.com</code>), not the OAuth callback path.
+                  <code>https://your-api.onrender.com</code>), not the OAuth callback path.
                 </div>
               )}
 

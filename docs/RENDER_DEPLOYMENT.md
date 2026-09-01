@@ -13,7 +13,7 @@ GitHub repo (SocialIQ / Voxa)
 
 The static site calls the API over HTTPS. Auth uses **Bearer JWT** in the `Authorization` header (not cookies).
 
-**Production custom domains:** see [CUSTOM_DOMAINS.md](./CUSTOM_DOMAINS.md) (`www` + `api.socialaidigital.com`).
+**Production URLs:** see [CUSTOM_DOMAINS.md](./CUSTOM_DOMAINS.md). API: `https://socialiq-37aa.onrender.com`, client: `https://www.socialaidigital.com`.
 
 ---
 
@@ -60,14 +60,14 @@ In Render: **New → Web Service** → connect your GitHub repo.
 | `NODE_ENV` | Yes | `production` |
 | `MONGODB_URI` | Yes | Atlas URI with `/voxa` |
 | `JWT_SECRET` | Yes | Random string, 32+ characters |
-| `CLIENT_URL` | Yes | Production: `https://www.socialaidigital.com` (no trailing slash). Comma-separated allowed. **First `https://` non-localhost entry is used for OAuth return** (do not put `http://localhost:5173` first on Render). |
-| `SERVER_URL` | OAuth + WhatsApp | Production: `https://api.socialaidigital.com` (origin only). WhatsApp Callback URL = `{SERVER_URL}/api/whatsapp/webhook` — there is no separate callback env var |
+| `CLIENT_URL` | Yes | Production: `https://www.socialaidigital.com,https://socialaidigital.com` (no trailing slash). Comma-separated allowed. **First `https://` non-localhost entry is used for OAuth return** (do not put `http://localhost:5173` first on Render). |
+| `SERVER_URL` | OAuth + WhatsApp | Production: `https://socialiq-37aa.onrender.com` (origin only). WhatsApp Callback URL = `{SERVER_URL}/api/whatsapp/webhook` — there is no separate callback env var |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | YouTube OAuth |
-| `GOOGLE_REDIRECT_URI` | Optional | `https://api.socialaidigital.com/api/connections/youtube/callback` |
+| `GOOGLE_REDIRECT_URI` | Optional | `https://socialiq-37aa.onrender.com/api/connections/youtube/callback` |
 | `META_APP_ID` / `META_APP_SECRET` | Optional | Facebook Login (Page comments) |
-| `META_REDIRECT_URI` | Optional | `https://api.socialaidigital.com/api/connections/meta/callback` |
+| `META_REDIRECT_URI` | Optional | `https://socialiq-37aa.onrender.com/api/connections/meta/callback` |
 | `META_INSTAGRAM_APP_ID` / `META_INSTAGRAM_APP_SECRET` | Optional | Instagram Login — **separate Instagram App ID** from Meta Dashboard (e.g. `1102250409082500`, not always same as `META_APP_ID`) |
-| `META_INSTAGRAM_REDIRECT_URI` | Optional | `https://api.socialaidigital.com/api/connections/instagram/callback` |
+| `META_INSTAGRAM_REDIRECT_URI` | Optional | `https://socialiq-37aa.onrender.com/api/connections/instagram/callback` |
 | `META_WHATSAPP_ACCESS_TOKEN` | WhatsApp | Cloud API permanent token |
 | `META_PHONE_NUMBER_ID` / `META_WABA_ID` | WhatsApp | From Meta WhatsApp → API setup |
 | `META_WEBHOOK_VERIFY_TOKEN` | WhatsApp | Same string as Meta Webhooks **Verify token** field |
@@ -83,7 +83,7 @@ Also add the production redirect URIs in **Google Cloud Console** and **Meta App
 ### Verify API
 
 ```bash
-curl https://api.socialaidigital.com/api/health
+curl https://socialiq-37aa.onrender.com/api/health
 # → {"ok":true,"product":"Voxa","message":"AI Revenue Intelligence API"}
 ```
 
@@ -124,16 +124,18 @@ In Render: **New → Static Site** → same GitHub repo.
 
 | Key | Value |
 |-----|-------|
-| `VITE_API_URL` | `https://api.socialaidigital.com` |
+| `VITE_API_URL` | `https://socialiq-37aa.onrender.com` |
 
 **Important:** Do **not** append `/api`. Client request paths already include `/api/...` (e.g. `/api/auth/login`). Setting `.../api` would produce `/api/api/...`.
 
 Vite bakes `VITE_API_URL` into the build at deploy time — setting it only in a local `client/.env` is not enough; it must be set in the Render dashboard before building.
 
+[`client/public/runtime-config.js`](../client/public/runtime-config.js) also sets the API origin on production hostnames (`www.socialaidigital.com`, `*.onrender.com`) so login works even if an old `VITE_API_URL` was baked into the bundle. Prefer keeping `VITE_API_URL` correct on Render as well.
+
 Example:
 
 ```
-VITE_API_URL=https://api.socialaidigital.com
+VITE_API_URL=https://socialiq-37aa.onrender.com
 ```
 
 ### SPA routing (required on Render)
@@ -159,21 +161,21 @@ On the **API** service, update:
 
 | Key | Value |
 |-----|-------|
-| `CLIENT_URL` | `https://www.socialaidigital.com` (custom domain; no trailing slash) |
-| `SERVER_URL` | `https://api.socialaidigital.com` |
+| `CLIENT_URL` | `https://www.socialaidigital.com,https://socialaidigital.com` (no trailing slash) |
+| `SERVER_URL` | `https://socialiq-37aa.onrender.com` |
 
 Then **Manual Deploy** / redeploy the API so CORS (and OAuth redirects) use the correct origin.
 
 `CLIENT_URL` must match the static site URL **exactly** (no trailing slash). Production uses the custom domain:
 
 ```env
-CLIENT_URL=https://www.socialaidigital.com
+CLIENT_URL=https://www.socialaidigital.com,https://socialaidigital.com
 ```
 
-Optional cutover (custom domain first; old Render URL still allowed for CORS):
+Optional cutover (keep Render client URL as secondary CORS origin):
 
 ```env
-CLIENT_URL=https://www.socialaidigital.com,https://socialiq-client.onrender.com
+CLIENT_URL=https://www.socialaidigital.com,https://socialaidigital.com,https://socialiq-client.onrender.com
 ```
 
 Do **not** put `http://localhost:5173` first on production — after Facebook Connect the API redirects there and the browser has no live JWT (looks like logout). Redeploy the API after changing `CLIENT_URL`.
@@ -197,14 +199,14 @@ Then redeploy the static site after `VITE_API_URL` is set (it must be present at
 
 ## Post-deploy checklist
 
-- [ ] `curl https://api.socialaidigital.com/api/health` returns `ok` / `Voxa`
-- [ ] Static homepage loads (check Network tab → API requests go to `https://api.socialaidigital.com`)
+- [ ] `curl https://socialiq-37aa.onrender.com/api/health` returns `ok` / `Voxa`
+- [ ] Static homepage loads (check Network tab → API requests go to `https://socialiq-37aa.onrender.com`)
 - [ ] `/login` and `/app` work on direct URL / refresh (SPA rewrite)
 - [ ] Register / login works (JWT in local storage / Authorization header)
-- [ ] `CLIENT_URL` = `https://www.socialaidigital.com` (no trailing slash)
-- [ ] `SERVER_URL` / `VITE_API_URL` = `https://api.socialaidigital.com`
+- [ ] `CLIENT_URL` includes `https://www.socialaidigital.com` (no trailing slash)
+- [ ] `SERVER_URL` / `VITE_API_URL` = `https://socialiq-37aa.onrender.com`
 - [ ] Optional: seed ran; demo login `demo@voxa.app` / `demo1234`
-- [ ] YouTube / Meta OAuth redirect URIs use `api.socialaidigital.com` (see [CUSTOM_DOMAINS.md](./CUSTOM_DOMAINS.md))
+- [ ] YouTube / Meta OAuth redirect URIs use `socialiq-37aa.onrender.com` (see [CUSTOM_DOMAINS.md](./CUSTOM_DOMAINS.md))
 
 ---
 
@@ -212,8 +214,8 @@ Then redeploy the static site after `VITE_API_URL` is set (it must be present at
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| Homepage loads but API calls fail | `VITE_API_URL` missing or wrong at build time | Set env on Static Site (**no** trailing `/api`), redeploy |
-| Login fails / CORS errors | `CLIENT_URL` wrong or API not redeployed | Set static URL on API (comma-ok), redeploy API |
+| Homepage loads but API calls fail | `VITE_API_URL` missing, wrong, or stale at build time | Set `VITE_API_URL=https://socialiq-37aa.onrender.com` on Static Site (**no** trailing `/api`), **Clear build cache & redeploy** |
+| Login fails / CORS errors | `CLIENT_URL` wrong or API not redeployed | Set `CLIENT_URL=https://www.socialaidigital.com,https://socialaidigital.com` on API, redeploy API |
 | Logged out after Facebook Connect | `CLIENT_URL` localhost-first, or `/me` wiped JWT | Set live `CLIENT_URL` first; redeploy API + client |
 | WhatsApp webhook / inbox empty | Meta Callback URL wrong or Cloud API env missing | Callback = `{SERVER_URL}/api/whatsapp/webhook`. On Render set `SERVER_URL` + `META_WEBHOOK_VERIFY_TOKEN` (no separate callback env). Redeploy API; wake with `/api/health` then Verify again. See [`WHATSAPP_WEBHOOK.md`](./WHATSAPP_WEBHOOK.md) |
 | Local login `403` / empty body | Vite proxy port ≠ server `PORT` | Match `PORT` and Vite proxy (`5001` / `VITE_API_PROXY`) |
@@ -223,7 +225,8 @@ Then redeploy the static site after `VITE_API_URL` is set (it must be present at
 | Build fails on API (`file:..` / voxa) | Stale lockfile or old dep | Ensure `voxa` is not in `server`/`client` package.json; Root Directory is `server` |
 | Slow first request (~30–60s) | Free tier cold start | Normal on Render free Web Services |
 | 404 on `/login` or `/app` refresh | SPA rewrite missing | Dashboard → Redirects/Rewrites → Rewrite `/*` → `/index.html` |
-| OAuth callback fails | Redirect URI mismatch | Set `SERVER_URL` / `*_REDIRECT_URI` to `https://api.socialaidigital.com/...`; update Google/Meta consoles — [CUSTOM_DOMAINS.md](./CUSTOM_DOMAINS.md) |
+| OAuth callback fails | Redirect URI mismatch | Set `SERVER_URL` / `*_REDIRECT_URI` to `https://socialiq-37aa.onrender.com/...`; update Google/Meta consoles — [CUSTOM_DOMAINS.md](./CUSTOM_DOMAINS.md) |
+| Still calls `api.socialaidigital.com` | Old client build not redeployed | Update `VITE_API_URL` on static site and rebuild with cache clear |
 
 ---
 
