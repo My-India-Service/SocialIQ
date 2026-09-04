@@ -25,12 +25,14 @@ const baseComment = {
   externalId: 'yt-comment-1',
 };
 
-test('canPostReplyToPlatform supports youtube, facebook, instagram', () => {
+test('canPostReplyToPlatform supports youtube, facebook, instagram, linkedin', () => {
   assert.equal(canPostReplyToPlatform('youtube'), true);
   assert.equal(canPostReplyToPlatform('facebook'), true);
   assert.equal(canPostReplyToPlatform('instagram'), true);
+  assert.equal(canPostReplyToPlatform('linkedin'), true);
+  assert.equal(canPostReplyToPlatform('tiktok'), false);
   assert.equal(canPostReplyToPlatform('whatsapp'), false);
-  assert.deepEqual(POST_REPLY_PLATFORMS, ['youtube', 'facebook', 'instagram']);
+  assert.deepEqual(POST_REPLY_PLATFORMS, ['youtube', 'facebook', 'instagram', 'linkedin']);
 });
 
 test('isAlreadyPosted detects postedReplyAt or platformReplyId', () => {

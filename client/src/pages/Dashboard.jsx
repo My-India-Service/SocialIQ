@@ -20,6 +20,7 @@ const PLATFORM_LABELS = {
   youtube: 'YouTube',
   instagram: 'Instagram',
   facebook: 'Facebook',
+  linkedin: 'LinkedIn',
   whatsapp: 'WhatsApp',
   tiktok: 'TikTok',
   x: 'X',
@@ -34,7 +35,7 @@ const STATUS_LABELS = {
   ignored: 'Ignored',
 };
 
-const POST_REPLY_PLATFORMS = ['youtube', 'facebook', 'instagram'];
+const POST_REPLY_PLATFORMS = ['youtube', 'facebook', 'instagram', 'linkedin'];
 
 function isAlreadyPosted(comment) {
   return Boolean(comment?.postedReplyAt || comment?.platformReplyId);
@@ -55,6 +56,8 @@ const PLATFORM_EMPTY_HINTS = {
     'No WhatsApp messages yet. Enable inbox in Settings, then send a text message to your business WhatsApp number (Test send only sends outbound alerts — it does not fill the inbox).',
   youtube: 'No YouTube comments yet. Connect YouTube on Connect, then Sync comments.',
   facebook: 'No Facebook comments yet. Connect your Page on Connect, then Sync comments.',
+  linkedin: 'No LinkedIn comments yet. Connect a Company Page on Connect, then Sync comments.',
+  tiktok: 'No TikTok comments yet. Connect TikTok on Connect, then Sync comments.',
 };
 
 function formatMoney(n, currency = 'INR') {
@@ -440,6 +443,8 @@ export default function Dashboard() {
           <option value="youtube">YouTube</option>
           <option value="instagram">Instagram</option>
           <option value="facebook">Facebook</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="tiktok">TikTok</option>
           <option value="whatsapp">WhatsApp</option>
         </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">

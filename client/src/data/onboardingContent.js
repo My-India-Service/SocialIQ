@@ -11,6 +11,8 @@ export const PLATFORM_OPTIONS = [
   { id: 'youtube', label: 'YouTube', desc: 'Video comments & community posts' },
   { id: 'instagram', label: 'Instagram', desc: 'Reels, posts & story replies' },
   { id: 'facebook', label: 'Facebook', desc: 'Page comments & engagement' },
+  { id: 'linkedin', label: 'LinkedIn', desc: 'Company Page comments' },
+  { id: 'tiktok', label: 'TikTok', desc: 'Video comments' },
   { id: 'whatsapp', label: 'WhatsApp', desc: 'Inbound customer messages' },
 ];
 

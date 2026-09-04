@@ -1,7 +1,7 @@
 /** Main job of the product — shown on About and in-app Help. */
 export const MAIN_OBJECTIVE = {
   title: 'AI Sales Agent for Social Media',
-  body: 'Every comment is a potential customer. SocialAiDigital detects purchase intent in Instagram, YouTube, Facebook, and WhatsApp comments — including Hinglish like “kitne ka hai?” and “COD hai?” — replies in your brand tone, sends details in DM, qualifies the lead, and tracks ₹ sales influenced.',
+  body: 'Every comment is a potential customer. SocialAiDigital detects purchase intent in Instagram, YouTube, Facebook, LinkedIn, TikTok, and WhatsApp comments — including Hinglish like “kitne ka hai?” and “COD hai?” — replies in your brand tone, sends details in DM, qualifies the lead, and tracks ₹ sales influenced.',
 };
 
 export const OBJECTIVES = [
@@ -29,8 +29,8 @@ export const GUIDE_STEPS = [
     body: 'Create an account. In Settings set brand name, reply tone (friendly / professional / playful / luxury), and average order value. Intent scores use AOV to estimate expected order value.',
   },
   {
-    title: '2. Connect YouTube, Instagram, Facebook',
-    body: 'Open Connect. Google OAuth for YouTube. For Instagram: use Connect with Instagram (instagram.com login — no Facebook Page required) or Connect via Facebook Page if IG is linked to your Page. Facebook Page connect uses Meta Login for Page comments. After connect, click Sync comments. Inbox only fills after a successful sync.',
+    title: '2. Connect YouTube, Instagram, Facebook, LinkedIn, TikTok',
+    body: 'Open Connect. Google OAuth for YouTube. For Instagram: use Connect with Instagram (instagram.com login — no Facebook Page required) or Connect via Facebook Page if IG is linked to your Page. Facebook Page connect uses Meta Login for Page comments. LinkedIn: Sign In + Share on LinkedIn (Company Page comments need a separate Community Management API app). TikTok: Login Kit on developers.tiktok.com. After connect, click Sync comments. Inbox only fills after a successful sync.',
   },
   {
     title: '3. Connect WhatsApp (optional)',
@@ -38,7 +38,7 @@ export const GUIDE_STEPS = [
   },
   {
     title: '4. Work the Revenue inbox (main screen)',
-    body: 'This is the daily workspace. Click the stat cards to filter Hot leads, Sales, Complaints, or Needs review. Open a comment: read intent %, expected value, and the suggested reply. Regenerate cycles a new draft reply. Post reply & mark done (YouTube/Facebook/Instagram), Copy reply, Save without posting, Send to sales, or set status to Converted when they buy.',
+    body: 'This is the daily workspace. Click the stat cards to filter Hot leads, Sales, Complaints, or Needs review. Open a comment: read intent %, expected value, and the suggested reply. Regenerate cycles a new draft reply. Post reply & mark done (YouTube/Facebook/Instagram/LinkedIn), Copy reply, Save without posting, Send to sales, or set status to Converted when they buy.',
   },
   {
     title: '5. Route hot leads automatically',
@@ -69,11 +69,11 @@ export const FAQS = [
   },
   {
     q: 'Where do comments come from?',
-    a: 'Official APIs only: YouTube Data API, Meta Graph (Facebook Page + Instagram), and Meta WhatsApp Cloud API. No scraping. WhatsApp is not Zapier.',
+    a: 'Official APIs only: YouTube Data API, Meta Graph (Facebook Page + Instagram), LinkedIn Community Management, TikTok Login Kit / Display API, and Meta WhatsApp Cloud API. No scraping. WhatsApp is not Zapier.',
   },
   {
     q: 'How do I connect Facebook or Instagram?',
-    a: 'Facebook: Connect → Connect Facebook (Page admin, facebook.com login) → Sync. Instagram (recommended): Connect with Instagram (instagram.com login, Business/Creator account, no Page required). Add the OAuth redirect URI in Meta → Instagram → Business login (Section 3), not Configure webhooks (Section 2). Alternative: Connect via Facebook Page if IG is linked in Meta Business Suite. In Development mode you must be a tester/admin on the Meta app.',
+    a: 'Facebook: Connect → Connect Facebook (Page admin, facebook.com login) → Sync. Instagram (recommended): Connect with Instagram (instagram.com login, Business/Creator account, no Page required). Add the OAuth redirect URI in Meta → Instagram → Business login (Section 3), not Configure webhooks (Section 2). Alternative: Connect via Facebook Page if IG is linked in Meta Business Suite. In Development mode you must be a tester/admin on the Meta app. LinkedIn: Connect → Connect LinkedIn. Enable Sign In with LinkedIn (OpenID) and Share on LinkedIn only — Community Management API cannot sit on the same app. TikTok: Connect → Connect TikTok (Login Kit).',
   },
   {
     q: 'How do I set the WhatsApp webhook?',
@@ -105,7 +105,7 @@ export const FAQS = [
   },
   {
     q: 'What does Post reply & mark done do?',
-    a: 'Posts your suggested reply on YouTube, Facebook, or Instagram via official APIs, then marks Replied in SocialAiDigital. WhatsApp still needs manual copy. If Meta rejects the post, reconnect on Connect (pages_manage_engagement / instagram_manage_comments). You cannot post twice — use Copy reply to edit on the platform.',
+    a: 'Posts your suggested reply on YouTube, Facebook, Instagram, or LinkedIn via official APIs, then marks Replied in SocialAiDigital. WhatsApp and TikTok still need manual copy. If Meta rejects the post, reconnect on Connect (pages_manage_engagement / instagram_manage_comments). You cannot post twice — use Copy reply to edit on the platform.',
   },
   {
     q: 'How does auto-reply on sync work?',

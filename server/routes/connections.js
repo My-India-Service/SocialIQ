@@ -6,6 +6,8 @@ import { isLLMConfigured } from '../services/ai.js';
 import {
   syncFacebookCommentsForUser,
   syncInstagramCommentsForUser,
+  syncLinkedInCommentsForUser,
+  syncTikTokCommentsForUser,
   syncYouTubeCommentsForUser,
 } from '../services/sync.js';
 import {
@@ -27,6 +29,22 @@ import {
   isInstagramDirectOAuthConfigured,
   verifyInstagramOAuthState,
 } from '../services/instagramLogin.js';
+import {
+  exchangeLinkedInCode,
+  getLinkedInAuthUrl,
+  getLinkedInOAuthScopes,
+  isLinkedInConfigured,
+  linkedInConnectErrorMessage,
+  saveLinkedInConnection,
+  verifyLinkedInOAuthState,
+} from '../services/linkedin.js';
+import {
+  exchangeTikTokCode,
+  getTikTokAuthUrl,
+  isTikTokConfigured,
+  saveTikTokConnection,
+  verifyTikTokOAuthState,
+} from '../services/tiktok.js';
 import { getClientUrl } from '../utils/clientUrl.js';
 
 function appendAutoReplySummary(message, result) {
@@ -58,6 +76,12 @@ async function oauthSuccessRedirect(userId, platform) {
   if (platform === 'instagram') {
     return `${clientUrl}/app/connections?instagram=connected`;
   }
+  if (platform === 'linkedin') {
+    return `${clientUrl}/app/connections?linkedin=connected`;
+  }
+  if (platform === 'tiktok') {
+    return `${clientUrl}/app/connections?tiktok=connected`;
+  }
   return `${clientUrl}/app/connections?meta=connected&platform=${encodeURIComponent(platform)}`;
 }
 
@@ -68,6 +92,9 @@ router.get('/status', authRequired, async (_req, res) => {
     youtubeOAuth: isYouTubeConfigured(),
     metaOAuth: isMetaConfigured(),
     instagramDirectOAuth: isInstagramDirectOAuthConfigured(),
+    linkedinOAuth: isLinkedInConfigured(),
+    linkedinScopes: isLinkedInConfigured() ? getLinkedInOAuthScopes() : [],
+    tiktokOAuth: isTikTokConfigured(),
     llm: isLLMConfigured(),
   });
 });
@@ -296,6 +323,152 @@ router.post('/instagram/sync', authRequired, async (req, res) => {
   } catch (err) {
     const status = err.status || (err.code === 'SYNC_COOLDOWN' ? 429 : 400);
     res.status(status).json({ message: err.message, code: err.code });
+  }
+});
+
+/** Start LinkedIn OAuth (Company Page comments via Community Management API) */
+router.get('/linkedin/auth', authRequired, async (req, res) => {
+  try {
+    if (!isLinkedInConfigured()) {
+      return res.status(503).json({
+        message:
+          'LinkedIn OAuth not configured. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET to server/.env',
+      });
+    }
+    const url = getLinkedInAuthUrl(req.userId);
+    console.log(`LinkedIn OAuth start scopes=${getLinkedInOAuthScopes().join(' ')}`);
+    res.json({ url, scopes: getLinkedInOAuthScopes() });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/linkedin/callback', async (req, res) => {
+  const clientUrl = getClientUrl();
+  try {
+    const { code, state, error, error_description: errorDescription } = req.query;
+    if (error) {
+      const reason = linkedInConnectErrorMessage(error, errorDescription);
+      return res.redirect(
+        `${clientUrl}/app/connections?linkedin=error&reason=${encodeURIComponent(reason)}`
+      );
+    }
+    if (!code || !state) {
+      return res.redirect(`${clientUrl}/app/connections?linkedin=error&reason=missing_code`);
+    }
+
+    const userId = verifyLinkedInOAuthState(String(state));
+    const result = await exchangeLinkedInCode(String(code));
+
+    const existing = await Connection.findOne({ user: userId, platform: 'linkedin' });
+    if (!result.tokens.refresh_token && existing?.refreshToken) {
+      result.tokens.refresh_token = existing.refreshToken;
+    }
+
+    await saveLinkedInConnection(userId, result);
+    return res.redirect(await oauthSuccessRedirect(userId, 'linkedin'));
+  } catch (err) {
+    console.error('LinkedIn OAuth callback failed:', err.message);
+    return res.redirect(
+      `${clientUrl}/app/connections?linkedin=error&reason=${encodeURIComponent(
+        linkedInConnectErrorMessage(err.message, err.message)
+      )}`
+    );
+  }
+});
+
+router.post('/linkedin/sync', authRequired, async (req, res) => {
+  try {
+    const result = await syncLinkedInCommentsForUser(req.userId, {
+      maxPosts: Number(req.body?.maxPosts) || 10,
+      maxCommentsPerPost: Number(req.body?.maxCommentsPerPost) || 40,
+    });
+    const scan =
+      typeof result.postsChecked === 'number' ? ` Checked ${result.postsChecked} posts.` : '';
+    const base = `LinkedIn: synced ${result.imported} new (${result.updated} updated) from ${result.fetched} fetched.${scan}`;
+    const hint = result.warning
+      ? ` ${result.warning}`
+      : result.fetched === 0
+        ? ' No comments imported — connect a Company Page you admin, enable Community Management API, then Sync again.'
+        : '';
+    res.json({
+      ...result,
+      analysisMode: isLLMConfigured() ? 'llm' : 'rules',
+      message: appendAutoReplySummary(`${base}${hint}`, result),
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+/** Start TikTok OAuth (Login Kit) */
+router.get('/tiktok/auth', authRequired, async (req, res) => {
+  try {
+    if (!isTikTokConfigured()) {
+      return res.status(503).json({
+        message:
+          'TikTok OAuth not configured. Add TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET to server/.env',
+      });
+    }
+    const url = getTikTokAuthUrl(req.userId);
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/tiktok/callback', async (req, res) => {
+  const clientUrl = getClientUrl();
+  try {
+    const { code, state, error, error_description: errorDescription } = req.query;
+    if (error) {
+      return res.redirect(
+        `${clientUrl}/app/connections?tiktok=error&reason=${encodeURIComponent(String(errorDescription || error))}`
+      );
+    }
+    if (!code || !state) {
+      return res.redirect(`${clientUrl}/app/connections?tiktok=error&reason=missing_code`);
+    }
+
+    const userId = verifyTikTokOAuthState(String(state));
+    const result = await exchangeTikTokCode(String(code));
+
+    const existing = await Connection.findOne({ user: userId, platform: 'tiktok' });
+    if (!result.tokens.refresh_token && existing?.refreshToken) {
+      result.tokens.refresh_token = existing.refreshToken;
+    }
+
+    await saveTikTokConnection(userId, result);
+    return res.redirect(await oauthSuccessRedirect(userId, 'tiktok'));
+  } catch (err) {
+    console.error('TikTok OAuth callback failed:', err.message);
+    return res.redirect(
+      `${clientUrl}/app/connections?tiktok=error&reason=${encodeURIComponent(err.message)}`
+    );
+  }
+});
+
+router.post('/tiktok/sync', authRequired, async (req, res) => {
+  try {
+    const result = await syncTikTokCommentsForUser(req.userId, {
+      maxVideos: Number(req.body?.maxVideos) || 8,
+      maxCommentsPerVideo: Number(req.body?.maxCommentsPerVideo) || 40,
+    });
+    const scan =
+      typeof result.videosChecked === 'number' ? ` Checked ${result.videosChecked} videos.` : '';
+    const base = `TikTok: synced ${result.imported} new (${result.updated} updated) from ${result.fetched} fetched.${scan}`;
+    const hint = result.warning
+      ? ` ${result.warning}`
+      : result.fetched === 0
+        ? ' No comments imported — post a public video, enable video.list on your TikTok app, then Sync again.'
+        : '';
+    res.json({
+      ...result,
+      analysisMode: isLLMConfigured() ? 'llm' : 'rules',
+      message: appendAutoReplySummary(`${base}${hint}`, result),
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 

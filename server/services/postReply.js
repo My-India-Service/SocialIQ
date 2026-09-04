@@ -2,6 +2,7 @@ import Connection from '../models/Connection.js';
 import Comment from '../models/Comment.js';
 import { postFacebookCommentReply, postInstagramCommentReply } from './meta.js';
 import { postYouTubeCommentReply } from './youtube.js';
+import { postLinkedInCommentReply } from './linkedin.js';
 import { paceOutboundMetaWrite } from './metaSafe.js';
 
 export {
@@ -12,7 +13,7 @@ export {
   randomOutboundDelayMs,
 } from './metaSafe.js';
 
-export const POST_REPLY_PLATFORMS = ['youtube', 'facebook', 'instagram'];
+export const POST_REPLY_PLATFORMS = ['youtube', 'facebook', 'instagram', 'linkedin'];
 export const PENDING_REPLY_ID = 'pending';
 export const PENDING_REPLY_TTL_MS = 2 * 60 * 1000;
 
@@ -134,7 +135,7 @@ export async function clearPendingPlatformReply(commentId) {
 }
 
 /**
- * Post a public reply on YouTube, Facebook, or Instagram. Returns platform reply id.
+ * Post a public reply on YouTube, Facebook, Instagram, or LinkedIn. Returns platform reply id.
  * Uses claim + outbound pacing for Meta platforms to reduce automation flags.
  */
 export async function postCommentReplyToPlatform(userId, comment, message, options = {}) {
@@ -182,6 +183,16 @@ export async function postCommentReplyToPlatform(userId, comment, message, optio
 
     if (comment.platform === 'instagram') {
       const platformReplyId = await postInstagramCommentReply(connection, comment.externalId, text);
+      return { platformReplyId, message: text };
+    }
+
+    if (comment.platform === 'linkedin') {
+      const platformReplyId = await postLinkedInCommentReply(
+        connection,
+        comment.externalId,
+        comment.videoId,
+        text
+      );
       return { platformReplyId, message: text };
     }
 

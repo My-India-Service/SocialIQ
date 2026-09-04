@@ -160,6 +160,7 @@ router.get('/stats', async (req, res) => {
         youtube: 0,
         instagram: 0,
         facebook: 0,
+        linkedin: 0,
         whatsapp: 0,
         tiktok: 0,
         x: 0,

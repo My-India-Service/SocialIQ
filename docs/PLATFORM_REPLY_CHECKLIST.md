@@ -7,6 +7,7 @@ Run after deploy to confirm posting works in your Meta/Google apps. Dev mode onl
 - [ ] YouTube connected via Google OAuth (`youtube.force-ssl` scope)
 - [ ] Facebook Page connected via Meta OAuth (`pages_manage_engagement`) — for FB comments only
 - [ ] Instagram via **Connect with Instagram** (`instagram_business_manage_comments`) **or** via Facebook Page link
+- [ ] LinkedIn Company Page via **Connect LinkedIn** (Community Management API)
 - [ ] Settings → Auto-reply enabled (optional, for sync test)
 
 ## Instagram connect paths
@@ -23,6 +24,7 @@ Run after deploy to confirm posting works in your Meta/Google apps. Dev mode onl
 | **YouTube** | Sync → open a comment → **Post reply & mark done** → verify reply on YT | ☐ |
 | **Facebook** | Same → verify reply on Page post | ☐ |
 | **Instagram** | Same → verify reply on IG post | ☐ |
+| **LinkedIn** | Same → verify reply on Company Page post | ☐ |
 
 After each post, confirm in Voxa:
 

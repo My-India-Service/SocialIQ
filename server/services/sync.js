@@ -4,6 +4,8 @@ import User from '../models/User.js';
 import { analyzeComment, buildAutoDmPreview } from './ai.js';
 import { fetchYouTubeComments } from './youtube.js';
 import { fetchFacebookComments, fetchInstagramComments } from './meta.js';
+import { fetchLinkedInComments } from './linkedin.js';
+import { fetchTikTokComments } from './tiktok.js';
 import { routeLead } from './integrations.js';
 import { planCommentLimit } from '../config/plans.js';
 import { runInstagramSalesAgentFlow } from './instagramMessaging.js';
@@ -330,6 +332,70 @@ export async function syncInstagramCommentsForUser(userId, options = {}) {
     fetched: rawComments.length,
     mediaChecked,
     mediaWithCommentSignal,
+    commentFetchFailures,
+    warning,
+    ...stats,
+    lastSyncedAt: connection.lastSyncedAt,
+  };
+}
+
+export async function syncLinkedInCommentsForUser(userId, options = {}) {
+  const connection = await getOAuthConnection(
+    userId,
+    'linkedin',
+    'Click “Connect LinkedIn” first.'
+  );
+  const user = await User.findById(userId);
+  const {
+    comments: rawComments,
+    accountName,
+    postsChecked = 0,
+    commentFetchFailures = 0,
+    warning,
+  } = await fetchLinkedInComments(connection, options);
+  const stats = await ingestRawComments(userId, 'linkedin', rawComments, user);
+
+  connection.lastSyncedAt = new Date();
+  if (accountName) connection.accountName = accountName;
+  await connection.save();
+
+  return {
+    platform: 'linkedin',
+    channelTitle: connection.accountName,
+    fetched: rawComments.length,
+    postsChecked,
+    commentFetchFailures,
+    warning,
+    ...stats,
+    lastSyncedAt: connection.lastSyncedAt,
+  };
+}
+
+export async function syncTikTokCommentsForUser(userId, options = {}) {
+  const connection = await getOAuthConnection(
+    userId,
+    'tiktok',
+    'Click “Connect TikTok” first.'
+  );
+  const user = await User.findById(userId);
+  const {
+    comments: rawComments,
+    accountName,
+    videosChecked = 0,
+    commentFetchFailures = 0,
+    warning,
+  } = await fetchTikTokComments(connection, options);
+  const stats = await ingestRawComments(userId, 'tiktok', rawComments, user);
+
+  connection.lastSyncedAt = new Date();
+  if (accountName) connection.accountName = accountName;
+  await connection.save();
+
+  return {
+    platform: 'tiktok',
+    channelTitle: connection.accountName,
+    fetched: rawComments.length,
+    videosChecked,
     commentFetchFailures,
     warning,
     ...stats,

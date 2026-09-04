@@ -7,8 +7,9 @@ const PLATFORMS = [
   { id: 'youtube', label: 'YouTube', ready: true, mvp: true },
   { id: 'instagram', label: 'Instagram', ready: true, mvp: true },
   { id: 'facebook', label: 'Facebook', ready: true, mvp: false },
+  { id: 'linkedin', label: 'LinkedIn', ready: true, mvp: false },
+  { id: 'tiktok', label: 'TikTok', ready: true, mvp: false },
   { id: 'whatsapp', label: 'WhatsApp', ready: true, mvp: true },
-  { id: 'tiktok', label: 'TikTok', ready: false, mvp: false },
   { id: 'x', label: 'X', ready: false, mvp: false },
 ];
 
@@ -26,6 +27,8 @@ export default function Connections() {
     youtubeOAuth: false,
     metaOAuth: false,
     instagramDirectOAuth: false,
+    linkedinOAuth: false,
+    tiktokOAuth: false,
     llm: false,
   });
   const [message, setMessage] = useState('');
@@ -50,7 +53,9 @@ export default function Connections() {
     const yt = searchParams.get('youtube');
     const meta = searchParams.get('meta');
     const instagram = searchParams.get('instagram');
-    if (!yt && !meta && !instagram) return;
+    const linkedin = searchParams.get('linkedin');
+    const tiktok = searchParams.get('tiktok');
+    if (!yt && !meta && !instagram && !linkedin && !tiktok) return;
 
     if (yt === 'connected') {
       setMessage('YouTube connected. Click Sync comments to pull real comments.');
@@ -74,6 +79,20 @@ export default function Connections() {
       load().catch(() => {});
     } else if (instagram === 'error') {
       setError(searchParams.get('reason') || 'Instagram connection failed');
+    }
+
+    if (linkedin === 'connected') {
+      setMessage('LinkedIn connected. Click Sync comments to pull Company Page comments.');
+      load().catch(() => {});
+    } else if (linkedin === 'error') {
+      setError(searchParams.get('reason') || 'LinkedIn connection failed');
+    }
+
+    if (tiktok === 'connected') {
+      setMessage('TikTok connected. Click Sync comments to pull video comments.');
+      load().catch(() => {});
+    } else if (tiktok === 'error') {
+      setError(searchParams.get('reason') || 'TikTok connection failed');
     }
 
     setSearchParams({}, { replace: true });
@@ -118,6 +137,32 @@ export default function Connections() {
     }
   }
 
+  async function connectLinkedIn() {
+    setError('');
+    setMessage('');
+    setBusy('linkedin');
+    try {
+      const data = await api('/api/connections/linkedin/auth', { token });
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err.message);
+      setBusy('');
+    }
+  }
+
+  async function connectTikTok() {
+    setError('');
+    setMessage('');
+    setBusy('tiktok');
+    try {
+      const data = await api('/api/connections/tiktok/auth', { token });
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err.message);
+      setBusy('');
+    }
+  }
+
   async function syncPlatform(platform) {
     setError('');
     setMessage('');
@@ -128,10 +173,20 @@ export default function Connections() {
           ? '/api/connections/youtube/sync'
           : platform === 'facebook'
             ? '/api/connections/facebook/sync'
-            : '/api/connections/instagram/sync';
+            : platform === 'linkedin'
+              ? '/api/connections/linkedin/sync'
+              : platform === 'tiktok'
+                ? '/api/connections/tiktok/sync'
+                : '/api/connections/instagram/sync';
       const data = await api(path, { method: 'POST', token, body: {} });
       const summary = `${data.message} Analysis: ${data.analysisMode === 'llm' ? 'OpenAI LLM' : 'rules fallback'}.`;
-      if ((platform === 'facebook' || platform === 'instagram') && data.fetched === 0) {
+      if (
+        (platform === 'facebook' ||
+          platform === 'instagram' ||
+          platform === 'linkedin' ||
+          platform === 'tiktok') &&
+        data.fetched === 0
+      ) {
         setError(summary);
         setMessage('');
       } else {
@@ -158,6 +213,8 @@ export default function Connections() {
   const yt = statusFor('youtube');
   const ig = statusFor('instagram');
   const fb = statusFor('facebook');
+  const li = statusFor('linkedin');
+  const tt = statusFor('tiktok');
   const igAuthLabel = instagramAuthLabel(ig?.metaAuthType);
 
   return (
@@ -165,7 +222,7 @@ export default function Connections() {
       <div className="page-head">
         <div>
           <h1>Connect channels</h1>
-          <p>Instagram, YouTube, Facebook via OAuth. WhatsApp Cloud API is configured in Settings.</p>
+          <p>Instagram, YouTube, Facebook, LinkedIn, TikTok via OAuth. WhatsApp Cloud API is configured in Settings.</p>
         </div>
       </div>
 
@@ -181,6 +238,14 @@ export default function Connections() {
         <div className="stat">
           <strong>{integration.instagramDirectOAuth ? 'On' : 'Off'}</strong>
           <span>Instagram Login</span>
+        </div>
+        <div className="stat">
+          <strong>{integration.linkedinOAuth ? 'On' : 'Off'}</strong>
+          <span>LinkedIn OAuth</span>
+        </div>
+        <div className="stat">
+          <strong>{integration.tiktokOAuth ? 'On' : 'Off'}</strong>
+          <span>TikTok OAuth</span>
         </div>
         <div className="stat">
           <strong>{integration.llm ? 'On' : 'Rules'}</strong>
@@ -371,6 +436,118 @@ export default function Connections() {
         )}
         {fb?.hasOAuth && fb?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(fb.lastSyncedAt).toLocaleString()}</p>
+        )}
+      </div>
+
+      <div className="panel stack-gap">
+        <h2>LinkedIn</h2>
+        <p className="prob" style={{ marginTop: 0 }}>
+          Connect with Sign In + Share only. In{' '}
+          <a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noreferrer">
+            LinkedIn Developer Portal
+          </a>
+          → your app → Products: enable <strong>Sign In with LinkedIn using OpenID Connect</strong>{' '}
+          and <strong>Share on LinkedIn</strong>. If <strong>Community Management API</strong> is
+          listed (even Pending), remove it from this app — LinkedIn then rejects login with{' '}
+          <code>w_organization_social</code>. Redirect URI:{' '}
+          <code>/api/connections/linkedin/callback</code>
+          {integration.linkedinScopes?.length ? (
+            <>
+              . Scopes this server will request:{' '}
+              <code>{integration.linkedinScopes.join(' ')}</code>
+            </>
+          ) : null}
+        </p>
+        <div className="reply-actions">
+          <button
+            type="button"
+            className="btn btn-citrus"
+            onClick={connectLinkedIn}
+            disabled={Boolean(busy) || !integration.linkedinOAuth}
+          >
+            {busy === 'linkedin'
+              ? 'Redirecting…'
+              : li?.hasOAuth
+                ? 'Reconnect LinkedIn'
+                : 'Connect LinkedIn'}
+          </button>
+          {li?.hasOAuth && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => syncPlatform('linkedin')}
+              disabled={Boolean(syncing)}
+            >
+              {syncing === 'linkedin' ? 'Syncing…' : 'Sync comments'}
+            </button>
+          )}
+          {li && !li.hasOAuth && (
+            <button type="button" className="btn btn-ghost" onClick={() => disconnect('linkedin')}>
+              Remove stub
+            </button>
+          )}
+        </div>
+        {!integration.linkedinOAuth && (
+          <p className="prob">Add LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET to server/.env</p>
+        )}
+        {li?.hasOAuth && (
+          <p className="prob">
+            Connected: <strong>{li.accountName || 'Unknown'}</strong>
+            {li.channelId ? (
+              <>
+                {' '}
+                (id <code>{li.channelId}</code>)
+              </>
+            ) : null}
+          </p>
+        )}
+        {li?.hasOAuth && li?.lastSyncedAt && (
+          <p className="prob">Last synced: {new Date(li.lastSyncedAt).toLocaleString()}</p>
+        )}
+      </div>
+
+      <div className="panel stack-gap">
+        <h2>TikTok</h2>
+        <p className="prob" style={{ marginTop: 0 }}>
+          Connect with TikTok Login Kit, then sync. Add Login Kit + Display API (
+          <code>user.info.basic</code>, <code>video.list</code>) on developers.tiktok.com. Redirect
+          URI must match exactly — TikTok requires HTTPS in production.
+        </p>
+        <div className="reply-actions">
+          <button
+            type="button"
+            className="btn btn-citrus"
+            onClick={connectTikTok}
+            disabled={Boolean(busy) || !integration.tiktokOAuth}
+          >
+            {busy === 'tiktok' ? 'Redirecting…' : tt?.hasOAuth ? 'Reconnect TikTok' : 'Connect TikTok'}
+          </button>
+          {tt?.hasOAuth && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => syncPlatform('tiktok')}
+              disabled={Boolean(syncing)}
+            >
+              {syncing === 'tiktok' ? 'Syncing…' : 'Sync comments'}
+            </button>
+          )}
+          {tt && !tt.hasOAuth && (
+            <button type="button" className="btn btn-ghost" onClick={() => disconnect('tiktok')}>
+              Remove stub
+            </button>
+          )}
+        </div>
+        {!integration.tiktokOAuth && (
+          <p className="prob">Add TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET to server/.env</p>
+        )}
+        {tt?.hasOAuth && (
+          <p className="prob">
+            Connected: <strong>{tt.accountName || 'Unknown'}</strong>
+          </p>
+        )}
+        {tt?.hasOAuth && tt?.lastSyncedAt && (
+          <p className="prob">Last synced: {new Date(tt.lastSyncedAt).toLocaleString()}</p>
         )}
       </div>
 

@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './loadEnv.js';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -11,9 +11,13 @@ import campaignRoutes from './routes/campaigns.js';
 import conversationRoutes from './routes/conversations.js';
 import billingRoutes from './routes/billing.js';
 import instagramMessagingRoutes from './routes/instagramMessaging.js';
+import { isYouTubeConfigured } from './services/youtube.js';
+import { isMetaConfigured } from './services/meta.js';
+import { getLinkedInOAuthScopes, isLinkedInConfigured } from './services/linkedin.js';
+import { isTikTokConfigured } from './services/tiktok.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 /** Comma-separated CLIENT_URL values; always allow local Vite in non-production. */
 function corsOrigins() {
@@ -24,6 +28,9 @@ function corsOrigins() {
   const origins = new Set(fromEnv);
   if (process.env.NODE_ENV !== 'production') {
     origins.add('http://localhost:5173');
+    origins.add('http://localhost:5174');
+    origins.add('http://127.0.0.1:5173');
+    origins.add('http://127.0.0.1:5174');
   }
   return [...origins];
 }
@@ -51,7 +58,18 @@ app.use(
 );
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, product: 'Voxa', message: 'AI Revenue Intelligence API' });
+  res.json({
+    ok: true,
+    product: 'Voxa',
+    message: 'AI Revenue Intelligence API',
+    oauth: {
+      youtube: isYouTubeConfigured(),
+      meta: isMetaConfigured(),
+      linkedin: isLinkedInConfigured(),
+      tiktok: isTikTokConfigured(),
+    },
+    linkedinScopes: isLinkedInConfigured() ? getLinkedInOAuthScopes() : [],
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -68,7 +86,15 @@ async function start() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/voxa';
   await mongoose.connect(uri);
   console.log('MongoDB connected');
-  app.listen(PORT, () => console.log(`Voxa API running on http://localhost:${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Voxa API running on http://localhost:${PORT}`);
+    console.log(
+      `OAuth: YouTube ${isYouTubeConfigured() ? 'On' : 'Off'} | Meta ${isMetaConfigured() ? 'On' : 'Off'} | LinkedIn ${isLinkedInConfigured() ? 'On' : 'Off'} | TikTok ${isTikTokConfigured() ? 'On' : 'Off'}`
+    );
+    if (isLinkedInConfigured()) {
+      console.log(`LinkedIn OAuth scopes: ${getLinkedInOAuthScopes().join(' ')}`);
+    }
+  });
 }
 
 start().catch((err) => {

@@ -131,7 +131,11 @@ export default function Onboarding() {
           ? '/api/connections/youtube/auth'
           : platform === 'instagram'
             ? '/api/connections/instagram/auth'
-            : '/api/connections/meta/auth?platform=facebook';
+            : platform === 'linkedin'
+              ? '/api/connections/linkedin/auth'
+              : platform === 'tiktok'
+                ? '/api/connections/tiktok/auth'
+                : '/api/connections/meta/auth?platform=facebook';
       const data = await api(path, { token });
       if (data.url) window.location.href = data.url;
       else setError('OAuth not configured on server');
