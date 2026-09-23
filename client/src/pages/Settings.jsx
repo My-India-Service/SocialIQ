@@ -447,6 +447,10 @@ export default function Settings() {
       <form className="form-stack settings-form" onSubmit={save}>
         <div className="panel">
           <h2>Brand</h2>
+          <p className="prob" style={{ marginTop: 0 }}>
+            For full reply rules (never say / always mention), use{' '}
+            <Link to="/app/ai-setup">AI Setup</Link>.
+          </p>
           <label>
             Brand name
             <input value={brandName} onChange={(e) => setBrandName(e.target.value)} required />
@@ -454,10 +458,11 @@ export default function Settings() {
           <label>
             Default reply tone
             <select value={brandTone} onChange={(e) => setBrandTone(e.target.value)}>
-              <option value="friendly">Friendly — warm & human</option>
               <option value="professional">Professional — clear & formal</option>
-              <option value="playful">Playful — witty & casual</option>
+              <option value="friendly">Friendly — warm & human</option>
+              <option value="casual">Casual — witty & Gen-Z</option>
               <option value="luxury">Luxury — refined & calm</option>
+              <option value="funny">Funny — light humour</option>
             </select>
           </label>
           <label>

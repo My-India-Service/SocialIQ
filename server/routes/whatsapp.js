@@ -13,6 +13,7 @@ import {
   verifySignature,
   verifyWebhookChallenge,
 } from '../services/whatsapp.js';
+import { logError } from '../services/logger.js';
 
 const router = express.Router();
 
@@ -86,12 +87,12 @@ router.post('/webhook', async (req, res) => {
           conn.lastSyncedAt = new Date();
           await conn.save();
         } catch (err) {
-          console.error('[whatsapp] ingest failed:', err.message);
+          logError(err, { route: '/api/whatsapp/webhook', method: 'POST', phase: 'ingest' });
         }
       }
     }
   } catch (err) {
-    console.error('[whatsapp] webhook handler error:', err.message);
+    logError(err, { route: '/api/whatsapp/webhook', method: 'POST' });
   }
 });
 

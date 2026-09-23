@@ -17,6 +17,7 @@ import {
   saveYouTubeConnection,
   verifyYouTubeOAuthState,
 } from '../services/youtube.js';
+import { logError } from '../services/logger.js';
 import {
   exchangeMetaCodeAndSave,
   getMetaAuthUrl,
@@ -159,7 +160,7 @@ router.get('/youtube/callback', async (req, res) => {
     await saveYouTubeConnection(userId, result);
     return res.redirect(await oauthSuccessRedirect(userId, 'youtube'));
   } catch (err) {
-    console.error('YouTube OAuth callback failed:', err.message);
+    logError(err, { route: '/api/connections/youtube/callback', method: 'GET' });
     return res.redirect(
       `${clientUrl}/app/connections?youtube=error&reason=${encodeURIComponent(err.message)}`
     );
@@ -221,7 +222,7 @@ router.get('/meta/callback', async (req, res) => {
 
     return res.redirect(await oauthSuccessRedirect(parsed.userId, platform));
   } catch (err) {
-    console.error('Meta OAuth callback failed:', err.message);
+    logError(err, { route: '/api/connections/meta/callback', method: 'GET' });
     return res.redirect(
       `${clientUrl}/app/connections?meta=error&platform=${encodeURIComponent(platform)}&reason=${encodeURIComponent(err.message)}`
     );
@@ -262,7 +263,7 @@ router.get('/instagram/callback', async (req, res) => {
 
     return res.redirect(await oauthSuccessRedirect(userId, 'instagram'));
   } catch (err) {
-    console.error('Instagram OAuth callback failed:', err.message);
+    logError(err, { route: '/api/connections/instagram/callback', method: 'GET' });
     return res.redirect(
       `${clientUrl}/app/connections?instagram=error&reason=${encodeURIComponent(err.message)}`
     );
@@ -368,7 +369,7 @@ router.get('/linkedin/callback', async (req, res) => {
     await saveLinkedInConnection(userId, result);
     return res.redirect(await oauthSuccessRedirect(userId, 'linkedin'));
   } catch (err) {
-    console.error('LinkedIn OAuth callback failed:', err.message);
+    logError(err, { route: '/api/connections/linkedin/callback', method: 'GET' });
     return res.redirect(
       `${clientUrl}/app/connections?linkedin=error&reason=${encodeURIComponent(
         linkedInConnectErrorMessage(err.message, err.message)
@@ -441,7 +442,7 @@ router.get('/tiktok/callback', async (req, res) => {
     await saveTikTokConnection(userId, result);
     return res.redirect(await oauthSuccessRedirect(userId, 'tiktok'));
   } catch (err) {
-    console.error('TikTok OAuth callback failed:', err.message);
+    logError(err, { route: '/api/connections/tiktok/callback', method: 'GET' });
     return res.redirect(
       `${clientUrl}/app/connections?tiktok=error&reason=${encodeURIComponent(err.message)}`
     );

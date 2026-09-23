@@ -5,7 +5,7 @@ const commentSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     platform: {
       type: String,
-      enum: ['youtube', 'instagram', 'facebook', 'linkedin', 'tiktok', 'x', 'whatsapp'],
+      enum: ['youtube', 'instagram', 'facebook', 'linkedin', 'tiktok', 'x', 'whatsapp', 'manual'],
       required: true,
     },
     externalId: { type: String },
@@ -81,6 +81,10 @@ const commentSchema = new mongoose.Schema(
     replyClaimedAt: { type: Date },
     postedReplyAt: { type: Date },
     postedAt: { type: Date, default: Date.now },
+    /** Support / complaints center */
+    assignedTo: { type: String, default: '' },
+    escalated: { type: Boolean, default: false },
+    escalatedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

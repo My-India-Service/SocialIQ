@@ -37,6 +37,12 @@ const SAMPLE_COMMENTS = [
   { platform: 'youtube', postTitle: 'Unboxing the new earbuds', author: 'NothingFan', authorHandle: '@nfan', text: 'Nothing Phone looks better than this.', likes: 55, replies: 14 },
   { platform: 'instagram', postTitle: 'Price drop story', author: 'BuyerNow', authorHandle: '@buyernow', text: 'Price?', likes: 14, replies: 2 },
   { platform: 'youtube', postTitle: 'Unboxing the new earbuds', author: 'LinkPlease', authorHandle: '@linkp', text: 'Where can I buy this now?', likes: 27, replies: 3 },
+  { platform: 'instagram', postTitle: 'Summer drop reel', author: 'CodBuyer', authorHandle: '@codbuy', text: 'COD available? Want to order today.', likes: 22, replies: 4 },
+  { platform: 'instagram', postTitle: 'Summer drop reel', author: 'CashOnly', authorHandle: '@casho', text: 'Is COD possible for this?', likes: 11, replies: 2 },
+  { platform: 'instagram', postTitle: 'Summer drop reel', author: 'SizeSeeker', authorHandle: '@sizeseek', text: 'Is this available in XXL?', likes: 36, replies: 8 },
+  { platform: 'instagram', postTitle: 'Summer drop reel', author: 'BigFit', authorHandle: '@bigfit', text: 'Need XXL size please — do you stock it?', likes: 18, replies: 3 },
+  { platform: 'instagram', postTitle: 'Restock story', author: 'DelhiDelay', authorHandle: '@delhid', text: 'Delivery to Delhi is delayed again. Shipping is awful.', likes: 42, replies: 14 },
+  { platform: 'youtube', postTitle: '30-day review', author: 'DelhiShopper', authorHandle: '@delshop', text: 'Courier never came in Delhi — late delivery third time.', likes: 55, replies: 12 },
 ];
 
 async function seed() {

@@ -3,7 +3,13 @@ import Comment from '../models/Comment.js';
 import Conversation from '../models/Conversation.js';
 import User from '../models/User.js';
 import { authRequired } from '../middleware/auth.js';
-import { analyzeComment, buildAutoDmPreview, buildDailyReport, buildRoiSummary, regenerateSuggestedReply } from '../services/ai.js';
+import { analyzeComment, buildAutoDmPreview, buildDailyReport, buildRoiSummary, brandProfileFromUser, regenerateSuggestedReply } from '../services/ai.js';
+import {
+  bucketCustomerTopics,
+  buildAiFindings,
+  filterCommentsByPeriod,
+  parseInsightsPeriod,
+} from '../services/customerInsights.js';
 import { hasAnyIntegration, routeLead } from '../services/integrations.js';
 import { csvDateStamp, rowsToCsv } from '../utils/csv.js';
 import {
@@ -200,12 +206,17 @@ router.get('/insights', async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     const comments = await Comment.find({ user: req.userId });
+    const period = parseInsightsPeriod(req.query.period);
+    const periodComments = filterCommentsByPeriod(comments, period);
     const reportOptions = {
       avgOrderValue: user?.avgOrderValue ?? 2499,
       currency: user?.currency || 'INR',
     };
-    const report = buildDailyReport(comments, reportOptions);
+    const report = buildDailyReport(periodComments, reportOptions);
     res.json({
+      period,
+      topics: bucketCustomerTopics(periodComments),
+      aiFindings: buildAiFindings(periodComments, comments, { periodDays: period }),
       featureRequests: report.featureRequestGroups,
       competitors: report.competitorIntel,
       complaintThemes: report.complaintThemes,
@@ -254,7 +265,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'platform, author, and text are required' });
     }
 
-    const analysis = await analyzeComment(text, user.brandTone, user.avgOrderValue);
+    const analysis = await analyzeComment(text, brandProfileFromUser(user));
     let autoDmStatus = 'none';
     let autoDmPreview = '';
     if (user.autoDm?.enabled && analysis.category === 'sales_opportunity') {
@@ -289,7 +300,7 @@ router.post('/analyze', async (req, res) => {
     const user = await User.findById(req.userId);
     const { text } = req.body;
     if (!text) return res.status(400).json({ message: 'text is required' });
-    const analysis = await analyzeComment(text, user.brandTone, user.avgOrderValue);
+    const analysis = await analyzeComment(text, brandProfileFromUser(user));
     res.json({
       analysis: {
         ...analysis,
@@ -341,7 +352,7 @@ router.post('/:id/regenerate-reply', async (req, res) => {
     const next = await regenerateSuggestedReply(
       comment.text,
       comment.category,
-      user.brandTone,
+      brandProfileFromUser(user),
       comment.suggestedReply
     );
     comment.suggestedReply = next.suggestedReply;

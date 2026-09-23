@@ -1,10 +1,11 @@
 export const ONBOARDING_STEPS = 7;
 
 export const TONE_OPTIONS = [
-  { id: 'friendly', label: 'Friendly', desc: 'Warm, approachable, conversational' },
   { id: 'professional', label: 'Professional', desc: 'Clear, polished, business-ready' },
-  { id: 'playful', label: 'Playful', desc: 'Fun, energetic, emoji-friendly' },
+  { id: 'friendly', label: 'Friendly', desc: 'Warm, approachable, conversational' },
+  { id: 'casual', label: 'Casual', desc: 'Fun, energetic, Gen-Z friendly' },
   { id: 'luxury', label: 'Luxury', desc: 'Refined, premium, understated' },
+  { id: 'funny', label: 'Funny', desc: 'Light humour without being rude' },
 ];
 
 export const PLATFORM_OPTIONS = [

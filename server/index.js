@@ -11,10 +11,13 @@ import campaignRoutes from './routes/campaigns.js';
 import conversationRoutes from './routes/conversations.js';
 import billingRoutes from './routes/billing.js';
 import instagramMessagingRoutes from './routes/instagramMessaging.js';
+import leadRoutes from './routes/leads.js';
+import complaintRoutes from './routes/complaints.js';
 import { isYouTubeConfigured } from './services/youtube.js';
 import { isMetaConfigured } from './services/meta.js';
 import { getLinkedInOAuthScopes, isLinkedInConfigured } from './services/linkedin.js';
 import { isTikTokConfigured } from './services/tiktok.js';
+import { logError, logFatal, logInfo } from './services/logger.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -81,13 +84,40 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/instagram', instagramMessagingRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/complaints', complaintRoutes);
+
+// Express error handler — logs + alerts, then JSON response
+app.use((err, req, res, _next) => {
+  const status = Number(err.status || err.statusCode || 500);
+  logError(err, {
+    route: req.originalUrl || req.url,
+    method: req.method,
+    userId: req.userId ? String(req.userId) : undefined,
+    status,
+  });
+  if (res.headersSent) return;
+  res.status(status >= 400 ? status : 500).json({
+    message: err.message || 'Internal server error',
+  });
+});
+
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  logError(err, { route: 'unhandledRejection' });
+});
+
+process.on('uncaughtException', (err) => {
+  logFatal(err, { route: 'uncaughtException' });
+  setTimeout(() => process.exit(1), 500);
+});
 
 async function start() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/voxa';
   await mongoose.connect(uri);
-  console.log('MongoDB connected');
+  logInfo('MongoDB connected');
   app.listen(PORT, () => {
-    console.log(`Voxa API running on http://localhost:${PORT}`);
+    logInfo(`Voxa API running on http://localhost:${PORT}`);
     console.log(
       `OAuth: YouTube ${isYouTubeConfigured() ? 'On' : 'Off'} | Meta ${isMetaConfigured() ? 'On' : 'Off'} | LinkedIn ${isLinkedInConfigured() ? 'On' : 'Off'} | TikTok ${isTikTokConfigured() ? 'On' : 'Off'}`
     );
@@ -98,6 +128,6 @@ async function start() {
 }
 
 start().catch((err) => {
-  console.error('Failed to start server:', err.message);
-  process.exit(1);
+  logFatal(err, { route: 'startup' });
+  setTimeout(() => process.exit(1), 500);
 });

@@ -6,10 +6,16 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6 },
     brandName: { type: String, default: 'My Brand' },
+    brandDescription: { type: String, default: '' },
     brandTone: {
       type: String,
-      enum: ['friendly', 'professional', 'playful', 'luxury'],
+      // playful kept for legacy docs; normalize to casual on read/write
+      enum: ['professional', 'friendly', 'casual', 'luxury', 'funny', 'playful'],
       default: 'friendly',
+    },
+    aiProfile: {
+      neverSay: { type: [String], default: [] },
+      alwaysMention: { type: [String], default: [] },
     },
     /** Average order value used for revenue estimates (INR by default). */
     avgOrderValue: { type: Number, default: 2499, min: 0 },

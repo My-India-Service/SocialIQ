@@ -7,6 +7,19 @@ function formatInr(n) {
   return `₹${Number(n || 0).toLocaleString('en-IN')}`;
 }
 
+function padIndex(n) {
+  return String(n).padStart(2, '0');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function CampaignForm({ post, token, onSaved }) {
   const [keywords, setKeywords] = useState((post.keywords || []).join(', '));
   const [publicReplyTemplate, setPublicReplyTemplate] = useState(
@@ -132,43 +145,152 @@ function CampaignForm({ post, token, onSaved }) {
 
 export default function Insights() {
   const { token } = useAuth();
+  const [period, setPeriod] = useState(30);
   const [data, setData] = useState(null);
   const [postKpis, setPostKpis] = useState(null);
   const [error, setError] = useState('');
   const [editingPost, setEditingPost] = useState(null);
+  const [copyFlash, setCopyFlash] = useState('');
 
-  async function load() {
+  async function load(nextPeriod = period) {
     try {
-        const [insightsRes, kpisRes] = await Promise.all([
-          api('/api/comments/insights', { token }),
-          api('/api/campaigns/kpis', { token }),
-        ]);
-        setData(insightsRes);
-        setPostKpis(kpisRes);
+      setError('');
+      const [insightsRes, kpisRes] = await Promise.all([
+        api(`/api/comments/insights?period=${nextPeriod}`, { token }),
+        api('/api/campaigns/kpis', { token }),
+      ]);
+      setData(insightsRes);
+      setPostKpis(kpisRes);
     } catch (err) {
       setError(err.message);
     }
   }
 
   useEffect(() => {
-    load();
-  }, [token]);
+    load(period);
+  }, [token, period]);
+
+  async function handleCopy(kind) {
+    let text = '';
+    if (kind === 'topics') {
+      const lines = (data?.topics || []).map((t) => `${t.label}\t${t.count}`);
+      text = [`Customer topics (last ${period} days)`, ...lines].join('\n');
+    } else if (kind === 'findings') {
+      const lines = (data?.aiFindings || []).map(
+        (f) => `${padIndex(f.index)}. ${f.text}`
+      );
+      text = [`AI findings (last ${period} days)`, ...lines].join('\n');
+    }
+    const ok = await copyText(text);
+    setCopyFlash(ok ? kind : '');
+    if (ok) setTimeout(() => setCopyFlash(''), 1600);
+  }
+
+  const topics = data?.topics || [];
+  const maxTopic = Math.max(...topics.map((t) => t.count), 1);
+  const findings = data?.aiFindings || [];
 
   return (
-    <div>
+    <div className="customer-insights">
       <div className="page-head">
         <div>
-          <h1>Product & competitor intel</h1>
-          <p>
-            Feature requests aggregated into roadmap signals — plus what people say about rivals.
-          </p>
+          <p className="eyebrow">Customer intelligence</p>
+          <h1>Customer Insights</h1>
+          <p>Stop managing comments — see what customers are talking about.</p>
         </div>
-        <Link to="/app/conversations" className="btn btn-ghost btn-sm">
-          DM conversations
-        </Link>
+        <div className="insights-period">
+          <label>
+            Period
+            <select
+              value={period}
+              onChange={(e) => setPeriod(Number(e.target.value))}
+              aria-label="Insights period"
+            >
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+            </select>
+          </label>
+          <Link to="/app/conversations" className="btn btn-ghost btn-sm">
+            DM conversations
+          </Link>
+        </div>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
+
+      <section className="panel insights-topics">
+        <div className="insights-panel-head">
+          <div>
+            <p className="eyebrow">Customer Insights</p>
+            <h2>What are customers talking about?</h2>
+          </div>
+          <button
+            type="button"
+            className="insights-copy-btn"
+            onClick={() => handleCopy('topics')}
+            aria-label="Copy topics"
+            title="Copy"
+          >
+            {copyFlash === 'topics' ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+        {topics.length ? (
+          <ul className="insight-bars topic-bars">
+            {topics.map((t) => (
+              <li key={t.label}>
+                <div className="insight-bar-head topic-bar-head">
+                  <strong>{t.label}</strong>
+                  <div className="insight-bar-track">
+                    <div
+                      className="insight-bar-fill topic"
+                      style={{
+                        width: `${Math.min(100, (t.count / maxTopic) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span>{t.count}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="prob">No topic signals in this period yet. Sync comments or widen the period.</p>
+        )}
+      </section>
+
+      <section className="ai-findings-section">
+        <h2>AI Findings</h2>
+        <div className="panel ai-findings">
+          <div className="insights-panel-head">
+            <p className="ai-findings-banner">
+              AI found {findings.length} important pattern{findings.length === 1 ? '' : 's'}
+            </p>
+            <button
+              type="button"
+              className="insights-copy-btn"
+              onClick={() => handleCopy('findings')}
+              aria-label="Copy findings"
+              title="Copy"
+              disabled={!findings.length}
+            >
+              {copyFlash === 'findings' ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          {findings.length ? (
+            <ol className="ai-findings-list">
+              {findings.map((f) => (
+                <li key={f.id} className="ai-finding-item">
+                  <span className="ai-finding-index">{padIndex(f.index)}</span>
+                  <p>{f.text}</p>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="prob">No strong patterns yet — more comments will unlock findings.</p>
+          )}
+        </div>
+      </section>
 
       {postKpis?.posts?.length ? (
         <section className="panel" style={{ marginBottom: '1.5rem' }}>

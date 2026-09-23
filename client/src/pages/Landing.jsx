@@ -10,8 +10,9 @@ import {
   TESTIMONIALS,
   TRUST_BADGE,
 } from '../data/landingContent';
-import PhoneMockup from '../components/landing/PhoneMockup';
 import BrandLogo from '../components/BrandLogo';
+import ThemeToggle from '../components/ThemeToggle';
+import PhoneMockup from '../components/landing/PhoneMockup';
 
 function LandingFaq({ items }) {
   const [open, setOpen] = useState(0);
@@ -53,6 +54,7 @@ export default function Landing() {
               <BrandLogo />
             </Link>
             <div className="lq-nav-bar-end">
+              <ThemeToggle className="theme-toggle--nav" />
               <Link to="/register" className="btn btn-citrus btn-sm">
                 Start free
               </Link>

@@ -3,24 +3,40 @@ const API_BASE =
   import.meta.env.VITE_API_URL ||
   '';
 
+const FETCH_TIMEOUT_MS = 12_000;
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      const timeoutErr = new Error(
+        'Request timed out. The API may be waking up — try again.'
+      );
+      timeoutErr.status = 0;
+      throw timeoutErr;
+    }
+    const networkErr = new Error(
+      'Cannot reach the API. Check that the server is running and try again.'
+    );
+    networkErr.status = 0;
+    throw networkErr;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function api(path, { method = 'GET', body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  let res;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    const err = new Error(
-      'Cannot reach the API. Check that the server is running and try again.'
-    );
-    err.status = 0;
-    throw err;
-  }
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -43,16 +59,7 @@ export async function downloadFile(path, { token, fallbackFilename = 'download' 
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  let res;
-  try {
-    res = await fetch(`${API_BASE}${path}`, { headers });
-  } catch {
-    const err = new Error(
-      'Cannot reach the API. Check that the server is running and try again.'
-    );
-    err.status = 0;
-    throw err;
-  }
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, { headers });
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

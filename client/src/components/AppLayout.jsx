@@ -1,18 +1,50 @@
-import { NavLink, Outlet, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { needsOnboarding } from '../utils/onboarding';
 import BrandLogo from './BrandLogo';
+import ThemeToggle from './ThemeToggle';
 
 export default function AppLayout() {
-  const { user, token, loading, logout } = useAuth();
+  const { user, token, loading, sessionError, logout, retrySession } = useAuth();
+  const { theme } = useTheme();
+  const navigate = useNavigate();
 
   if (loading) {
     return <div className="loading-screen">Loading SocialAiDigital…</div>;
   }
 
-  // JWT still present (e.g. after OAuth return) but /me briefly failed — do not send to login.
+  // JWT still present but /me failed — auto-retrying or offer recovery.
   if (!user && token) {
-    return <div className="loading-screen">Restoring session…</div>;
+    if (!sessionError) {
+      return <div className="loading-screen">Restoring session…</div>;
+    }
+    return (
+      <div className="loading-screen session-restore">
+        <div className="session-restore-card">
+          <h1>Couldn’t restore your session</h1>
+          <p>
+            {sessionError ||
+              'The API didn’t respond. It may be waking up — retry in a moment.'}
+          </p>
+          <div className="session-restore-actions">
+            <button type="button" className="btn btn-citrus" onClick={retrySession}>
+              Retry
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                logout();
+                navigate('/login', { replace: true });
+              }}
+            >
+              Log in again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -27,7 +59,7 @@ export default function AppLayout() {
     <div className="app-shell">
       <aside className="sidebar">
         <NavLink to="/app" className="logo" end>
-          <BrandLogo variant="onDark" />
+          <BrandLogo variant={theme === 'dark' ? 'onDark' : 'default'} />
         </NavLink>
         <nav className="side-nav">
           <NavLink to="/app" end>
@@ -36,13 +68,17 @@ export default function AppLayout() {
           <NavLink to="/app/report">CEO dashboard</NavLink>
           <NavLink to="/app/revenue">Revenue & ROI</NavLink>
           <NavLink to="/app/conversations">Conversations</NavLink>
+          <NavLink to="/app/leads">Lead Center</NavLink>
+          <NavLink to="/app/complaints">Complaints</NavLink>
           <NavLink to="/app/insights">Insights</NavLink>
           <NavLink to="/app/connections">Connect</NavLink>
+          <NavLink to="/app/ai-setup">AI Setup</NavLink>
           <NavLink to="/app/settings">Settings</NavLink>
           <NavLink to="/app/billing">Billing</NavLink>
           <NavLink to="/app/help">Guide</NavLink>
         </nav>
         <div className="side-foot">
+          <ThemeToggle className="theme-toggle--sidebar" />
           <div className="who">
             <span className="who-avatar" aria-hidden="true">
               {(user.brandName || 'V').slice(0, 1).toUpperCase()}

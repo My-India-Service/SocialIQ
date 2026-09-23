@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 
 const AuthContext = createContext(null);
+const MAX_AUTO_RETRIES = 2;
 
 async function fetchMe(token, attempts = 3) {
   let lastErr;
@@ -25,18 +26,28 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('voxa_token'));
   const [loading, setLoading] = useState(true);
   const [sessionRetry, setSessionRetry] = useState(0);
+  const [sessionError, setSessionError] = useState(null);
+  const userRef = useRef(user);
+  const loadingRef = useRef(loading);
+  userRef.current = user;
+  loadingRef.current = loading;
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       if (!token) {
         setLoading(false);
+        setSessionError(null);
         return;
       }
       setLoading(true);
+      setSessionError(null);
       try {
         const data = await fetchMe(token);
-        if (!cancelled) setUser(data.user);
+        if (!cancelled) {
+          setUser(data.user);
+          setSessionError(null);
+        }
       } catch (err) {
         // Only wipe session on real auth failure — not network/5xx after OAuth return.
         const status = err?.status;
@@ -45,14 +56,19 @@ export function AuthProvider({ children }) {
           if (!cancelled) {
             setToken(null);
             setUser(null);
+            setSessionError(null);
           }
         } else if (!cancelled) {
           setUser(null);
-          // One delayed retry after OAuth full-page return when API was briefly down.
-          if (sessionRetry < 2) {
+          const message =
+            err?.message ||
+            'Cannot restore your session. The API may be offline or waking up.';
+          if (sessionRetry < MAX_AUTO_RETRIES) {
             setTimeout(() => {
               if (!cancelled) setSessionRetry((n) => n + 1);
             }, 1200);
+          } else {
+            setSessionError(message);
           }
         }
       } finally {
@@ -65,27 +81,60 @@ export function AuthProvider({ children }) {
     };
   }, [token, sessionRetry]);
 
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return;
+      if (!token || userRef.current || loadingRef.current) return;
+      setSessionError(null);
+      setSessionRetry((n) => n + 1);
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [token]);
+
   function loginSuccess({ token: nextToken, user: nextUser }) {
     localStorage.setItem('voxa_token', nextToken);
     setToken(nextToken);
     setUser(nextUser);
+    setSessionError(null);
+    setSessionRetry(0);
   }
 
   function logout() {
     localStorage.removeItem('voxa_token');
     setToken(null);
     setUser(null);
+    setSessionError(null);
+    setSessionRetry(0);
+  }
+
+  function retrySession() {
+    setSessionError(null);
+    setSessionRetry((n) => n + 1);
   }
 
   async function refreshUser() {
     if (!token) return null;
     const data = await fetchMe(token);
     setUser(data.user);
+    setSessionError(null);
     return data.user;
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, loginSuccess, logout, setUser, refreshUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        sessionError,
+        loginSuccess,
+        logout,
+        retrySession,
+        setUser,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 import Comment from '../models/Comment.js';
 import Connection from '../models/Connection.js';
 import User from '../models/User.js';
-import { analyzeComment, buildAutoDmPreview } from './ai.js';
+import { analyzeComment, buildAutoDmPreview, brandProfileFromUser } from './ai.js';
 import { fetchYouTubeComments } from './youtube.js';
 import { fetchFacebookComments, fetchInstagramComments } from './meta.js';
 import { fetchLinkedInComments } from './linkedin.js';
@@ -47,8 +47,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
     }
   }
 
-  const brandTone = user?.brandTone || 'friendly';
-  const avgOrderValue = user?.avgOrderValue ?? 2499;
+  const brandProfile = brandProfileFromUser(user);
   const threshold = user?.integrations?.hotLeadThreshold ?? 80;
   const autoRoute = Boolean(user?.integrations?.autoRouteHotLeads);
 
@@ -68,7 +67,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
       continue;
     }
 
-    const analysis = await analyzeComment(raw.text, brandTone, avgOrderValue);
+    const analysis = await analyzeComment(raw.text, brandProfile);
     let autoDmStatus = 'none';
     let autoDmPreview = '';
     const campaign =

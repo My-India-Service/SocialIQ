@@ -3,6 +3,7 @@ import Connection from '../models/Connection.js';
 import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
 import { processInboundDmMessage } from '../services/conversationAgent.js';
+import { logError } from '../services/logger.js';
 
 const router = express.Router();
 
@@ -99,7 +100,7 @@ router.post('/webhook', async (req, res) => {
       }
     }
   } catch (err) {
-    console.error('[instagram/webhook]', err.message);
+    logError(err, { route: '/api/instagram/webhook', method: 'POST' });
   }
 });
 

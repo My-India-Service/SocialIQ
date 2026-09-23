@@ -177,6 +177,20 @@ const TONE_REPLIES = {
     other: "Thank you for writing. How may we be of service?",
   },
 };
+// Casual aliases playful templates; funny is a lighter witty variant.
+TONE_REPLIES.casual = TONE_REPLIES.playful;
+TONE_REPLIES.funny = {
+  sales_opportunity: "Say less — wallet's about to have a good day 😄 Details in your DMs!",
+  complaint: "Oof, not the plot twist we wanted. DM your order ID and we'll fix the sequel.",
+  feature_request: "Chef's kiss idea — already on the fridge for the product team.",
+  positive_feedback: "Stop, we're blushing 🔥 Thanks for the love!",
+  spam: '',
+  competitor_mention: "Them? Cute. Us? Check your DMs for the receipts.",
+  refund_request: "Bummer ending. Slide the order ID in DMs — we'll sort it.",
+  shipping_issue: "Is your package on a world tour? Send the order ID — we'll GPS it.",
+  influencer: "Main-character energy! DMing you now.",
+  other: "We're all ears — spill!",
+};
 
 /** Extra templates for Regenerate (rules path). Primary stays in TONE_REPLIES. */
 const REPLY_EXTRAS = {
@@ -338,10 +352,53 @@ const REPLY_EXTRAS = {
   },
 };
 
+REPLY_EXTRAS.casual = REPLY_EXTRAS.playful;
+REPLY_EXTRAS.funny = {
+  sales_opportunity: [
+    "Price? Link? We got you — check DMs 😄",
+    "Your cart called. Details incoming in DM!",
+  ],
+  complaint: [
+    "Not funny for you — DM the order ID and we'll fix it.",
+    "Ugh, our bad vibe. Message us and we'll make it right.",
+  ],
+  feature_request: [
+    "That's a banger idea — logged!",
+    "Product team just got a gift. Thanks!",
+  ],
+  positive_feedback: [
+    "You're too kind 🔥",
+    "Cue happy dance — thank you!",
+  ],
+  competitor_mention: [
+    "Competition who? DM us for the funny version of the truth.",
+    "We love a roast-off — details in DM.",
+  ],
+  refund_request: [
+    "Let's untangle this — order ID in DM please.",
+    "Refund path unlocked — drop order details in DM.",
+  ],
+  shipping_issue: [
+    "Tracking plot twist? Order ID in DM.",
+    "We'll find that package — DM the number.",
+  ],
+  influencer: [
+    "Star spotted — DMing!",
+    "You're on our cool list. Check DMs.",
+  ],
+  other: [
+    "Hit us — we're listening 👂",
+    "What's the tea? We're here.",
+    "Comment unlocked. Need a hand?",
+  ],
+};
+
 const TONE_LABELS = {
   friendly: 'warm, human, lightly casual',
   professional: 'clear, formal, polite',
   playful: 'witty, casual, Gen-Z friendly',
+  casual: 'witty, casual, Gen-Z friendly',
+  funny: 'humorous, light, playful without being rude',
   luxury: 'refined, calm, concierge-like',
 };
 
@@ -452,40 +509,145 @@ export function categorizeComment(text) {
   };
 }
 
-export function suggestReply(text, category, brandTone = 'friendly') {
-  const tone = TONE_REPLIES[brandTone] || TONE_REPLIES.friendly;
-  return tone[category] || tone.other;
+export function suggestReply(text, category, brandTone = 'friendly', profile = null) {
+  const toneKey = resolveToneKey(brandTone);
+  const tone = TONE_REPLIES[toneKey] || TONE_REPLIES.friendly;
+  let reply = tone[category] || tone.other;
+  return polishReply(reply, category, profile || { brandTone: toneKey });
+}
+
+function resolveToneKey(brandTone = 'friendly') {
+  if (brandTone === 'playful') return 'casual';
+  if (TONE_REPLIES[brandTone]) return brandTone;
+  return 'friendly';
+}
+
+/** Build profile from User doc or loose options. */
+export function brandProfileFromUser(user) {
+  if (!user) {
+    return {
+      brandTone: 'friendly',
+      brandName: '',
+      brandDescription: '',
+      neverSay: [],
+      alwaysMention: [],
+      avgOrderValue: 2499,
+    };
+  }
+  if (typeof user === 'string') {
+    return {
+      brandTone: resolveToneKey(user),
+      brandName: '',
+      brandDescription: '',
+      neverSay: [],
+      alwaysMention: [],
+      avgOrderValue: 2499,
+    };
+  }
+  return {
+    brandTone: resolveToneKey(user.brandTone),
+    brandName: user.brandName || '',
+    brandDescription: user.brandDescription || '',
+    neverSay: user.neverSay || user.aiProfile?.neverSay || [],
+    alwaysMention: user.alwaysMention || user.aiProfile?.alwaysMention || [],
+    avgOrderValue: user.avgOrderValue ?? 2499,
+  };
+}
+
+function normalizeBrandProfile(toneOrProfile, avgOrderValue = 2499) {
+  if (toneOrProfile && typeof toneOrProfile === 'object') {
+    const p = brandProfileFromUser(toneOrProfile);
+    if (avgOrderValue != null && toneOrProfile.avgOrderValue == null) {
+      p.avgOrderValue = avgOrderValue;
+    }
+    return p;
+  }
+  return {
+    brandTone: resolveToneKey(toneOrProfile || 'friendly'),
+    brandName: '',
+    brandDescription: '',
+    neverSay: [],
+    alwaysMention: [],
+    avgOrderValue: avgOrderValue ?? 2499,
+  };
+}
+
+function brandPromptBlock(profile) {
+  const lines = [];
+  if (profile.brandName) lines.push(`Brand name: ${profile.brandName}`);
+  if (profile.brandDescription) lines.push(`Brand description: ${profile.brandDescription}`);
+  if (profile.neverSay?.length) {
+    lines.push(`Never say these phrases: ${profile.neverSay.map((s) => `"${s}"`).join('; ')}`);
+  }
+  if (profile.alwaysMention?.length) {
+    lines.push(
+      `When relevant, naturally mention: ${profile.alwaysMention.map((s) => `"${s}"`).join('; ')}`
+    );
+  }
+  return lines.length ? `\n${lines.join('\n')}` : '';
+}
+
+function stripNeverSay(reply, neverSay = []) {
+  if (!reply || !neverSay?.length) return reply || '';
+  let out = String(reply);
+  for (const phrase of neverSay) {
+    if (!phrase) continue;
+    const re = new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    out = out.replace(re, '');
+  }
+  return out
+    .replace(/\s+([?.!,;:])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[?.!,;:\s]+|[?.!,;:\s]+$/g, '')
+    .trim();
+}
+
+function applyAlwaysMention(reply, category, alwaysMention = []) {
+  if (!reply || !alwaysMention?.length) return reply || '';
+  if (!['sales_opportunity', 'shipping_issue'].includes(category)) return reply;
+  const tip = alwaysMention[0];
+  if (!tip) return reply;
+  if (reply.toLowerCase().includes(tip.toLowerCase())) return reply;
+  return `${reply} ${tip}`.trim();
+}
+
+function polishReply(reply, category, profile) {
+  let out = stripNeverSay(reply, profile?.neverSay);
+  out = applyAlwaysMention(out, category, profile?.alwaysMention);
+  return out;
 }
 
 function replyVariantPool(category, brandTone = 'friendly') {
   if (category === 'spam') return [''];
-  const toneKey = TONE_REPLIES[brandTone] ? brandTone : 'friendly';
-  const primary = suggestReply('', category, toneKey);
+  const toneKey = resolveToneKey(brandTone);
+  const primary = (TONE_REPLIES[toneKey] || TONE_REPLIES.friendly)[category]
+    || (TONE_REPLIES[toneKey] || TONE_REPLIES.friendly).other;
   const extras = REPLY_EXTRAS[toneKey]?.[category] || REPLY_EXTRAS.friendly[category] || [];
   return [...new Set([primary, ...extras].filter((s) => typeof s === 'string'))];
 }
 
-function pickRulesReplyVariant(category, brandTone, previousReply = '') {
+function pickRulesReplyVariant(category, brandTone, previousReply = '', profile = null) {
   const pool = replyVariantPool(category, brandTone);
   if (pool.length === 0) return '';
-  if (pool.length === 1) return pool[0];
+  if (pool.length === 1) return polishReply(pool[0], category, profile);
   const prev = String(previousReply || '').trim();
   const alternatives = pool.filter((s) => s.trim() !== prev);
   const choices = alternatives.length ? alternatives : pool;
-  return choices[Math.floor(Math.random() * choices.length)];
+  const picked = choices[Math.floor(Math.random() * choices.length)];
+  return polishReply(picked, category, profile);
 }
 
-async function regenerateReplyWithLLM(text, category, brandTone, previousReply) {
+async function regenerateReplyWithLLM(text, category, previousReply, profile) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  const toneDesc = TONE_LABELS[brandTone] || TONE_LABELS.friendly;
+  const toneDesc = TONE_LABELS[profile.brandTone] || TONE_LABELS.friendly;
   const prev = String(previousReply || '').trim();
 
   const system = `You are Voxa. Draft a short public comment reply in a ${toneDesc} brand tone.
 Return ONLY valid JSON: { "suggestedReply": string }.
-Rules: max 2 sentences; empty string if spam; do NOT repeat or lightly paraphrase the previous reply.`;
+Rules: max 2 sentences; empty string if spam; do NOT repeat or lightly paraphrase the previous reply.${brandPromptBlock(profile)}`;
 
   const user = `Category: ${category}
 Comment:
@@ -519,7 +681,7 @@ Previous suggested reply (write something different):
   const raw = data.choices?.[0]?.message?.content || '{}';
   const parsed = JSON.parse(raw);
   if (typeof parsed.suggestedReply !== 'string') return null;
-  return parsed.suggestedReply.trim();
+  return polishReply(parsed.suggestedReply.trim(), category, profile);
 }
 
 /**
@@ -529,9 +691,10 @@ Previous suggested reply (write something different):
 export async function regenerateSuggestedReply(
   text,
   category = 'other',
-  brandTone = 'friendly',
+  brandToneOrProfile = 'friendly',
   previousReply = ''
 ) {
+  const profile = normalizeBrandProfile(brandToneOrProfile);
   const cat = normalizeCategory(category);
   if (cat === 'spam') {
     return { suggestedReply: '', analysisSource: 'rules' };
@@ -539,7 +702,7 @@ export async function regenerateSuggestedReply(
 
   if (process.env.OPENAI_API_KEY) {
     try {
-      const llmReply = await regenerateReplyWithLLM(text, cat, brandTone, previousReply);
+      const llmReply = await regenerateReplyWithLLM(text, cat, previousReply, profile);
       if (llmReply !== null && llmReply !== String(previousReply || '').trim()) {
         return { suggestedReply: llmReply, analysisSource: 'llm' };
       }
@@ -554,7 +717,7 @@ export async function regenerateSuggestedReply(
   }
 
   return {
-    suggestedReply: pickRulesReplyVariant(cat, brandTone, previousReply),
+    suggestedReply: pickRulesReplyVariant(cat, profile.brandTone, previousReply, profile),
     analysisSource: 'rules',
   };
 }
@@ -578,16 +741,17 @@ function enrichAnalysis(text, base, avgOrderValue = 2499) {
   };
 }
 
-export function analyzeCommentRules(text, brandTone = 'friendly', avgOrderValue = 2499) {
+export function analyzeCommentRules(text, brandToneOrProfile = 'friendly', avgOrderValue = 2499) {
+  const profile = normalizeBrandProfile(brandToneOrProfile, avgOrderValue);
   const result = categorizeComment(text);
   return enrichAnalysis(
     text,
     {
       ...result,
-      suggestedReply: suggestReply(text, result.category, brandTone),
+      suggestedReply: suggestReply(text, result.category, profile.brandTone, profile),
       analysisSource: 'rules',
     },
-    avgOrderValue
+    profile.avgOrderValue
   );
 }
 
@@ -609,12 +773,12 @@ function clampProbability(n) {
   return Math.max(0, Math.min(100, Math.round(num)));
 }
 
-async function analyzeWithLLM(text, brandTone = 'friendly', avgOrderValue = 2499) {
+async function analyzeWithLLM(text, profile) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  const toneDesc = TONE_LABELS[brandTone] || TONE_LABELS.friendly;
+  const toneDesc = TONE_LABELS[profile.brandTone] || TONE_LABELS.friendly;
 
   const system = `You are Voxa, an AI Sales Agent for social media comments (Instagram, YouTube) for Indian D2C brands.
 Comments may be in English, Hinglish, or Hindi (Roman script): e.g. "kitne ka hai?", "price batao", "COD hai?", "dm krdo", "genuine hai?", "deliver Haryana me hogi?".
@@ -627,7 +791,7 @@ purchaseProbability (0-100 integer; buying intent),
 sentiment (positive|neutral|negative),
 suggestedReply (string; empty string for spam; max 2 sentences; brand-tone; Hinglish OK if comment is Hinglish),
 competitorName (string; brand name if competitor_mention else ""),
-featureTheme (string; short product/theme label if feature_request else "").`;
+featureTheme (string; short product/theme label if feature_request else "").${brandPromptBlock(profile)}`;
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -655,6 +819,10 @@ featureTheme (string; short product/theme label if feature_request else "").`;
   const raw = data.choices?.[0]?.message?.content || '{}';
   const parsed = JSON.parse(raw);
   const category = normalizeCategory(parsed.category);
+  const rawReply =
+    typeof parsed.suggestedReply === 'string'
+      ? parsed.suggestedReply.trim()
+      : suggestReply(text, category, profile.brandTone, profile);
 
   return enrichAnalysis(
     text,
@@ -662,36 +830,35 @@ featureTheme (string; short product/theme label if feature_request else "").`;
       category,
       purchaseProbability: clampProbability(parsed.purchaseProbability),
       sentiment: normalizeSentiment(parsed.sentiment),
-      suggestedReply:
-        typeof parsed.suggestedReply === 'string'
-          ? parsed.suggestedReply.trim()
-          : suggestReply(text, category, brandTone),
+      suggestedReply: polishReply(rawReply, category, profile),
       competitorName: typeof parsed.competitorName === 'string' ? parsed.competitorName.trim() : '',
       featureTheme: typeof parsed.featureTheme === 'string' ? parsed.featureTheme.trim() : '',
       analysisSource: 'llm',
     },
-    avgOrderValue
+    profile.avgOrderValue
   );
 }
 
 /**
  * Prefer OpenAI LLM when OPENAI_API_KEY is set; otherwise rule-based fallback.
+ * Second arg may be brandTone string or a full brand profile / User-like object.
  */
-export async function analyzeComment(text, brandTone = 'friendly', avgOrderValue = 2499) {
+export async function analyzeComment(text, brandToneOrProfile = 'friendly', avgOrderValue = 2499) {
+  const profile = normalizeBrandProfile(brandToneOrProfile, avgOrderValue);
   if (!text?.trim()) {
-    return analyzeCommentRules(text || '', brandTone, avgOrderValue);
+    return analyzeCommentRules(text || '', profile);
   }
 
   if (process.env.OPENAI_API_KEY) {
     try {
-      const llm = await analyzeWithLLM(text, brandTone, avgOrderValue);
+      const llm = await analyzeWithLLM(text, profile);
       if (llm) return llm;
     } catch (err) {
       console.warn('LLM analysis failed, using rules:', err.message);
     }
   }
 
-  return analyzeCommentRules(text, brandTone, avgOrderValue);
+  return analyzeCommentRules(text, profile);
 }
 
 function bucketThemes(comments, themes) {
@@ -927,8 +1094,11 @@ export function renderReportEmail(brandName, report) {
     '',
     line('Complaints', report.complaints),
     line('Top complaint', report.topComplaint || '—'),
-    report.complaintThemes.length
-      ? line('Complaint themes', report.complaintThemes.map((t) => `${t.label} (${t.count})`).join(', '))
+    report.complaintThemes?.length
+      ? line(
+          'Complaint themes',
+          report.complaintThemes.map((t) => `${t.label} (${t.count})`).join(', ')
+        )
       : '',
     '',
     line('Trending feature request', report.trendingFeatureRequest || '—'),
@@ -938,14 +1108,14 @@ export function renderReportEmail(brandName, report) {
           report.featureRequestGroups.map((t) => `${t.label} ×${t.count}`).join(', ')
         )
       : '',
-    line('Competitor mentions', report.competitorMentions.join(', ') || '—'),
+    line('Competitor mentions', (report.competitorMentions ?? []).join(', ') || '—'),
     '',
-    report.crisis.active ? `⚠ CRISIS ALERT: ${report.crisis.reason}` : '',
+    report.crisis?.active ? `⚠ CRISIS ALERT: ${report.crisis.reason}` : '',
     '',
-    `Sentiment — 😊 ${report.sentiment.positive}%  😐 ${report.sentiment.neutral}%  😡 ${report.sentiment.negative}%`,
+    `Sentiment — 😊 ${report.sentiment?.positive ?? 0}%  😐 ${report.sentiment?.neutral ?? 0}%  😡 ${report.sentiment?.negative ?? 0}%`,
     '',
-    report.hotLeads.length ? 'Hottest leads:' : '',
-    ...report.hotLeads.map(
+    report.hotLeads?.length ? 'Hottest leads:' : '',
+    ...(report.hotLeads ?? []).map(
       (l) =>
         `  • ${l.author} (${l.purchaseProbability}% · ${money(l.expectedOrderValue)}) — "${l.text}"`
     ),
@@ -953,12 +1123,13 @@ export function renderReportEmail(brandName, report) {
     .filter((l) => l !== '')
     .join('\n');
 
+  const hotLeads = report.hotLeads ?? [];
   const html = `
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#0f1c24">
     <h2 style="margin:0 0 4px">${brandName} — Daily CEO Report</h2>
     <p style="color:#5c6b75;margin:0 0 16px">${report.date}</p>
     ${
-      report.crisis.active
+      report.crisis?.active
         ? `<div style="background:#ffe8e2;color:#9a2f18;padding:10px 14px;border-radius:10px;margin-bottom:16px">⚠ <b>Crisis alert:</b> ${report.crisis.reason}</div>`
         : ''
     }
@@ -970,7 +1141,7 @@ export function renderReportEmail(brandName, report) {
       </tr>
       <tr>
         <td style="padding:8px;border:1px solid #eee"><b>${report.complaints}</b><br>complaints</td>
-        <td style="padding:8px;border:1px solid #eee"><b>${report.sentiment.positive}%</b><br>positive</td>
+        <td style="padding:8px;border:1px solid #eee"><b>${report.sentiment?.positive ?? 0}%</b><br>positive</td>
         <td style="padding:8px;border:1px solid #eee"><b>${money(report.roi?.revenueGenerated || 0)}</b><br>revenue attributed</td>
       </tr>
     </table>
@@ -980,10 +1151,10 @@ export function renderReportEmail(brandName, report) {
         ? report.featureRequestGroups.map((t) => `${t.label} (${t.count})`).join(', ')
         : '—'
     }</p>
-    <p><b>Competitors:</b> ${report.competitorMentions.join(', ') || '—'}</p>
+    <p><b>Competitors:</b> ${(report.competitorMentions ?? []).join(', ') || '—'}</p>
     ${
-      report.hotLeads.length
-        ? `<h3>Hottest leads</h3><ul>${report.hotLeads
+      hotLeads.length
+        ? `<h3>Hottest leads</h3><ul>${hotLeads
             .map(
               (l) =>
                 `<li><b>${l.author}</b> (${l.purchaseProbability}% · ${money(l.expectedOrderValue)}) — “${l.text}”</li>`

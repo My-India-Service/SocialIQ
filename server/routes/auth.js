@@ -9,9 +9,35 @@ import { getClientUrl } from '../utils/clientUrl.js';
 const router = express.Router();
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+const VALID_TONES = new Set(['professional', 'friendly', 'casual', 'luxury', 'funny']);
 
 function hashResetToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/** Map legacy playful → casual; default unknown → friendly. */
+export function normalizeTone(tone) {
+  if (tone === 'playful') return 'casual';
+  if (VALID_TONES.has(tone)) return tone;
+  return 'friendly';
+}
+
+function normalizePhraseList(value, { maxItems = 20, maxLen = 120 } = {}) {
+  const raw = Array.isArray(value)
+    ? value
+    : String(value || '')
+        .split('\n')
+        .map((s) => s.trim());
+  const out = [];
+  for (const item of raw) {
+    const s = String(item || '')
+      .trim()
+      .slice(0, maxLen);
+    if (!s) continue;
+    out.push(s);
+    if (out.length >= maxItems) break;
+  }
+  return out;
 }
 
 function signToken(user) {
@@ -24,9 +50,14 @@ function publicUser(user) {
     name: user.name,
     email: user.email,
     brandName: user.brandName,
-    brandTone: user.brandTone,
+    brandDescription: user.brandDescription || '',
+    brandTone: normalizeTone(user.brandTone),
     avgOrderValue: user.avgOrderValue ?? 2499,
     currency: user.currency || 'INR',
+    aiProfile: {
+      neverSay: user.aiProfile?.neverSay || [],
+      alwaysMention: user.aiProfile?.alwaysMention || [],
+    },
     integrations: {
       slackWebhookUrl: user.integrations?.slackWebhookUrl || '',
       whatsappNotifyPhone: user.integrations?.whatsappNotifyPhone || '',
@@ -95,7 +126,7 @@ router.post('/register', async (req, res) => {
       email,
       password: hashed,
       brandName: brandName || 'My Brand',
-      brandTone: brandTone || 'friendly',
+      brandTone: normalizeTone(brandTone || 'friendly'),
     });
 
     const token = signToken(user);
@@ -224,19 +255,35 @@ router.patch('/brand', async (req, res) => {
     const {
       brandName,
       brandTone,
+      brandDescription,
       avgOrderValue,
       currency,
       integrations,
       autoDm,
+      aiProfile,
     } = req.body;
 
     const user = await User.findById(payload.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (brandName !== undefined) user.brandName = brandName;
-    if (brandTone !== undefined) user.brandTone = brandTone;
+    if (brandTone !== undefined) user.brandTone = normalizeTone(brandTone);
+    if (brandDescription !== undefined) {
+      user.brandDescription = String(brandDescription).trim().slice(0, 2000);
+    }
     if (avgOrderValue !== undefined) user.avgOrderValue = Math.max(0, Number(avgOrderValue) || 0);
     if (currency !== undefined) user.currency = currency;
+
+    if (aiProfile && typeof aiProfile === 'object') {
+      user.aiProfile = user.aiProfile || {};
+      if (aiProfile.neverSay !== undefined) {
+        user.aiProfile.neverSay = normalizePhraseList(aiProfile.neverSay);
+      }
+      if (aiProfile.alwaysMention !== undefined) {
+        user.aiProfile.alwaysMention = normalizePhraseList(aiProfile.alwaysMention);
+      }
+      user.markModified('aiProfile');
+    }
 
     if (integrations && typeof integrations === 'object') {
       user.integrations = user.integrations || {};
@@ -328,7 +375,7 @@ router.patch('/onboarding', async (req, res) => {
     const { brandName, brandTone, avgOrderValue, currency, onboarding, complete } = req.body || {};
 
     if (brandName !== undefined) user.brandName = String(brandName).trim() || 'My Brand';
-    if (brandTone !== undefined) user.brandTone = brandTone;
+    if (brandTone !== undefined) user.brandTone = normalizeTone(brandTone);
     if (avgOrderValue !== undefined) user.avgOrderValue = Math.max(0, Number(avgOrderValue) || 0);
     if (currency !== undefined) user.currency = currency;
 

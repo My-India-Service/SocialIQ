@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { postAuthPath, needsOnboarding } from '../utils/onboarding';
 import BrandLogo from '../components/BrandLogo';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function Register() {
   const { user, loginSuccess } = useAuth();
@@ -46,6 +47,7 @@ export default function Register() {
 
   return (
     <div className="auth-page">
+      <ThemeToggle className="theme-toggle--auth" />
       <div className="auth-panel">
         <Link to="/" className="logo">
           <BrandLogo />
