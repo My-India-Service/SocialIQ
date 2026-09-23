@@ -3,16 +3,31 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { sendEmail } from '../services/mailer.js';
+import { isEmailConfigured, sendEmail } from '../services/mailer.js';
 import { getClientUrl } from '../utils/clientUrl.js';
+import { logInfo, logWarn } from '../services/logger.js';
 
 const router = express.Router();
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_RESEND_MS = 60 * 1000; // 1 minute
 const VALID_TONES = new Set(['professional', 'friendly', 'casual', 'luxury', 'funny']);
+const VALID_OTP_PURPOSES = new Set(['verify', 'login']);
+
+/** In-memory resend throttle: email+purpose → last sent timestamp */
+const otpLastSent = new Map();
 
 function hashResetToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function hashOtp(code) {
+  return crypto.createHash('sha256').update(String(code)).digest('hex');
+}
+
+function generateOtpCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 /** Map legacy playful → casual; default unknown → friendly. */
@@ -40,8 +55,10 @@ function normalizePhraseList(value, { maxItems = 20, maxLen = 120 } = {}) {
   return out;
 }
 
-function signToken(user) {
-  return jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+function signToken(user, { rememberMe = false } = {}) {
+  return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: rememberMe ? '30d' : '7d',
+  });
 }
 
 function publicUser(user) {
@@ -49,6 +66,7 @@ function publicUser(user) {
     id: user._id,
     name: user.name,
     email: user.email,
+    emailVerifiedAt: user.emailVerifiedAt || null,
     brandName: user.brandName,
     brandDescription: user.brandDescription || '',
     brandTone: normalizeTone(user.brandTone),
@@ -105,6 +123,52 @@ function publicUser(user) {
   };
 }
 
+function clearOtpFields(user) {
+  user.emailOtpHash = null;
+  user.emailOtpExpires = null;
+  user.emailOtpPurpose = null;
+}
+
+async function issueAndSendOtp(user, purpose) {
+  const code = generateOtpCode();
+  user.emailOtpHash = hashOtp(code);
+  user.emailOtpExpires = new Date(Date.now() + OTP_TTL_MS);
+  user.emailOtpPurpose = purpose;
+  await user.save();
+
+  const throttleKey = `${user.email}:${purpose}`;
+  otpLastSent.set(throttleKey, Date.now());
+
+  const subject = '[SocialAiDigital] Your code';
+  const text = `Hi ${user.name},\n\nYour SocialAiDigital verification code is: ${code}\n\nIt expires in 10 minutes. If you did not request this, ignore this email.`;
+  const html = `
+    <p>Hi ${user.name},</p>
+    <p>Your SocialAiDigital verification code is:</p>
+    <p style="font-size:28px;letter-spacing:6px;font-weight:700">${code}</p>
+    <p>It expires in 10 minutes. If you did not request this, ignore this email.</p>
+  `;
+
+  const result = await sendEmail({ to: user.email, subject, text, html });
+  if (!result.delivered) {
+    const msg = `OTP for ${user.email} (${purpose}): ${code} — email not sent (${result.reason})`;
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[otp] ${msg}`);
+      logInfo(msg, { route: '/api/auth/otp/send' });
+    } else {
+      logWarn(`OTP email not delivered to ${user.email}: ${result.reason}`, {
+        route: '/api/auth/otp/send',
+      });
+    }
+  }
+
+  return {
+    delivered: Boolean(result.delivered),
+    // Expose code only when SMTP is off and not production (local/dev testing)
+    devCode:
+      !isEmailConfigured() && process.env.NODE_ENV !== 'production' ? code : undefined,
+  };
+}
+
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, brandName, brandTone } = req.body;
@@ -127,10 +191,19 @@ router.post('/register', async (req, res) => {
       password: hashed,
       brandName: brandName || 'My Brand',
       brandTone: normalizeTone(brandTone || 'friendly'),
+      emailVerifiedAt: null,
     });
 
+    const otpMeta = await issueAndSendOtp(user, 'verify');
     const token = signToken(user);
-    res.status(201).json({ token, user: publicUser(user) });
+
+    res.status(201).json({
+      token,
+      user: publicUser(user),
+      needsVerification: true,
+      otpDelivered: otpMeta.delivered,
+      ...(otpMeta.devCode ? { devOtp: otpMeta.devCode } : {}),
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -138,7 +211,7 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     const user = await User.findOne({ email: email?.toLowerCase() });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
@@ -149,7 +222,104 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    res.json({ token: signToken(user), user: publicUser(user) });
+    // Legacy / password login: treat successful password as email ownership
+    if (!user.emailVerifiedAt) {
+      user.emailVerifiedAt = new Date();
+      clearOtpFields(user);
+      await user.save();
+    }
+
+    res.json({
+      token: signToken(user, { rememberMe: Boolean(rememberMe) }),
+      user: publicUser(user),
+      needsVerification: false,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/otp/send', async (req, res) => {
+  try {
+    const email = req.body.email?.toLowerCase()?.trim();
+    const purpose = req.body.purpose;
+    if (!email || !VALID_OTP_PURPOSES.has(purpose)) {
+      return res.status(400).json({ message: 'Valid email and purpose (verify|login) are required' });
+    }
+
+    const throttleKey = `${email}:${purpose}`;
+    const last = otpLastSent.get(throttleKey) || 0;
+    if (Date.now() - last < OTP_RESEND_MS) {
+      const waitSec = Math.ceil((OTP_RESEND_MS - (Date.now() - last)) / 1000);
+      return res.status(429).json({ message: `Please wait ${waitSec}s before requesting another code` });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      if (purpose === 'login') {
+        return res.json({
+          message: 'If an account exists for that email, a code was sent.',
+          otpDelivered: false,
+        });
+      }
+      return res.status(404).json({ message: 'No account found for that email' });
+    }
+
+    if (purpose === 'verify' && user.emailVerifiedAt) {
+      return res.json({ message: 'Email already verified', alreadyVerified: true });
+    }
+
+    const otpMeta = await issueAndSendOtp(user, purpose);
+    res.json({
+      message: 'Verification code sent',
+      otpDelivered: otpMeta.delivered,
+      ...(otpMeta.devCode ? { devOtp: otpMeta.devCode } : {}),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/otp/verify', async (req, res) => {
+  try {
+    const email = req.body.email?.toLowerCase()?.trim();
+    const code = String(req.body.code || '').trim();
+    const purpose = req.body.purpose;
+    const rememberMe = Boolean(req.body.rememberMe);
+
+    if (!email || !code || !VALID_OTP_PURPOSES.has(purpose)) {
+      return res.status(400).json({ message: 'Email, code, and purpose are required' });
+    }
+    if (!/^\d{6}$/.test(code)) {
+      return res.status(400).json({ message: 'Enter the 6-digit code' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid or expired code' });
+    }
+
+    if (
+      !user.emailOtpHash ||
+      !user.emailOtpExpires ||
+      user.emailOtpPurpose !== purpose ||
+      user.emailOtpExpires < new Date() ||
+      user.emailOtpHash !== hashOtp(code)
+    ) {
+      return res.status(401).json({ message: 'Invalid or expired code' });
+    }
+
+    clearOtpFields(user);
+    if (purpose === 'verify' || purpose === 'login') {
+      user.emailVerifiedAt = user.emailVerifiedAt || new Date();
+    }
+    await user.save();
+
+    res.json({
+      token: signToken(user, { rememberMe }),
+      user: publicUser(user),
+      needsVerification: false,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -180,7 +350,7 @@ router.post('/forgot-password', async (req, res) => {
 
     const result = await sendEmail({
       to: user.email,
-      subject: 'Reset your Voxa password',
+      subject: 'Reset your SocialAiDigital password',
       text: `Hi ${user.name},\n\nReset your password using this link (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
       html: `
         <p>Hi ${user.name},</p>
@@ -391,6 +561,12 @@ router.patch('/onboarding', async (req, res) => {
     }
 
     if (complete) {
+      if (!user.emailVerifiedAt) {
+        return res.status(403).json({
+          message: 'Verify your email before finishing onboarding',
+          needsVerification: true,
+        });
+      }
       user.onboardingCompletedAt = new Date();
     }
 

@@ -14,17 +14,11 @@ export default function OnboardingShell({
   continueDisabled = false,
 }) {
   const progress = Math.round((step / totalSteps) * 100);
+  const canGoBack = step > 1 && typeof onBack === 'function';
 
   return (
     <div className="onboarding-shell">
       <div className="onboarding-top">
-        {step > 1 ? (
-          <button type="button" className="onboarding-back btn btn-ghost btn-sm" onClick={onBack}>
-            ← Back
-          </button>
-        ) : (
-          <span />
-        )}
         <span className="onboarding-step-label">
           Step {step} of {totalSteps}
         </span>
@@ -43,16 +37,28 @@ export default function OnboardingShell({
       </div>
 
       <div className="onboarding-foot">
-        {showSkip && onSkip ? (
-          <button type="button" className="btn btn-ghost" onClick={onSkip} disabled={busy}>
-            {skipLabel}
-          </button>
-        ) : (
-          <span />
-        )}
+        <div className="onboarding-foot-left">
+          {canGoBack ? (
+            <button
+              type="button"
+              className="btn btn-ghost onboarding-foot-back"
+              onClick={onBack}
+              disabled={busy}
+            >
+              ← Back
+            </button>
+          ) : (
+            <span />
+          )}
+          {showSkip && onSkip ? (
+            <button type="button" className="btn btn-ghost" onClick={onSkip} disabled={busy}>
+              {skipLabel}
+            </button>
+          ) : null}
+        </div>
         <button
           type="button"
-          className="btn btn-citrus"
+          className="btn btn-citrus onboarding-foot-continue"
           onClick={onContinue}
           disabled={busy || continueDisabled}
         >

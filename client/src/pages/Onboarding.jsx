@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import OnboardingShell from '../components/onboarding/OnboardingShell';
 import PhoneMockup from '../components/landing/PhoneMockup';
 import BrandLogo from '../components/BrandLogo';
+import { needsEmailVerification } from '../utils/onboarding';
 import {
   GOAL_OPTIONS,
   ONBOARDING_STEPS,
@@ -63,6 +64,7 @@ export default function Onboarding() {
 
   if (loading) return <div className="loading-screen">Loading…</div>;
   if (!user || !token) return <Navigate to="/login" replace />;
+  if (needsEmailVerification(user)) return <Navigate to="/verify-email" replace />;
   if (user.onboardingCompletedAt) return <Navigate to="/app" replace />;
 
   async function savePatch(body) {

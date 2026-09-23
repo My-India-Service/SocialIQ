@@ -26,6 +26,7 @@ import Help from './pages/Help';
 import Pricing from './pages/Pricing';
 import Billing from './pages/Billing';
 import Onboarding from './pages/Onboarding';
+import VerifyEmail from './pages/VerifyEmail';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />

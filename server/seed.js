@@ -75,6 +75,7 @@ async function seed() {
       primaryGoal: 'both',
     },
     onboardingCompletedAt: new Date(),
+    emailVerifiedAt: new Date(),
   });
 
   const docs = SAMPLE_COMMENTS.map((c, i) => {

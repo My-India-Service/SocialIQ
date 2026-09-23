@@ -1,7 +1,7 @@
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { needsOnboarding } from '../utils/onboarding';
+import { needsEmailVerification, needsOnboarding } from '../utils/onboarding';
 import BrandLogo from './BrandLogo';
 import ThemeToggle from './ThemeToggle';
 
@@ -49,6 +49,10 @@ export default function AppLayout() {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (needsEmailVerification(user)) {
+    return <Navigate to="/verify-email" replace />;
   }
 
   if (needsOnboarding(user)) {
