@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import LegalPage from './LegalPage';
 
-const CONTACT = 'narsingh.bind@gmail.com';
+const CONTACT = 'myindiaservice1@gmail.com';
 
 export default function Privacy() {
   return (
