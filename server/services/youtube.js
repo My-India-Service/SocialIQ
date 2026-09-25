@@ -177,6 +177,29 @@ export async function postYouTubeCommentReply(connection, parentCommentId, messa
   return data.id || '';
 }
 
+/**
+ * Moderate a comment on the channel owner's video.
+ * status: published (unhide) | heldForReview (hide) | rejected (remove from public view).
+ */
+export async function setYouTubeCommentModeration(connection, commentId, status) {
+  if (!commentId) throw new Error('YouTube comment id missing — re-sync comments');
+  const accessToken = await getValidAccessToken(connection);
+  const url = new URL('https://www.googleapis.com/youtube/v3/comments/setModerationStatus');
+  url.searchParams.set('id', commentId);
+  url.searchParams.set('moderationStatus', status);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const err = new Error(data?.error?.message || `YouTube API ${res.status}`);
+    err.code = res.status;
+    throw err;
+  }
+  return true;
+}
+
 export async function exchangeYouTubeCode(code) {
   const tokens = await exchangeCodeForTokens(code);
   const channelData = await youtubeGet(tokens.access_token, 'channels', {

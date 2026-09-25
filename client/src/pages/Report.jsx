@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import BrandHealthCard from '../components/BrandHealthCard';
 
 function formatMoney(n, currency = 'INR') {
   if (currency === 'INR') return `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -60,6 +61,7 @@ export default function Report() {
   const [sending, setSending] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [sent, setSent] = useState('');
+  const [brandHealth, setBrandHealth] = useState(null);
   const emailPreviewRef = useRef(null);
   const currency = user?.currency || 'INR';
 
@@ -73,6 +75,9 @@ export default function Report() {
       }
     }
     load();
+    api('/api/brand-health', { token })
+      .then(setBrandHealth)
+      .catch(() => setBrandHealth(null));
   }, [token]);
 
   async function previewEmail() {
@@ -172,6 +177,15 @@ export default function Report() {
         <div className="error-banner" style={{ marginBottom: '1rem' }}>
           ⚠ Crisis alert: {report.crisis.reason}
         </div>
+      )}
+
+      {brandHealth?.health && (
+        <BrandHealthCard
+          health={brandHealth.health}
+          currency={brandHealth.currency || currency}
+          activeAlerts={brandHealth.crisis?.activeCount || 0}
+          compact
+        />
       )}
 
       {report && (

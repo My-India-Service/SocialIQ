@@ -12,6 +12,7 @@ import {
   recordAutoReplySuccess,
 } from './postReply.js';
 import { paceOutboundMetaWrite } from './metaSafe.js';
+import { checkoutAvailable, checkoutMessage, createCheckoutLink } from './checkout.js';
 
 const COD_YES = /\b(cod|cash on delivery)\b/i;
 const COD_NO = /\b(prepaid|online pay|upi only|no cod)\b/i;
@@ -72,6 +73,20 @@ function nextQuestion(missing, user) {
 function buildHandoffReply(handoff) {
   if (!handoff.url) return `${handoff.message}\n\nReply if you need help.`;
   return `${handoff.message}\n\n${handoff.url}`;
+}
+
+/** Payment link line for qualified buyers when comment-to-checkout is on; '' otherwise. */
+async function checkoutLineFor(user, conversation) {
+  if (!user?.checkout?.enabled || user.checkout.sendInDm === false || !checkoutAvailable(user)) {
+    return '';
+  }
+  try {
+    const link = await createCheckoutLink(user, { conversation });
+    return checkoutMessage(link, user);
+  } catch (err) {
+    console.warn('[conversationAgent] checkout link failed:', err.message);
+    return '';
+  }
 }
 
 async function loadCampaignForConversation(conversation) {
@@ -139,6 +154,8 @@ export async function processInboundDmMessage({ user, conversation, text, sendDm
       sentAt: new Date(),
     };
     agentReply = buildHandoffReply(handoff);
+    const payLine = await checkoutLineFor(user, conversation);
+    if (payLine) agentReply = `${agentReply}\n\n${payLine}`;
   } else {
     const missing = missingQualificationFields(
       qualification,
@@ -197,7 +214,9 @@ export async function sendHandoffNow({ user, conversation }) {
   const handoff = resolveHandoff(user, campaign, {
     customerHandle: conversation.customerHandle,
   });
-  const agentReply = buildHandoffReply(handoff);
+  let agentReply = buildHandoffReply(handoff);
+  const payLine = await checkoutLineFor(user, conversation);
+  if (payLine) agentReply = `${agentReply}\n\n${payLine}`;
 
   conversation.stage = 'qualified';
   conversation.handoff = { type: handoff.type, url: handoff.url, sentAt: new Date() };

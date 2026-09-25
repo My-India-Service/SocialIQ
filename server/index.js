@@ -13,11 +13,18 @@ import billingRoutes from './routes/billing.js';
 import instagramMessagingRoutes from './routes/instagramMessaging.js';
 import leadRoutes from './routes/leads.js';
 import complaintRoutes from './routes/complaints.js';
+import moderationRoutes from './routes/moderation.js';
+import postRoutes from './routes/posts.js';
+import healthRoutes from './routes/health.js';
+import ticketRoutes from './routes/tickets.js';
+import checkoutRoutes from './routes/checkout.js';
+import intelRoutes from './routes/intel.js';
 import { isYouTubeConfigured } from './services/youtube.js';
 import { isMetaConfigured } from './services/meta.js';
 import { getLinkedInOAuthScopes, isLinkedInConfigured } from './services/linkedin.js';
 import { isTikTokConfigured } from './services/tiktok.js';
 import { logError, logFatal, logInfo } from './services/logger.js';
+import { startCrisisMonitor } from './services/crisisMonitor.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -56,6 +63,9 @@ app.use(
       if (req.originalUrl?.startsWith('/api/instagram/webhook')) {
         req.rawBody = buf;
       }
+      if (req.originalUrl?.startsWith('/api/checkout/razorpay/webhook')) {
+        req.rawBody = buf;
+      }
     },
   })
 );
@@ -63,7 +73,7 @@ app.use(
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
-    product: 'Voxa',
+    product: 'SocialAiDigital',
     message: 'AI Revenue Intelligence API',
     oauth: {
       youtube: isYouTubeConfigured(),
@@ -86,6 +96,12 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/instagram', instagramMessagingRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/moderation', moderationRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/brand-health', healthRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/checkout', checkoutRoutes);
+app.use('/api/intel', intelRoutes);
 
 // Express error handler — logs + alerts, then JSON response
 app.use((err, req, res, _next) => {
@@ -117,7 +133,8 @@ async function start() {
   await mongoose.connect(uri);
   logInfo('MongoDB connected');
   app.listen(PORT, () => {
-    logInfo(`Voxa API running on http://localhost:${PORT}`);
+    logInfo(`SocialAiDigital API running on http://localhost:${PORT}`);
+    startCrisisMonitor();
     console.log(
       `OAuth: YouTube ${isYouTubeConfigured() ? 'On' : 'Off'} | Meta ${isMetaConfigured() ? 'On' : 'Off'} | LinkedIn ${isLinkedInConfigured() ? 'On' : 'Off'} | TikTok ${isTikTokConfigured() ? 'On' : 'Off'}`
     );

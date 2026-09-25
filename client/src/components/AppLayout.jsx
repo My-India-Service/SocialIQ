@@ -73,7 +73,12 @@ export default function AppLayout() {
           <NavLink to="/app/revenue">Revenue & ROI</NavLink>
           <NavLink to="/app/conversations">Conversations</NavLink>
           <NavLink to="/app/leads">Lead Center</NavLink>
+          <NavLink to="/app/checkout">Checkout</NavLink>
           <NavLink to="/app/complaints">Complaints</NavLink>
+          <NavLink to="/app/tickets">Tickets</NavLink>
+          <NavLink to="/app/moderation">Moderation</NavLink>
+          <NavLink to="/app/brand-health">Brand health</NavLink>
+          <NavLink to="/app/posts">Posts</NavLink>
           <NavLink to="/app/insights">Insights</NavLink>
           <NavLink to="/app/connections">Connect</NavLink>
           <NavLink to="/app/ai-setup">AI Setup</NavLink>

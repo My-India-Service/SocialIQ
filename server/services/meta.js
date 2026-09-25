@@ -236,6 +236,68 @@ export async function postInstagramCommentReply(connection, commentId, message) 
   }
 }
 
+async function graphDeleteRaw(base, path, accessToken) {
+  const url = new URL(`${base}/${path}`);
+  url.searchParams.set('access_token', accessToken);
+  return fetchGraphWithBackoff(() => fetch(url, { method: 'DELETE' }));
+}
+
+/** Hide or unhide a Facebook Page comment (pages_manage_engagement). */
+export async function setFacebookCommentHidden(connection, commentId, hidden) {
+  if (!commentId) throw new Error('Facebook comment id missing — re-sync comments');
+  try {
+    await graphPostWithConnection(connection, commentId, { is_hidden: Boolean(hidden) });
+    return true;
+  } catch (err) {
+    throw wrapMetaReplyError(err, 'facebook');
+  }
+}
+
+export async function deleteFacebookComment(connection, commentId) {
+  if (!commentId) throw new Error('Facebook comment id missing — re-sync comments');
+  try {
+    try {
+      await graphDeleteRaw(GRAPH, commentId, connection.accessToken);
+    } catch (err) {
+      if (isMetaTokenError(err.message, err.code) && connection.refreshToken) {
+        const token = await refreshPageAccessToken(connection);
+        await graphDeleteRaw(GRAPH, commentId, token);
+      } else {
+        throw err;
+      }
+    }
+    return true;
+  } catch (err) {
+    throw wrapMetaReplyError(err, 'facebook');
+  }
+}
+
+/** Hide or unhide an Instagram comment (instagram_manage_comments). */
+export async function setInstagramCommentHidden(connection, commentId, hidden) {
+  if (!commentId) throw new Error('Instagram comment id missing — re-sync comments');
+  try {
+    await instagramGraphPost(connection, commentId, { hide: Boolean(hidden) });
+    return true;
+  } catch (err) {
+    throw wrapMetaReplyError(err, 'instagram');
+  }
+}
+
+export async function deleteInstagramComment(connection, commentId) {
+  if (!commentId) throw new Error('Instagram comment id missing — re-sync comments');
+  const base = getInstagramGraphBase(connection);
+  const token =
+    resolveInstagramMetaAuthType(connection) === 'instagram_direct'
+      ? await getValidInstagramDirectAccessToken(connection)
+      : connection.accessToken;
+  try {
+    await graphDeleteRaw(base, commentId, token);
+    return true;
+  } catch (err) {
+    throw wrapMetaReplyError(err, 'instagram');
+  }
+}
+
 const COMMENT_READ_SCOPES = ['pages_read_engagement', 'pages_read_user_content'];
 
 /**

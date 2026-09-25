@@ -91,6 +91,27 @@ export default function Leads() {
     }
   }
 
+  async function createPaymentLink() {
+    if (!detail?.lead) return;
+    setBusy(true);
+    setError('');
+    setSuccess('');
+    try {
+      const data = await api('/api/checkout/links', {
+        method: 'POST',
+        token,
+        body: { commentId: detail.lead.id, amount: detail.summary.estimatedValue },
+      });
+      const line = `Pay ${formatMoney(data.link.amount, currency)} here to confirm your order: ${data.link.url}`;
+      setReplyText((prev) => (prev.trim() ? `${prev.trim()}\n\n${line}` : line));
+      setSuccess('Payment link added to the reply — send it to the customer. Paid links convert the lead automatically.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createLead(e) {
     e.preventDefault();
     await run(async () => {
@@ -337,6 +358,15 @@ export default function Leads() {
                   }
                 >
                   Convert
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={busy || detail.lead.statusLabel === 'Converted'}
+                  title="Create a UPI / Razorpay link — marks converted automatically when paid"
+                  onClick={createPaymentLink}
+                >
+                  💳 Payment link
                 </button>
               </div>
             </div>

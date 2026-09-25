@@ -1,3 +1,6 @@
+import { scoreModeration } from './moderation.js';
+import { detectFaqIntent, FAQ_INTENT_QUESTIONS } from './faq.js';
+
 const CATEGORIES = [
   'sales_opportunity',
   'complaint',
@@ -551,6 +554,8 @@ export function brandProfileFromUser(user) {
     neverSay: user.neverSay || user.aiProfile?.neverSay || [],
     alwaysMention: user.alwaysMention || user.aiProfile?.alwaysMention || [],
     avgOrderValue: user.avgOrderValue ?? 2499,
+    moderation: user.moderation || {},
+    faq: (user.faq || []).filter((f) => f.enabled !== false && String(f.answer || '').trim()),
   };
 }
 
@@ -583,6 +588,12 @@ function brandPromptBlock(profile) {
     lines.push(
       `When relevant, naturally mention: ${profile.alwaysMention.map((s) => `"${s}"`).join('; ')}`
     );
+  }
+  if (profile.faq?.length) {
+    lines.push('Brand FAQ (use these facts when the comment asks about them; never contradict):');
+    for (const f of profile.faq.slice(0, 12)) {
+      lines.push(`- ${FAQ_INTENT_QUESTIONS[f.intent] || f.intent}: ${String(f.answer).trim()}`);
+    }
   }
   return lines.length ? `\n${lines.join('\n')}` : '';
 }
@@ -645,7 +656,7 @@ async function regenerateReplyWithLLM(text, category, previousReply, profile) {
   const toneDesc = TONE_LABELS[profile.brandTone] || TONE_LABELS.friendly;
   const prev = String(previousReply || '').trim();
 
-  const system = `You are Voxa. Draft a short public comment reply in a ${toneDesc} brand tone.
+  const system = `You are SocialAiDigital. Draft a short public comment reply in a ${toneDesc} brand tone.
 Return ONLY valid JSON: { "suggestedReply": string }.
 Rules: max 2 sentences; empty string if spam; do NOT repeat or lightly paraphrase the previous reply.${brandPromptBlock(profile)}`;
 
@@ -741,18 +752,54 @@ function enrichAnalysis(text, base, avgOrderValue = 2499) {
   };
 }
 
+/**
+ * Attach spam/toxicity scores. Strong spam signals override the category so spam never
+ * reaches the lead pipeline or auto-reply.
+ */
+function withModeration(text, analysis, profile) {
+  const mod = scoreModeration(text, profile?.moderation || {});
+  const out = {
+    ...analysis,
+    spamScore: mod.spamScore,
+    toxicity: mod.toxicity,
+    moderationFlags: mod.moderationFlags,
+    moderationStatus: mod.shouldFlag ? 'flagged' : 'visible',
+  };
+  if (mod.spamScore >= 70 && out.category !== 'spam') {
+    out.category = 'spam';
+    out.suggestedReply = '';
+    out.purchaseProbability = 0;
+    out.expectedOrderValue = 0;
+    out.leadTemperature = 'none';
+  }
+  return out;
+}
+
+/** Rules-mode FAQ reply: use the brand's saved answer when the comment matches a FAQ intent. */
+function faqReplyFor(text, profile) {
+  if (!profile?.faq?.length) return '';
+  const intent = detectFaqIntent(text);
+  if (!intent) return '';
+  const entry = profile.faq.find((f) => f.intent === intent);
+  return entry?.answer?.trim() || '';
+}
+
 export function analyzeCommentRules(text, brandToneOrProfile = 'friendly', avgOrderValue = 2499) {
   const profile = normalizeBrandProfile(brandToneOrProfile, avgOrderValue);
   const result = categorizeComment(text);
-  return enrichAnalysis(
+  const faqAnswer = result.category === 'spam' ? '' : faqReplyFor(text, profile);
+  const analysis = enrichAnalysis(
     text,
     {
       ...result,
-      suggestedReply: suggestReply(text, result.category, profile.brandTone, profile),
+      suggestedReply: faqAnswer
+        ? polishReply(faqAnswer, result.category, profile)
+        : suggestReply(text, result.category, profile.brandTone, profile),
       analysisSource: 'rules',
     },
     profile.avgOrderValue
   );
+  return withModeration(text, analysis, profile);
 }
 
 function normalizeCategory(value) {
@@ -780,7 +827,7 @@ async function analyzeWithLLM(text, profile) {
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   const toneDesc = TONE_LABELS[profile.brandTone] || TONE_LABELS.friendly;
 
-  const system = `You are Voxa, an AI Sales Agent for social media comments (Instagram, YouTube) for Indian D2C brands.
+  const system = `You are SocialAiDigital, an AI Sales Agent for social media comments (Instagram, YouTube) for Indian D2C brands.
 Comments may be in English, Hinglish, or Hindi (Roman script): e.g. "kitne ka hai?", "price batao", "COD hai?", "dm krdo", "genuine hai?", "deliver Haryana me hogi?".
 Classify purchase intent generously for these patterns.
 Classify each comment and draft a short reply in the brand's tone (${toneDesc}).
@@ -852,7 +899,7 @@ export async function analyzeComment(text, brandToneOrProfile = 'friendly', avgO
   if (process.env.OPENAI_API_KEY) {
     try {
       const llm = await analyzeWithLLM(text, profile);
-      if (llm) return llm;
+      if (llm) return withModeration(text, llm, profile);
     } catch (err) {
       console.warn('LLM analysis failed, using rules:', err.message);
     }

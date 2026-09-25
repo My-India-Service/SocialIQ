@@ -22,6 +22,8 @@ import {
   shouldAutoReply,
   assertMetaSyncCooldown,
 } from './postReply.js';
+import { canModerateOnPlatform, moderateComment } from './moderationActions.js';
+import { syncTicketsForUser } from './tickets.js';
 
 export async function ingestRawComments(userId, platform, rawComments, user) {
   let imported = 0;
@@ -33,6 +35,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
   let autoRepliesThisSync = 0;
   let autoReplySkippedDaily = 0;
   let autoReplySkippedSyncCap = 0;
+  let autoHidden = 0;
 
   const planId = user?.subscription?.planId || 'starter';
   const limit = planCommentLimit(planId);
@@ -68,11 +71,13 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
     }
 
     const analysis = await analyzeComment(raw.text, brandProfile);
+    const flagged = analysis.moderationStatus === 'flagged';
     let autoDmStatus = 'none';
     let autoDmPreview = '';
     const campaign =
       platform === 'instagram' ? await findCampaignForComment(userId, { platform, videoId: raw.videoId }) : null;
     const willTriggerAgent =
+      !flagged &&
       platform === 'instagram' &&
       shouldTriggerSalesAgent(user, { platform, text: raw.text, videoId: raw.videoId }, analysis, campaign);
     if (willTriggerAgent) {
@@ -101,8 +106,19 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
 
     let salesAgentHandled = false;
 
+    if (flagged && user?.moderation?.autoHide && canModerateOnPlatform(platform)) {
+      try {
+        await moderateComment(userId, comment, 'hide');
+        autoHidden += 1;
+      } catch (err) {
+        comment.moderationError = err.message;
+        await comment.save();
+        console.warn('Auto-hide failed:', err.message);
+      }
+    }
+
     if (
-      platform === 'instagram' &&
+      willTriggerAgent &&
       shouldTriggerSalesAgent(user, comment, analysis, campaign)
     ) {
       if (autoRepliesThisSync >= MAX_AUTO_REPLIES_PER_SYNC) {
@@ -150,6 +166,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
     });
 
     if (
+      !flagged &&
       autoRoute &&
       analysis.purchaseProbability >= threshold &&
       analysis.category === 'sales_opportunity'
@@ -168,7 +185,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
       }
     }
 
-    if (!salesAgentHandled && shouldAutoReply(user, comment)) {
+    if (!flagged && !salesAgentHandled && shouldAutoReply(user, comment)) {
       if (autoRepliesThisSync >= MAX_AUTO_REPLIES_PER_SYNC) {
         autoReplySkippedSyncCap += 1;
       } else if (!canAutoReplyToday(user)) {
@@ -203,6 +220,16 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
     imported += 1;
   }
 
+  let ticketsCreated = 0;
+  if (imported > 0) {
+    try {
+      const ticketResult = await syncTicketsForUser(userId, user);
+      ticketsCreated = ticketResult.created;
+    } catch (err) {
+      console.warn('Ticket sync failed:', err.message);
+    }
+  }
+
   return {
     imported,
     updated,
@@ -212,6 +239,8 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
     autoReplyFailed,
     autoReplySkippedDaily,
     autoReplySkippedSyncCap,
+    autoHidden,
+    ticketsCreated,
   };
 }
 

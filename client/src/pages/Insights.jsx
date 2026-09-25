@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import GrowthIntel from '../components/GrowthIntel';
 
 function formatInr(n) {
   return `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -367,6 +368,8 @@ export default function Insights() {
           ) : null}
         </section>
       ) : null}
+
+      <GrowthIntel token={token} period={period} />
 
       {data && (
         <div className="insights-grid">

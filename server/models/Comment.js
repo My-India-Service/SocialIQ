@@ -85,6 +85,18 @@ const commentSchema = new mongoose.Schema(
     assignedTo: { type: String, default: '' },
     escalated: { type: Boolean, default: false },
     escalatedAt: { type: Date, default: null },
+    ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', default: null },
+    /** Moderation */
+    spamScore: { type: Number, default: 0, min: 0, max: 100 },
+    toxicity: { type: Number, default: 0, min: 0, max: 100 },
+    moderationFlags: { type: [String], default: [] },
+    moderationStatus: {
+      type: String,
+      enum: ['visible', 'flagged', 'hidden', 'deleted', 'allowed'],
+      default: 'visible',
+    },
+    moderatedAt: { type: Date, default: null },
+    moderationError: { type: String, default: '' },
   },
   { timestamps: true }
 );
@@ -92,5 +104,7 @@ const commentSchema = new mongoose.Schema(
 commentSchema.index({ user: 1, category: 1, postedAt: -1 });
 commentSchema.index({ user: 1, externalId: 1 }, { unique: true, sparse: true });
 commentSchema.index({ user: 1, leadTemperature: 1, purchaseProbability: -1 });
+commentSchema.index({ user: 1, moderationStatus: 1, postedAt: -1 });
+commentSchema.index({ user: 1, platform: 1, videoId: 1 });
 
 export default mongoose.model('Comment', commentSchema);

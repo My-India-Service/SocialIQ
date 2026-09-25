@@ -27,6 +27,11 @@ import Pricing from './pages/Pricing';
 import Billing from './pages/Billing';
 import Onboarding from './pages/Onboarding';
 import VerifyEmail from './pages/VerifyEmail';
+import Moderation from './pages/Moderation';
+import Posts from './pages/Posts';
+import Tickets from './pages/Tickets';
+import BrandHealth from './pages/BrandHealth';
+import Checkout from './pages/Checkout';
 
 export default function App() {
   return (
@@ -56,6 +61,11 @@ export default function App() {
               <Route path="conversations" element={<Conversations />} />
               <Route path="leads" element={<Leads />} />
               <Route path="complaints" element={<Complaints />} />
+              <Route path="moderation" element={<Moderation />} />
+              <Route path="posts" element={<Posts />} />
+              <Route path="tickets" element={<Tickets />} />
+              <Route path="brand-health" element={<BrandHealth />} />
+              <Route path="checkout" element={<Checkout />} />
               <Route path="settings" element={<Settings />} />
               <Route path="ai-setup" element={<AiSetup />} />
               <Route path="billing" element={<Billing />} />

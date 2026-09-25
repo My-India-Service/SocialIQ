@@ -25,6 +25,8 @@ const userSchema = new mongoose.Schema(
       /** E.164 sales phone for Meta WhatsApp Cloud API lead alerts (not a Zapier URL). */
       whatsappNotifyPhone: { type: String, default: '' },
       crmWebhookUrl: { type: String, default: '' },
+      /** Helpdesk (Freshdesk/Zendesk/Zapier) webhook for complaint tickets; falls back to CRM webhook. */
+      helpdeskWebhookUrl: { type: String, default: '' },
     /** Auto-route hot leads (purchaseProbability >= threshold) on sync. */
       autoRouteHotLeads: { type: Boolean, default: false },
       hotLeadThreshold: { type: Number, default: 80, min: 0, max: 100 },
@@ -76,6 +78,40 @@ const userSchema = new mongoose.Schema(
         enum: ['sales', 'complaints', 'both', ''],
         default: '',
       },
+    },
+    moderation: {
+      sensitivity: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
+      /** Hide flagged comments on the platform automatically during sync. */
+      autoHide: { type: Boolean, default: false },
+      hideCompetitorAds: { type: Boolean, default: true },
+      customKeywords: { type: [String], default: [] },
+    },
+    crisis: {
+      enabled: { type: Boolean, default: true },
+      keywords: {
+        type: [String],
+        default: ['scam', 'fraud', 'fake', 'cheat', 'consumer court', 'police complaint', 'boycott'],
+      },
+      /** Extra recipient; account email always receives alerts. */
+      alertEmail: { type: String, default: '' },
+      lastCheckedAt: { type: Date, default: null },
+    },
+    checkout: {
+      enabled: { type: Boolean, default: false },
+      upiId: { type: String, default: '' },
+      payeeName: { type: String, default: '' },
+      /** Send payment link automatically when DM qualification completes. */
+      sendInDm: { type: Boolean, default: true },
+    },
+    faq: {
+      type: [
+        {
+          intent: { type: String, required: true },
+          answer: { type: String, default: '' },
+          enabled: { type: Boolean, default: true },
+        },
+      ],
+      default: [],
     },
     onboardingCompletedAt: { type: Date, default: null },
     emailVerifiedAt: { type: Date, default: null },

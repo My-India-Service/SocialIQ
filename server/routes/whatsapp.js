@@ -191,7 +191,7 @@ router.post('/test-send', authRequired, async (req, res) => {
 
     const text =
       (req.body?.message && String(req.body.message).trim()) ||
-      `Voxa WhatsApp test from ${user?.brandName || 'Voxa'} — Cloud API OK.`;
+      `SocialAiDigital WhatsApp test from ${user?.brandName || 'SocialAiDigital'} — Cloud API OK.`;
 
     const data = await sendWhatsAppLeadAlert(to, text);
     res.json({ ok: true, message: 'Test message sent', graph: data });

@@ -134,8 +134,8 @@ router.get('/export.csv', async (req, res) => {
     const csv = rowsToCsv(columns, rows, { bom: true });
     const filename =
       scope === 'all'
-        ? `voxa-comments-${csvDateStamp()}.csv`
-        : `voxa-leads-${csvDateStamp()}.csv`;
+        ? `socialaidigital-comments-${csvDateStamp()}.csv`
+        : `socialaidigital-leads-${csvDateStamp()}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('X-Export-Count', String(comments.length));
@@ -364,7 +364,7 @@ router.post('/:id/regenerate-reply', async (req, res) => {
   }
 });
 
-/** Post reply on YouTube/Facebook/Instagram and mark Voxa status replied. */
+/** Post reply on YouTube/Facebook/Instagram and mark SocialAiDigital status replied. */
 router.post('/:id/post-reply', async (req, res) => {
   try {
     const comment = await Comment.findOne({ _id: req.params.id, user: req.userId });
