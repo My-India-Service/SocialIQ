@@ -6,6 +6,7 @@ import User from '../models/User.js';
 import { isEmailConfigured, sendEmail } from '../services/mailer.js';
 import { getClientUrl } from '../utils/clientUrl.js';
 import { logInfo, logWarn } from '../services/logger.js';
+import { isWhatsAppEnabled } from '../config/features.js';
 
 const router = express.Router();
 
@@ -120,6 +121,9 @@ function publicUser(user) {
       primaryGoal: user.onboarding?.primaryGoal || '',
     },
     onboardingCompletedAt: user.onboardingCompletedAt || null,
+    features: {
+      whatsapp: isWhatsAppEnabled(),
+    },
   };
 }
 

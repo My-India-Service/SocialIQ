@@ -18,6 +18,9 @@ const STEP_KEY = 'voxa_onboarding_step';
 
 export default function Onboarding() {
   const { user, token, loading, setUser } = useAuth();
+  const platformOptions = user?.features?.whatsapp
+    ? PLATFORM_OPTIONS
+    : PLATFORM_OPTIONS.filter((p) => p.id !== 'whatsapp');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const connected = searchParams.get('connected');
@@ -286,7 +289,7 @@ export default function Onboarding() {
           busy={busy}
         >
           <div className="onboarding-card-grid onboarding-card-grid-2">
-            {PLATFORM_OPTIONS.map((p) => (
+            {platformOptions.map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -337,7 +340,7 @@ export default function Onboarding() {
 
   if (step === 6) {
     const preferred =
-      form.platforms.length > 0 ? form.platforms : PLATFORM_OPTIONS.map((p) => p.id);
+      form.platforms.length > 0 ? form.platforms : platformOptions.map((p) => p.id);
 
     return (
       <div className="onboarding-page">
@@ -357,7 +360,7 @@ export default function Onboarding() {
           {connectedMsg && <div className="success-banner">{connectedMsg}</div>}
           <div className="onboarding-connect-grid">
             {preferred.map((id) => {
-              const p = PLATFORM_OPTIONS.find((x) => x.id === id);
+              const p = platformOptions.find((x) => x.id === id);
               if (!p) return null;
               if (p.id === 'whatsapp') {
                 return (

@@ -73,6 +73,7 @@ function TempPill({ temp }) {
 
 export default function Dashboard() {
   const { token, user } = useAuth();
+  const whatsappEnabled = Boolean(user?.features?.whatsapp);
   const [comments, setComments] = useState([]);
   const [stats, setStats] = useState(null);
   const [category, setCategory] = useState('all');
@@ -328,7 +329,9 @@ export default function Dashboard() {
       ? PLATFORM_EMPTY_HINTS[platform]
       : filtersActive
         ? 'Try clearing filters, or sync more comments from Connect.'
-        : 'Connect Facebook, Instagram, YouTube, or enable WhatsApp in Settings — then sync.';
+        : whatsappEnabled
+          ? 'Connect Facebook, Instagram, YouTube, or enable WhatsApp in Settings — then sync.'
+          : 'Connect Facebook, Instagram, or YouTube — then sync.';
 
   return (
     <div className="inbox-page">
@@ -445,7 +448,7 @@ export default function Dashboard() {
           <option value="facebook">Facebook</option>
           <option value="linkedin">LinkedIn</option>
           <option value="tiktok">TikTok</option>
-          <option value="whatsapp">WhatsApp</option>
+          {whatsappEnabled && <option value="whatsapp">WhatsApp</option>}
         </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
           <option value="all">All statuses</option>
@@ -511,7 +514,7 @@ export default function Dashboard() {
               <Link className="btn btn-citrus btn-sm" to="/app/connections">
                 Open Connect
               </Link>
-              {(platform === 'whatsapp' || platform === 'all') && (
+              {whatsappEnabled && (platform === 'whatsapp' || platform === 'all') && (
                 <Link className="btn btn-ghost btn-sm" to="/app/settings">
                   WhatsApp settings
                 </Link>

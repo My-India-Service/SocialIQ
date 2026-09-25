@@ -20,7 +20,9 @@ function instagramAuthLabel(metaAuthType) {
 }
 
 export default function Connections() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const whatsappEnabled = Boolean(user?.features?.whatsapp);
+  const platforms = whatsappEnabled ? PLATFORMS : PLATFORMS.filter((p) => p.id !== 'whatsapp');
   const [searchParams, setSearchParams] = useSearchParams();
   const [connections, setConnections] = useState([]);
   const [integration, setIntegration] = useState({
@@ -222,7 +224,10 @@ export default function Connections() {
       <div className="page-head">
         <div>
           <h1>Connect channels</h1>
-          <p>Instagram, YouTube, Facebook, LinkedIn, TikTok via OAuth. WhatsApp Cloud API is configured in Settings.</p>
+          <p>
+            Instagram, YouTube, Facebook, LinkedIn, TikTok via OAuth.
+            {whatsappEnabled && ' WhatsApp Cloud API is configured in Settings.'}
+          </p>
         </div>
       </div>
 
@@ -256,18 +261,20 @@ export default function Connections() {
       {error && <div className="error-banner">{error}</div>}
       {message && <div className="success-banner">{message}</div>}
 
-      <div className="panel stack-gap">
-        <h2>WhatsApp</h2>
-        <p className="prob" style={{ marginTop: 0 }}>
-          Incoming messages use Meta Cloud API webhooks — not Facebook Login. Enable inbox and copy
-          the Callback URL in Settings.
-        </p>
-        <div className="reply-actions">
-          <Link className="btn btn-citrus btn-sm" to="/app/settings">
-            Open WhatsApp settings
-          </Link>
+      {whatsappEnabled && (
+        <div className="panel stack-gap">
+          <h2>WhatsApp</h2>
+          <p className="prob" style={{ marginTop: 0 }}>
+            Incoming messages use Meta Cloud API webhooks — not Facebook Login. Enable inbox and copy
+            the Callback URL in Settings.
+          </p>
+          <div className="reply-actions">
+            <Link className="btn btn-citrus btn-sm" to="/app/settings">
+              Open WhatsApp settings
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="panel stack-gap">
         <h2>YouTube</h2>
@@ -554,7 +561,7 @@ export default function Connections() {
       <div className="panel">
         <h2>Channels</h2>
         <div className="connect-grid">
-          {PLATFORMS.map((p) => {
+          {platforms.map((p) => {
             const conn = statusFor(p.id);
             const igVia = p.id === 'instagram' ? instagramAuthLabel(conn?.metaAuthType) : '';
             return (

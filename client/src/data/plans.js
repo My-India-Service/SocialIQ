@@ -21,7 +21,7 @@ export const PLANS = [
     perks: [
       'Up to 15k comments/mo',
       'Instagram DM sales agent',
-      'Slack / WhatsApp / CRM',
+      'Slack / CRM webhook',
       'Sales influenced dashboard',
     ],
     featured: true,

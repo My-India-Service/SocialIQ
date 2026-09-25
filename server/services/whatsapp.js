@@ -3,6 +3,7 @@
  * Credentials stay server-side (env). Never expose tokens to the client.
  */
 import crypto from 'crypto';
+import { isWhatsAppEnabled } from '../config/features.js';
 
 function graphVersion() {
   return (process.env.META_GRAPH_API_VERSION || 'v21.0').replace(/^\//, '');
@@ -17,6 +18,7 @@ function accessToken() {
 }
 
 export function isWhatsAppConfigured() {
+  if (!isWhatsAppEnabled()) return false;
   return Boolean(
     accessToken() &&
       phoneNumberId() &&

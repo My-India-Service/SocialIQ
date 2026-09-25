@@ -57,7 +57,7 @@ export const LANDING_FEATURES = [
   },
   {
     title: 'Route to sales',
-    body: 'Slack, CRM webhook, or WhatsApp alert when intent crosses your threshold.',
+    body: 'Slack, CRM webhook, or email alert when intent crosses your threshold.',
   },
 ];
 
@@ -98,5 +98,5 @@ export const BENEFITS = [
   'Qualify leads on COD, delivery, and location',
   'Track ₹ sales influenced — not vanity metrics',
   'Recover complaints before they become refunds',
-  'One AI agent across Instagram, YouTube & WhatsApp',
+  'One AI agent across Instagram, Facebook & YouTube',
 ];

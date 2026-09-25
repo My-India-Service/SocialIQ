@@ -2,6 +2,7 @@
  * Outbound lead routing: Slack webhooks, WhatsApp Cloud API, generic CRM webhooks.
  */
 import { isWhatsAppConfigured, sendWhatsAppLeadAlert } from './whatsapp.js';
+import { isWhatsAppEnabled } from '../config/features.js';
 
 function moneyLabel(amount, currency = 'INR') {
   if (currency === 'INR') return `₹${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -143,8 +144,7 @@ export async function routeLead(user, comment, channels = 'all') {
     return {
       routed: false,
       results: [],
-      message:
-        'No destinations configured. Add Slack webhook, WhatsApp notify phone (Cloud API), or CRM webhook in Settings.',
+      message: noDestinationsMessage(),
     };
   }
 
@@ -154,6 +154,12 @@ export async function routeLead(user, comment, channels = 'all') {
     results,
     routedChannels,
   };
+}
+
+export function noDestinationsMessage() {
+  return isWhatsAppEnabled()
+    ? 'No sales destinations configured. Add Slack webhook, WhatsApp notify phone (Cloud API), or CRM webhook in Settings.'
+    : 'No sales destinations configured. Add a Slack webhook or CRM webhook in Settings.';
 }
 
 export function hasAnyIntegration(user) {

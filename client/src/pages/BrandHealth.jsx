@@ -13,7 +13,7 @@ function timeAgo(date) {
 }
 
 export default function BrandHealth() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [data, setData] = useState(null);
   const [settings, setSettings] = useState(null);
   const [keywordsText, setKeywordsText] = useState('');
@@ -108,7 +108,8 @@ export default function BrandHealth() {
           <h2>Crisis alerts</h2>
           <p className="prob">
             Checked every hour: a spike of negative comments vs your 7-day normal, or any crisis
-            keyword. Alerts go to email, Slack and WhatsApp (if connected in Settings).
+            keyword. Alerts go to email and Slack
+            {user?.features?.whatsapp ? ' and WhatsApp' : ''} (if connected in Settings).
           </p>
           {alerts.length === 0 ? (
             <p className="mod-empty">No crisis alerts. All quiet.</p>

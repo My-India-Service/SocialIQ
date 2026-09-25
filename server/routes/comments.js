@@ -10,7 +10,7 @@ import {
   filterCommentsByPeriod,
   parseInsightsPeriod,
 } from '../services/customerInsights.js';
-import { hasAnyIntegration, routeLead } from '../services/integrations.js';
+import { hasAnyIntegration, noDestinationsMessage, routeLead } from '../services/integrations.js';
 import { csvDateStamp, rowsToCsv } from '../utils/csv.js';
 import {
   canPostReplyToPlatform,
@@ -406,10 +406,7 @@ router.post('/:id/send-to-sales', async (req, res) => {
     if (!comment) return res.status(404).json({ message: 'Comment not found' });
 
     if (!hasAnyIntegration(user)) {
-      return res.status(400).json({
-        message:
-          'No sales destinations configured. Add Slack webhook, WhatsApp notify phone, or CRM webhook in Settings.',
-      });
+      return res.status(400).json({ message: noDestinationsMessage() });
     }
 
     const channels = req.body?.channels || 'all';

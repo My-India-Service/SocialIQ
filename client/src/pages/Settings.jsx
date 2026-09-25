@@ -122,6 +122,7 @@ function mapWhatsAppError(rawMessage, notifyPhone) {
 
 export default function Settings() {
   const { token, user, setUser } = useAuth();
+  const whatsappEnabled = Boolean(user?.features?.whatsapp);
   const [brandName, setBrandName] = useState(user?.brandName || '');
   const [brandTone, setBrandTone] = useState(user?.brandTone || 'friendly');
   const [avgOrderValue, setAvgOrderValue] = useState(user?.avgOrderValue ?? 2499);
@@ -264,8 +265,8 @@ export default function Settings() {
   }
 
   useEffect(() => {
-    if (token) loadWhatsAppStatus();
-  }, [token]);
+    if (token && whatsappEnabled) loadWhatsAppStatus();
+  }, [token, whatsappEnabled]);
 
   async function save(e) {
     e?.preventDefault?.();
@@ -476,6 +477,7 @@ export default function Settings() {
           </label>
         </div>
 
+        {whatsappEnabled && (
         <div className="panel wa-setup">
           <div className="wa-setup-head">
             <h2>WhatsApp (Meta Cloud API)</h2>
@@ -637,12 +639,14 @@ export default function Settings() {
             </p>
           ) : null}
         </div>
+        )}
 
         <div className="panel">
           <h2>Send leads to sales</h2>
           <p className="prob">
-            Slack and CRM still use outbound webhook URLs. WhatsApp uses Cloud API + the notify
-            phone above.
+            {whatsappEnabled
+              ? 'Slack and CRM still use outbound webhook URLs. WhatsApp uses Cloud API + the notify phone above.'
+              : 'Hot leads are posted to your Slack and CRM webhook URLs.'}
           </p>
           <label>
             Slack webhook URL
