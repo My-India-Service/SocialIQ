@@ -5,7 +5,7 @@ const CONTACT = 'myindiaservice1@gmail.com';
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy Policy" updated="16 August 2026">
+    <LegalPage title="Privacy Policy" updated="26 September 2026">
       <p>
         SocialAiDigital (“we”, “our”) is a revenue intelligence dashboard that helps brands read, categorize,
         and reply to comments from connected social accounts. This policy explains what we collect
@@ -40,6 +40,45 @@ export default function Privacy() {
         <li>Categorize intent and draft replies (rules and, if configured, OpenAI).</li>
         <li>Send optional emails such as password reset or daily reports when SMTP is set.</li>
       </ul>
+
+      <h2>Google user data (YouTube and Google Sign-In)</h2>
+      <ul>
+        <li>
+          <strong>Data accessed:</strong> for Google Sign-In, your Google account ID, name, and
+          email. For YouTube, with your consent, your channel ID and name, comments on your videos,
+          and the ability to post replies and set comment moderation status (
+          <code>youtube.readonly</code>, <code>youtube.force-ssl</code>).
+        </li>
+        <li>
+          <strong>How we use it:</strong> to sign you in, sync comments into your inbox,
+          categorize them, draft replies, and post replies or moderate only when you ask or enable
+          an automation that does so.
+        </li>
+        <li>
+          <strong>Storage and protection:</strong> sent over HTTPS and stored in an
+          access-controlled database; OAuth tokens stay server-side.
+        </li>
+        <li>
+          <strong>Sharing:</strong> never sold or used for advertising; only shared with the
+          hosting, database, and (if enabled) AI providers needed to run the features above. Not
+          used to train generalized AI or machine-learning models.
+        </li>
+        <li>
+          <strong>Deletion:</strong> disconnect YouTube in Connect, revoke access at{' '}
+          <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>,
+          or email {CONTACT} to delete your account and data.
+        </li>
+      </ul>
+      <p>
+        <strong>
+          SocialAiDigital's use and transfer of information received from Google APIs to any other
+          app will adhere to the{' '}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy">
+            Google API Services User Data Policy
+          </a>
+          , including the Limited Use requirements.
+        </strong>
+      </p>
 
       <h2>Sharing</h2>
       <p>We do not sell your personal data. We share data only as needed to run SocialAiDigital:</p>
