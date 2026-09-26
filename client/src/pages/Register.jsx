@@ -7,9 +7,12 @@ import BrandLogo from '../components/BrandLogo';
 import ThemeToggle from '../components/ThemeToggle';
 import OtpInput from '../components/OtpInput';
 import InstallAppBanner from '../components/InstallAppBanner';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import useAuthConfig from '../hooks/useAuthConfig';
 
 export default function Register() {
   const { user, loginSuccess, logout } = useAuth();
+  const authConfig = useAuthConfig();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get('plan');
@@ -48,6 +51,10 @@ export default function Register() {
         body: form,
       });
       loginSuccess(data);
+      if (!data.needsVerification) {
+        navigate(postAuthPath(data.user, selectedPlan));
+        return;
+      }
       if (data.devOtp) setDevHint(`Dev code: ${data.devOtp}`);
       setStep('verify');
     } catch (err) {
@@ -110,6 +117,13 @@ export default function Register() {
             <h1>Start with SocialAiDigital</h1>
             <p>Connect social comments. Capture sales. Catch complaints early.</p>
             {error && <div className="error-banner">{error}</div>}
+            {authConfig.googleLogin && (
+              <GoogleSignInButton
+                plan={selectedPlan}
+                label="Sign up with Google"
+                onError={setError}
+              />
+            )}
             <form className="form-stack" onSubmit={onSubmit}>
               <label>
                 Your name

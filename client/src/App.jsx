@@ -27,6 +27,7 @@ import Pricing from './pages/Pricing';
 import Billing from './pages/Billing';
 import Onboarding from './pages/Onboarding';
 import VerifyEmail from './pages/VerifyEmail';
+import GoogleCallback from './pages/GoogleCallback';
 import Moderation from './pages/Moderation';
 import Posts from './pages/Posts';
 import Tickets from './pages/Tickets';
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />

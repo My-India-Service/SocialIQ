@@ -6,7 +6,16 @@ import User from '../models/User.js';
 import { isEmailConfigured, sendEmail } from '../services/mailer.js';
 import { getClientUrl } from '../utils/clientUrl.js';
 import { logInfo, logWarn } from '../services/logger.js';
-import { isWhatsAppEnabled } from '../config/features.js';
+import {
+  isEmailOtpEnabled,
+  isGoogleLoginEnabled,
+  isWhatsAppEnabled,
+} from '../config/features.js';
+import {
+  fetchGoogleProfile,
+  getGoogleLoginUrl,
+  verifyGoogleLoginState,
+} from '../services/googleLogin.js';
 
 const router = express.Router();
 
@@ -123,6 +132,7 @@ function publicUser(user) {
     onboardingCompletedAt: user.onboardingCompletedAt || null,
     features: {
       whatsapp: isWhatsAppEnabled(),
+      emailOtp: isEmailOtpEnabled(),
     },
   };
 }
@@ -188,6 +198,7 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ message: 'Email already registered' });
     }
 
+    const otpEnabled = isEmailOtpEnabled();
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({
       name,
@@ -195,12 +206,15 @@ router.post('/register', async (req, res) => {
       password: hashed,
       brandName: brandName || 'My Brand',
       brandTone: normalizeTone(brandTone || 'friendly'),
-      emailVerifiedAt: null,
+      emailVerifiedAt: otpEnabled ? null : new Date(),
     });
 
-    const otpMeta = await issueAndSendOtp(user, 'verify');
     const token = signToken(user);
+    if (!otpEnabled) {
+      return res.status(201).json({ token, user: publicUser(user), needsVerification: false });
+    }
 
+    const otpMeta = await issueAndSendOtp(user, 'verify');
     res.status(201).json({
       token,
       user: publicUser(user),
@@ -243,7 +257,70 @@ router.post('/login', async (req, res) => {
   }
 });
 
+const OTP_DISABLED_MESSAGE = 'Email codes are turned off. Sign in with your password or Google.';
+
+/** Public sign-in options, read by Login/Register before a session exists. */
+router.get('/config', (_req, res) => {
+  res.json({ emailOtp: isEmailOtpEnabled(), googleLogin: isGoogleLoginEnabled() });
+});
+
+router.get('/google', (req, res) => {
+  try {
+    if (!isGoogleLoginEnabled()) {
+      return res.status(503).json({ message: 'Google sign-in is not configured' });
+    }
+    res.json({ url: getGoogleLoginUrl({ plan: String(req.query.plan || '') }) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/google/callback', async (req, res) => {
+  const clientUrl = getClientUrl();
+  try {
+    const { code, state, error } = req.query;
+    if (error) {
+      return res.redirect(`${clientUrl}/login?google=error&reason=${encodeURIComponent(String(error))}`);
+    }
+    if (!code || !state) {
+      return res.redirect(`${clientUrl}/login?google=error&reason=missing_code`);
+    }
+    const { plan } = verifyGoogleLoginState(String(state));
+    const profile = await fetchGoogleProfile(String(code));
+
+    let user =
+      (await User.findOne({ googleId: profile.googleId })) ||
+      (await User.findOne({ email: profile.email }));
+    if (user) {
+      if (!user.googleId) user.googleId = profile.googleId;
+      if (!user.emailVerifiedAt) {
+        user.emailVerifiedAt = new Date();
+        clearOtpFields(user);
+      }
+      await user.save();
+    } else {
+      user = await User.create({
+        name: profile.name,
+        email: profile.email,
+        googleId: profile.googleId,
+        password: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10),
+        brandName: 'My Brand',
+        brandTone: 'friendly',
+        emailVerifiedAt: new Date(),
+      });
+    }
+
+    const token = signToken(user, { rememberMe: true });
+    const planParam = plan ? `&plan=${encodeURIComponent(plan)}` : '';
+    return res.redirect(`${clientUrl}/auth/google/callback#token=${encodeURIComponent(token)}${planParam}`);
+  } catch (err) {
+    logWarn(`Google sign-in failed: ${err.message}`, { route: '/api/auth/google/callback' });
+    return res.redirect(`${clientUrl}/login?google=error&reason=${encodeURIComponent(err.message)}`);
+  }
+});
+
 router.post('/otp/send', async (req, res) => {
+  if (!isEmailOtpEnabled()) return res.status(503).json({ message: OTP_DISABLED_MESSAGE });
   try {
     const email = req.body.email?.toLowerCase()?.trim();
     const purpose = req.body.purpose;
@@ -285,6 +362,7 @@ router.post('/otp/send', async (req, res) => {
 });
 
 router.post('/otp/verify', async (req, res) => {
+  if (!isEmailOtpEnabled()) return res.status(503).json({ message: OTP_DISABLED_MESSAGE });
   try {
     const email = req.body.email?.toLowerCase()?.trim();
     const code = String(req.body.code || '').trim();
@@ -565,7 +643,7 @@ router.patch('/onboarding', async (req, res) => {
     }
 
     if (complete) {
-      if (!user.emailVerifiedAt) {
+      if (!user.emailVerifiedAt && isEmailOtpEnabled()) {
         return res.status(403).json({
           message: 'Verify your email before finishing onboarding',
           needsVerification: true,

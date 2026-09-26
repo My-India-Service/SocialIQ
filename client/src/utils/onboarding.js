@@ -5,7 +5,7 @@ export function needsOnboarding(user) {
 }
 
 export function needsEmailVerification(user) {
-  return Boolean(user && !user.emailVerifiedAt);
+  return Boolean(user && !user.emailVerifiedAt && user.features?.emailOtp);
 }
 
 export function postAuthPath(user, plan) {

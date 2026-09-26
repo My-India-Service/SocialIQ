@@ -7,11 +7,17 @@ import BrandLogo from '../components/BrandLogo';
 import ThemeToggle from '../components/ThemeToggle';
 import OtpInput from '../components/OtpInput';
 import InstallAppBanner from '../components/InstallAppBanner';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import useAuthConfig from '../hooks/useAuthConfig';
 
 export default function Login() {
   const { user, loginSuccess } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const authConfig = useAuthConfig();
+  const googleError = new URLSearchParams(location.search).get('google') === 'error'
+    ? `Google sign-in failed: ${new URLSearchParams(location.search).get('reason') || 'unknown error'}`
+    : '';
   const [mode, setMode] = useState('password'); // password | otp
   const [otpPhase, setOtpPhase] = useState('email'); // email | code
   const [email, setEmail] = useState('demo@voxa.app');
@@ -97,8 +103,15 @@ export default function Login() {
         </Link>
         <InstallAppBanner />
         <h1>Welcome back</h1>
-        <p>Log in with your password or a one-time email code.</p>
+        <p>
+          {authConfig.emailOtp
+            ? 'Log in with your password or a one-time email code.'
+            : 'Log in to your account.'}
+        </p>
 
+        {authConfig.googleLogin && <GoogleSignInButton onError={setError} />}
+
+        {authConfig.emailOtp && (
         <div className="auth-mode-tabs" role="tablist" aria-label="Sign-in method">
           <button
             type="button"
@@ -127,12 +140,13 @@ export default function Login() {
             Email code
           </button>
         </div>
+        )}
 
-        {error && <div className="error-banner">{error}</div>}
+        {(error || googleError) && <div className="error-banner">{error || googleError}</div>}
         {success && <div className="success-banner">{success}</div>}
         {devHint && <div className="success-banner">{devHint}</div>}
 
-        {mode === 'password' ? (
+        {mode === 'password' || !authConfig.emailOtp ? (
           <form className="form-stack" onSubmit={onPasswordSubmit}>
             <label>
               Email

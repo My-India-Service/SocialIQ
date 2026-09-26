@@ -314,7 +314,19 @@ Preset in `render.yaml`: `WHATSAPP_ENABLED=false`, `CRISIS_MONITOR_ENABLED=true`
 - **App Domains:** `socialaidigital.com`, `onrender.com`; Privacy / Terms / Data deletion URLs on `https://www.socialaidigital.com/...`
 - While in **Development** mode only app roles (Admin/Developer/Tester) see real data — add your own FB/IG accounts as testers.
 
-### 3. Deploy + smoke test
+### 3. Google sign-in (Google Cloud Console)
+
+"Continue with Google" reuses the YouTube OAuth client (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`).
+
+- **APIs & Services → Credentials → your OAuth client → Authorized redirect URIs:** add `https://socialiq-37aa.onrender.com/api/auth/google/callback` (and `http://localhost:5001/api/auth/google/callback` for local).
+- **OAuth consent screen:** scopes `openid`, `email`, `profile` (non-sensitive, no Google review needed).
+- **Publishing status:** while "Testing", only listed test users can sign in — click **Publish app** for everyone.
+
+### Email codes are off on Render free
+
+Render free blocks outbound SMTP, so `EMAIL_OTP_ENABLED=false`: password sign-ups are verified immediately and the "Email code" login tab is hidden. SMTP emails fail fast (≈10 s timeout) instead of hanging. Set `EMAIL_OTP_ENABLED=true` only after moving to a paid plan or a host that allows SMTP.
+
+### 4. Deploy + smoke test
 
 1. Push to `main` (Render auto-deploys both services).
 2. `curl https://socialiq-37aa.onrender.com/api/health`

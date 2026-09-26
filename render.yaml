@@ -28,6 +28,11 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI
         value: https://socialiq-37aa.onrender.com/api/connections/youtube/callback
+      - key: GOOGLE_LOGIN_REDIRECT_URI
+        value: https://socialiq-37aa.onrender.com/api/auth/google/callback
+      # Render free blocks SMTP, so email codes can't be delivered; enable once mail works.
+      - key: EMAIL_OTP_ENABLED
+        value: "false"
       - key: META_APP_ID
         sync: false
       - key: META_APP_SECRET
