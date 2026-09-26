@@ -240,10 +240,55 @@ export async function saveYouTubeConnection(userId, { tokens, channelId, account
   );
 }
 
+const BACKFILL_MAX_VIDEOS = 50;
+const BACKFILL_MAX_PER_VIDEO = 100;
+const BACKFILL_MAX_TOTAL = 500;
+const BACKFILL_MAX_PAGES_PER_VIDEO = 10;
+
+function mapUploads(items) {
+  return (items || [])
+    .map((item) => ({
+      videoId: item.contentDetails?.videoId || item.snippet?.resourceId?.videoId,
+      title: item.snippet?.title || 'Untitled video',
+      publishedAt: item.contentDetails?.videoPublishedAt || item.snippet?.publishedAt || null,
+    }))
+    .filter((v) => v.videoId);
+}
+
+async function listUploadsSince(accessToken, playlistId, since, until) {
+  const videos = [];
+  let pageToken;
+  do {
+    const res = await youtubeGet(accessToken, 'playlistItems', {
+      part: 'snippet,contentDetails',
+      playlistId,
+      maxResults: 50,
+      pageToken,
+    });
+    let reachedOlder = false;
+    for (const video of mapUploads(res.items)) {
+      if (video.publishedAt && new Date(video.publishedAt) < since) {
+        reachedOlder = true;
+        break;
+      }
+      if (until && video.publishedAt && new Date(video.publishedAt) > until) continue;
+      videos.push(video);
+      if (videos.length >= BACKFILL_MAX_VIDEOS) break;
+    }
+    if (reachedOlder || videos.length >= BACKFILL_MAX_VIDEOS) break;
+    pageToken = res.nextPageToken;
+  } while (pageToken);
+  return videos;
+}
+
 /**
  * Fetch top-level comments from recent uploads (official YouTube Data API).
+ * With `since`, pages back through uploads to import older comments in [since, until].
  */
-export async function fetchYouTubeComments(connection, { maxVideos = 8, maxCommentsPerVideo = 50 } = {}) {
+export async function fetchYouTubeComments(
+  connection,
+  { maxVideos = 8, maxCommentsPerVideo = 50, since = null, until = null } = {}
+) {
   const accessToken = await getValidAccessToken(connection);
 
   const channelRes = await youtubeGet(accessToken, 'channels', {
@@ -256,32 +301,36 @@ export async function fetchYouTubeComments(connection, { maxVideos = 8, maxComme
   const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
   if (!uploadsPlaylistId) throw new Error('Could not find uploads playlist');
 
-  const playlistRes = await youtubeGet(accessToken, 'playlistItems', {
-    part: 'snippet,contentDetails',
-    playlistId: uploadsPlaylistId,
-    maxResults: maxVideos,
-  });
+  let videos;
+  if (since) {
+    videos = await listUploadsSince(accessToken, uploadsPlaylistId, since, until);
+  } else {
+    const playlistRes = await youtubeGet(accessToken, 'playlistItems', {
+      part: 'snippet,contentDetails',
+      playlistId: uploadsPlaylistId,
+      maxResults: maxVideos,
+    });
+    videos = mapUploads(playlistRes.items);
+  }
 
-  const videos = (playlistRes.items || [])
-    .map((item) => ({
-      videoId: item.contentDetails?.videoId || item.snippet?.resourceId?.videoId,
-      title: item.snippet?.title || 'Untitled video',
-    }))
-    .filter((v) => v.videoId);
-
+  const perVideoCap = since ? BACKFILL_MAX_PER_VIDEO : maxCommentsPerVideo;
   const comments = [];
 
   for (const video of videos) {
+    if (since && comments.length >= BACKFILL_MAX_TOTAL) break;
     let pageToken;
     let fetched = 0;
+    let pages = 0;
+    let reachedOlder = false;
 
     do {
+      pages += 1;
       let threadRes;
       try {
         threadRes = await youtubeGet(accessToken, 'commentThreads', {
           part: 'snippet',
           videoId: video.videoId,
-          maxResults: Math.min(50, maxCommentsPerVideo - fetched),
+          maxResults: since ? 50 : Math.min(50, perVideoCap - fetched),
           order: 'time',
           textFormat: 'plainText',
           pageToken,
@@ -294,6 +343,16 @@ export async function fetchYouTubeComments(connection, { maxVideos = 8, maxComme
       for (const item of threadRes.items || []) {
         const top = item.snippet?.topLevelComment?.snippet;
         if (!top?.textDisplay && !top?.textOriginal) continue;
+
+        if (since) {
+          const posted = top.publishedAt ? new Date(top.publishedAt) : null;
+          if (posted && until && posted > until) continue;
+          if (posted && posted < since) {
+            reachedOlder = true;
+            break;
+          }
+          if (comments.length >= BACKFILL_MAX_TOTAL || fetched >= perVideoCap) break;
+        }
 
         comments.push({
           externalId: item.snippet?.topLevelComment?.id || item.id,
@@ -311,7 +370,13 @@ export async function fetchYouTubeComments(connection, { maxVideos = 8, maxComme
       }
 
       pageToken = threadRes.nextPageToken;
-    } while (pageToken && fetched < maxCommentsPerVideo);
+    } while (
+      pageToken &&
+      fetched < perVideoCap &&
+      !reachedOlder &&
+      !(since && pages >= BACKFILL_MAX_PAGES_PER_VIDEO) &&
+      !(since && comments.length >= BACKFILL_MAX_TOTAL)
+    );
   }
 
   return {

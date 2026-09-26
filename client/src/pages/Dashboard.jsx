@@ -82,6 +82,8 @@ export default function Dashboard() {
   const [temperature, setTemperature] = useState('all');
   const [status, setStatus] = useState('all');
   const [range, setRange] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [q, setQ] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -99,7 +101,16 @@ export default function Dashboard() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ category, platform, q, temperature, status, range });
+      const params = new URLSearchParams({
+        category,
+        platform,
+        q,
+        temperature,
+        status,
+        range,
+        from: fromDate,
+        to: toDate,
+      });
       const [listData, statsData] = await Promise.all([
         api(`/api/comments?${params}`, { token }),
         api('/api/comments/stats', { token }),
@@ -116,7 +127,7 @@ export default function Dashboard() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, category, platform, temperature, status, range]);
+  }, [token, category, platform, temperature, status, range, fromDate, toDate]);
 
   async function search(e) {
     e.preventDefault();
@@ -131,6 +142,8 @@ export default function Dashboard() {
       setStatus('all');
       setPlatform('all');
       setRange('all');
+      setFromDate('');
+      setToDate('');
       return;
     }
     if (kind === 'hot') {
@@ -296,6 +309,8 @@ export default function Dashboard() {
         temperature,
         status,
         range,
+        from: fromDate,
+        to: toDate,
         scope,
       });
       const result = await downloadFile(`/api/comments/export.csv?${params}`, {
@@ -480,7 +495,28 @@ export default function Dashboard() {
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
           <option value="90d">Last 90 days</option>
+          <option value="custom">Custom range…</option>
         </select>
+        {range === 'custom' && (
+          <>
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={(e) => setFromDate(e.target.value)}
+              aria-label="Posted from"
+              title="Posted from"
+            />
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={(e) => setToDate(e.target.value)}
+              aria-label="Posted to"
+              title="Posted to"
+            />
+          </>
+        )}
         <input
           placeholder="Search comments…"
           value={q}
@@ -500,6 +536,8 @@ export default function Dashboard() {
               setTemperature('all');
               setStatus('all');
               setRange('all');
+              setFromDate('');
+              setToDate('');
               setQ('');
             }}
           >

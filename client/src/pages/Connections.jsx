@@ -29,6 +29,23 @@ function MetaSafetyStatus({ conn }) {
   );
 }
 
+function ConnectedAs({ conn, label = 'Connected as', children }) {
+  if (!conn?.hasOAuth) return null;
+  return (
+    <div className="connected-as">
+      <span className="status-dot" />
+      {conn.accountName ? (
+        <span>
+          {label} <strong>{conn.accountName}</strong>
+        </span>
+      ) : (
+        <span>{label}: name unavailable — click Reconnect</span>
+      )}
+      {children}
+    </div>
+  );
+}
+
 function instagramAuthLabel(metaAuthType) {
   if (metaAuthType === 'instagram_direct') return 'Via Instagram login';
   if (metaAuthType === 'facebook_page') return 'Via Facebook Page';
@@ -53,6 +70,9 @@ export default function Connections() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [syncing, setSyncing] = useState('');
+  const [ytSince, setYtSince] = useState('');
+  const [ytUntil, setYtUntil] = useState('');
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   async function load() {
     const [connData, statusData] = await Promise.all([
@@ -196,7 +216,16 @@ export default function Connections() {
               : platform === 'tiktok'
                 ? '/api/connections/tiktok/sync'
                 : '/api/connections/instagram/sync';
-      const data = await api(path, { method: 'POST', token, body: {} });
+      const body =
+        platform === 'youtube'
+          ? { ...(ytSince && { since: ytSince }), ...(ytUntil && { until: ytUntil }) }
+          : {};
+      const data = await api(path, {
+        method: 'POST',
+        token,
+        body,
+        timeoutMs: platform === 'youtube' ? 120_000 : undefined,
+      });
       const channelPrefix =
         platform === 'youtube' && data.channelTitle ? `${data.channelTitle} — ` : '';
       const summary = `${channelPrefix}${data.message} Analysis: ${data.analysisMode === 'llm' ? 'OpenAI LLM' : 'rules fallback'}.`;
@@ -300,6 +329,18 @@ export default function Connections() {
           Connect with Google, then sync comments.
           {integration.llm ? ' Categorized with OpenAI.' : ' Rule-based AI (add OPENAI_API_KEY for LLM).'}
         </p>
+        <ConnectedAs conn={yt} label="Connected channel">
+          {yt?.channelId && (
+            <a
+              href={`https://www.youtube.com/channel/${yt.channelId}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View channel
+            </a>
+          )}
+          {yt?.connectedAt && <span className="muted">since {formatDate(yt.connectedAt)}</span>}
+        </ConnectedAs>
         <div className="reply-actions">
           <button
             type="button"
@@ -310,14 +351,39 @@ export default function Connections() {
             {busy === 'youtube' ? 'Redirecting…' : yt?.hasOAuth ? 'Reconnect YouTube' : 'Connect with Google'}
           </button>
           {yt?.hasOAuth && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => syncPlatform('youtube')}
-              disabled={Boolean(syncing)}
-            >
-              {syncing === 'youtube' ? 'Syncing…' : 'Sync comments'}
-            </button>
+            <>
+              <label className="sync-date">
+                From
+                <input
+                  type="date"
+                  value={ytSince}
+                  max={ytUntil || todayIso}
+                  onChange={(e) => setYtSince(e.target.value)}
+                />
+              </label>
+              <label className="sync-date">
+                To
+                <input
+                  type="date"
+                  value={ytUntil}
+                  min={ytSince || undefined}
+                  max={todayIso}
+                  onChange={(e) => setYtUntil(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => syncPlatform('youtube')}
+                disabled={Boolean(syncing)}
+              >
+                {syncing === 'youtube'
+                  ? 'Syncing…'
+                  : ytSince || ytUntil
+                    ? 'Sync this period'
+                    : 'Sync comments'}
+              </button>
+            </>
           )}
           {yt && !yt.hasOAuth && (
             <button type="button" className="btn btn-ghost" onClick={() => disconnect('youtube')}>
@@ -330,25 +396,8 @@ export default function Connections() {
         )}
         {yt?.hasOAuth && (
           <p className="prob">
-            Connected channel: <strong>{yt.accountName || 'Unknown'}</strong>
-            {yt.channelId && (
-              <>
-                {' · '}
-                <a
-                  href={`https://www.youtube.com/channel/${yt.channelId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View channel
-                </a>
-              </>
-            )}
-            {yt.connectedAt && <> · Connected on {formatDate(yt.connectedAt)}</>}
-          </p>
-        )}
-        {yt?.hasOAuth && (
-          <p className="prob">
-            Sync pulls the newest comments (up to 40 each) from your latest 8 videos.
+            Quick sync reads your latest 8 videos. Pick a From date to import older comments (up
+            to 500 per sync).
           </p>
         )}
         {yt?.hasOAuth && yt?.lastSyncedAt && (
@@ -369,6 +418,9 @@ export default function Connections() {
           <strong>Alternative:</strong> Connect via Facebook Page if your IG is linked in Meta
           Business Suite.
         </p>
+        <ConnectedAs conn={ig}>
+          {igAuthLabel && <span className="pill wa-pill-ready">{igAuthLabel}</span>}
+        </ConnectedAs>
         <div className="reply-actions">
           <button
             type="button"
@@ -413,17 +465,6 @@ export default function Connections() {
             enable Instagram → API setup with Instagram login in Meta App Dashboard.
           </p>
         )}
-        {ig?.hasOAuth && (
-          <p className="prob">
-            Connected: <strong>{ig.accountName || 'Unknown'}</strong>
-            {igAuthLabel ? (
-              <>
-                {' '}
-                <span className="pill wa-pill-ready">{igAuthLabel}</span>
-              </>
-            ) : null}
-          </p>
-        )}
         {ig?.hasOAuth && ig?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(ig.lastSyncedAt).toLocaleString()}</p>
         )}
@@ -442,6 +483,13 @@ export default function Connections() {
           <strong>Live</strong>, Reconnect, Sync. Connecting Facebook also links Instagram if IG is
           attached to that Page.
         </p>
+        <ConnectedAs conn={fb} label="Connected Page">
+          {fb?.channelId && (
+            <span className="muted">
+              id <code>{fb.channelId}</code>
+            </span>
+          )}
+        </ConnectedAs>
         <div className="reply-actions">
           <button
             type="button"
@@ -472,16 +520,7 @@ export default function Connections() {
           )}
         </div>
         {fb?.hasOAuth && (
-          <p className="prob">
-            Connected Page: <strong>{fb.accountName || 'Unknown'}</strong>
-            {fb.channelId ? (
-              <>
-                {' '}
-                (id <code>{fb.channelId}</code>)
-              </>
-            ) : null}
-            . Confirm this matches Meta Comments Manager, then Sync.
-          </p>
+          <p className="prob">Confirm this Page matches Meta Comments Manager, then Sync.</p>
         )}
         {fb?.hasOAuth && fb?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(fb.lastSyncedAt).toLocaleString()}</p>
@@ -508,6 +547,13 @@ export default function Connections() {
             </>
           ) : null}
         </p>
+        <ConnectedAs conn={li}>
+          {li?.channelId && (
+            <span className="muted">
+              id <code>{li.channelId}</code>
+            </span>
+          )}
+        </ConnectedAs>
         <div className="reply-actions">
           <button
             type="button"
@@ -540,17 +586,6 @@ export default function Connections() {
         {!integration.linkedinOAuth && (
           <p className="prob">Add LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET to server/.env</p>
         )}
-        {li?.hasOAuth && (
-          <p className="prob">
-            Connected: <strong>{li.accountName || 'Unknown'}</strong>
-            {li.channelId ? (
-              <>
-                {' '}
-                (id <code>{li.channelId}</code>)
-              </>
-            ) : null}
-          </p>
-        )}
         {li?.hasOAuth && li?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(li.lastSyncedAt).toLocaleString()}</p>
         )}
@@ -563,6 +598,7 @@ export default function Connections() {
           <code>user.info.basic</code>, <code>video.list</code>) on developers.tiktok.com. Redirect
           URI must match exactly — TikTok requires HTTPS in production.
         </p>
+        <ConnectedAs conn={tt} />
         <div className="reply-actions">
           <button
             type="button"
@@ -590,11 +626,6 @@ export default function Connections() {
         </div>
         {!integration.tiktokOAuth && (
           <p className="prob">Add TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET to server/.env</p>
-        )}
-        {tt?.hasOAuth && (
-          <p className="prob">
-            Connected: <strong>{tt.accountName || 'Unknown'}</strong>
-          </p>
         )}
         {tt?.hasOAuth && tt?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(tt.lastSyncedAt).toLocaleString()}</p>

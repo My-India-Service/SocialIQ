@@ -5,9 +5,9 @@ const API_BASE =
 
 const FETCH_TIMEOUT_MS = 12_000;
 
-async function fetchWithTimeout(url, options = {}) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
@@ -28,15 +28,19 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
-export async function api(path, { method = 'GET', body, token } = {}) {
+export async function api(path, { method = 'GET', body, token, timeoutMs } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const res = await fetchWithTimeout(
+    `${API_BASE}${path}`,
+    {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    },
+    timeoutMs || FETCH_TIMEOUT_MS
+  );
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

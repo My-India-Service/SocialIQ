@@ -197,17 +197,48 @@ router.get('/youtube/callback', async (req, res) => {
   }
 });
 
+function parseSyncDay(value, endOfDay = false) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return null;
+  const d = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}+05:30`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatSyncDay(date) {
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  });
+}
+
 router.post('/youtube/sync', authRequired, async (req, res) => {
   try {
+    const since = parseSyncDay(req.body?.since);
+    let until = parseSyncDay(req.body?.until, true);
+    if ((req.body?.since && !since) || (req.body?.until && !until)) {
+      return res.status(400).json({ message: 'Dates must be in YYYY-MM-DD format.' });
+    }
+    if (since && until && since > until) {
+      return res.status(400).json({ message: 'From date must be before To date.' });
+    }
+    const backfillSince = since || (until ? new Date(until.getTime() - 365 * 86400000) : null);
+    if (until && until > new Date()) until = null;
+
     const result = await syncYouTubeCommentsForUser(req.userId, {
       maxVideos: Number(req.body?.maxVideos) || 8,
       maxCommentsPerVideo: Number(req.body?.maxCommentsPerVideo) || 40,
+      since: backfillSince,
+      until,
     });
+    const period = backfillSince
+      ? ` from ${formatSyncDay(backfillSince)} – ${formatSyncDay(until || new Date())}`
+      : '';
     res.json({
       ...result,
       analysisMode: isLLMConfigured() ? 'llm' : 'rules',
       message: appendAutoReplySummary(
-        `YouTube: synced ${result.imported} new (${result.updated} updated).`,
+        `YouTube: synced ${result.imported} new (${result.updated} updated)${period}.`,
         result
       ),
     });

@@ -50,15 +50,35 @@ const RANGE_MS = {
   '90d': 90 * 24 * 60 * 60 * 1000,
 };
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseDay(value, endOfDay = false) {
+  if (!ISO_DAY.test(String(value || ''))) return null;
+  const d = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}+05:30`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function customRangeFilter(from, to) {
+  const start = parseDay(from);
+  const end = parseDay(to, true);
+  if (!start && !end) return null;
+  return { ...(start && { $gte: start }), ...(end && { $lte: end }) };
+}
+
 function commentListFilter(userId, query) {
-  const { category, platform, status, q, temperature, range } = query;
+  const { category, platform, status, q, temperature, range, from, to } = query;
   const filter = { user: userId };
   if (category && category !== 'all') filter.category = category;
   if (platform && platform !== 'all') filter.platform = platform;
   if (status && status !== 'all') filter.status = status;
   if (temperature && temperature !== 'all') filter.leadTemperature = temperature;
   if (q) filter.text = { $regex: q, $options: 'i' };
-  if (RANGE_MS[range]) filter.postedAt = { $gte: new Date(Date.now() - RANGE_MS[range]) };
+  if (range === 'custom') {
+    const postedAt = customRangeFilter(from, to);
+    if (postedAt) filter.postedAt = postedAt;
+  } else if (RANGE_MS[range]) {
+    filter.postedAt = { $gte: new Date(Date.now() - RANGE_MS[range]) };
+  }
   return filter;
 }
 
