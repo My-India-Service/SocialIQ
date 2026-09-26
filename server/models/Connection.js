@@ -25,6 +25,12 @@ const connectionSchema = new mongoose.Schema(
       default: '',
     },
     lastSyncedAt: { type: Date },
+    /** Circuit breaker: Meta automation paused after policy / permission / token errors. */
+    metaPausedUntil: { type: Date, default: null },
+    metaPauseReason: { type: String, default: '' },
+    /** Daily Meta write budget (replies, DMs, hides, deletes). */
+    metaWriteDate: { type: String, default: '' },
+    metaWriteCount: { type: Number, default: 0 },
     connectedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

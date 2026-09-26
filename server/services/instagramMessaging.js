@@ -11,7 +11,13 @@ import {
   postCommentReplyToPlatform,
   recordAutoReplySuccess,
 } from './postReply.js';
-import { paceOutboundMetaWrite, fetchGraphWithBackoff } from './metaSafe.js';
+import {
+  assertMetaWriteAllowed,
+  fetchGraphWithBackoff,
+  paceOutboundMetaWrite,
+  recordMetaWrite,
+  withMetaGuard,
+} from './metaSafe.js';
 import { incrementCampaignTrigger } from './campaignTriggers.js';
 
 export function isInstagramMessagingConfigured() {
@@ -24,7 +30,8 @@ export function publicReplyForSalesAgent(user, campaign) {
   return 'Sent you the details in DM ❤️';
 }
 
-async function instagramGraphPost(connection, path, body = {}) {
+async function instagramGraphPost(connection, path, body = {}, { automated = true } = {}) {
+  assertMetaWriteAllowed(connection, { automated });
   const base = getInstagramGraphBase(connection);
   const token =
     resolveInstagramMetaAuthType(connection) === 'instagram_direct'
@@ -34,13 +41,31 @@ async function instagramGraphPost(connection, path, body = {}) {
   const url = new URL(`${base}/${path}`);
   url.searchParams.set('access_token', token);
 
-  return fetchGraphWithBackoff(() =>
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
+  const data = await withMetaGuard(connection, () =>
+    fetchGraphWithBackoff(() =>
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    )
   );
+  await recordMetaWrite(connection);
+  return data;
+}
+
+/** Meta only allows one private reply per comment, within 7 days of the comment. */
+export const PRIVATE_REPLY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function privateReplyBlockReason(comment, now = Date.now()) {
+  if (comment?.autoDmStatus === 'sent' || comment?.privateReplySentAt) {
+    return 'Private reply already sent for this comment (Meta allows only one).';
+  }
+  const postedAt = comment?.postedAt ? new Date(comment.postedAt).getTime() : 0;
+  if (postedAt && now - postedAt > PRIVATE_REPLY_WINDOW_MS) {
+    return 'Comment is older than 7 days — Meta no longer allows a private reply.';
+  }
+  return null;
 }
 
 /**
@@ -56,7 +81,7 @@ export async function sendPrivateReplyToComment(connection, commentExternalId, m
 }
 
 /** Send DM in an existing Instagram messaging thread (requires manage_messages + App Review). */
-export async function sendInstagramDm(connection, recipientId, message) {
+export async function sendInstagramDm(connection, recipientId, message, { automated = true } = {}) {
   if (!recipientId || !message?.trim()) {
     throw new Error('Recipient ID and message required');
   }
@@ -64,10 +89,15 @@ export async function sendInstagramDm(connection, recipientId, message) {
   if (!igUserId) {
     throw new Error('Instagram business account id missing on connection');
   }
-  return instagramGraphPost(connection, `${igUserId}/messages`, {
-    recipient: { id: String(recipientId) },
-    message: { text: message.trim() },
-  });
+  return instagramGraphPost(
+    connection,
+    `${igUserId}/messages`,
+    {
+      recipient: { id: String(recipientId) },
+      message: { text: message.trim() },
+    },
+    { automated }
+  );
 }
 
 export async function findInstagramConnection(userId) {
@@ -110,7 +140,8 @@ export async function runInstagramSalesAgentFlow({ user, comment, connection, ca
       const { platformReplyId, message } = await postCommentReplyToPlatform(
         user._id || user.id,
         comment,
-        publicReply
+        publicReply,
+        { automated: true }
       );
       comment.suggestedReply = message;
       comment.platformReplyId = platformReplyId;
@@ -127,13 +158,17 @@ export async function runInstagramSalesAgentFlow({ user, comment, connection, ca
   }
 
   if (isInstagramMessagingConfigured() && comment.externalId && comment.platform === 'instagram') {
-    if (!canAutoReplyToday(user)) {
+    const privateReplyBlocked = privateReplyBlockReason(comment);
+    if (privateReplyBlocked) {
+      dmError = privateReplyBlocked;
+    } else if (!canAutoReplyToday(user)) {
       dmError = dailyAutoReplyLimitMessage(user);
     } else {
       try {
         await paceOutboundMetaWrite();
         dmResult = await sendPrivateReplyToComment(connection, comment.externalId, dmText);
         if (dmResult) {
+          comment.autoDmStatus = 'sent';
           recordAutoReplySuccess(user);
           await user.save();
         }

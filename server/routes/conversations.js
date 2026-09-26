@@ -119,7 +119,7 @@ router.post('/:id/reply', async (req, res) => {
     ) {
       const connection = await findInstagramConnection(req.userId);
       if (connection) {
-        await sendInstagramDm(connection, conversation.instagramUserId, text);
+        await sendInstagramDm(connection, conversation.instagramUserId, text, { automated: false });
         dmSent = true;
       }
     }

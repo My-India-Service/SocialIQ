@@ -20,8 +20,8 @@ import {
   postCommentReplyToPlatform,
   recordAutoReplySuccess,
   shouldAutoReply,
-  assertMetaSyncCooldown,
 } from './postReply.js';
+import { assertMetaSyncAllowed, MAX_AUTO_HIDES_PER_SYNC, withMetaGuard } from './metaSafe.js';
 import { canModerateOnPlatform, moderateComment } from './moderationActions.js';
 import { syncTicketsForUser } from './tickets.js';
 
@@ -36,6 +36,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
   let autoReplySkippedDaily = 0;
   let autoReplySkippedSyncCap = 0;
   let autoHidden = 0;
+  let autoHideSkippedCap = 0;
 
   const planId = user?.subscription?.planId || 'starter';
   const limit = planCommentLimit(planId);
@@ -106,9 +107,16 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
 
     let salesAgentHandled = false;
 
-    if (flagged && user?.moderation?.autoHide && canModerateOnPlatform(platform)) {
+    if (
+      flagged &&
+      user?.moderation?.autoHide &&
+      canModerateOnPlatform(platform) &&
+      autoHidden >= MAX_AUTO_HIDES_PER_SYNC
+    ) {
+      autoHideSkippedCap += 1;
+    } else if (flagged && user?.moderation?.autoHide && canModerateOnPlatform(platform)) {
       try {
-        await moderateComment(userId, comment, 'hide');
+        await moderateComment(userId, comment, 'hide', { automated: true });
         autoHidden += 1;
       } catch (err) {
         comment.moderationError = err.message;
@@ -196,7 +204,8 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
         const { platformReplyId, message } = await postCommentReplyToPlatform(
           userId,
           comment,
-          comment.suggestedReply
+          comment.suggestedReply,
+          { automated: true }
         );
         comment.suggestedReply = message;
         if (!keepSentToSales) {
@@ -240,6 +249,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
     autoReplySkippedDaily,
     autoReplySkippedSyncCap,
     autoHidden,
+    autoHideSkippedCap,
     ticketsCreated,
   };
 }
@@ -293,7 +303,7 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     'facebook',
     'Click “Connect Facebook” first.'
   );
-  assertMetaSyncCooldown(connection);
+  assertMetaSyncAllowed(connection);
   const user = await User.findById(userId);
   const {
     comments: rawComments,
@@ -307,7 +317,7 @@ export async function syncFacebookCommentsForUser(userId, options = {}) {
     probeDataLength,
     probeError,
     warning,
-  } = await fetchFacebookComments(connection, options);
+  } = await withMetaGuard(connection, () => fetchFacebookComments(connection, options));
   const stats = await ingestRawComments(userId, 'facebook', rawComments, user);
 
   connection.lastSyncedAt = new Date();
@@ -338,7 +348,7 @@ export async function syncInstagramCommentsForUser(userId, options = {}) {
     'instagram',
     'Click “Connect Instagram” first.'
   );
-  assertMetaSyncCooldown(connection);
+  assertMetaSyncAllowed(connection);
   const user = await User.findById(userId);
   const {
     comments: rawComments,
@@ -347,7 +357,7 @@ export async function syncInstagramCommentsForUser(userId, options = {}) {
     mediaWithCommentSignal,
     commentFetchFailures,
     warning,
-  } = await fetchInstagramComments(connection, options);
+  } = await withMetaGuard(connection, () => fetchInstagramComments(connection, options));
   const stats = await ingestRawComments(userId, 'instagram', rawComments, user);
 
   connection.lastSyncedAt = new Date();

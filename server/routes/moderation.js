@@ -6,12 +6,15 @@ import { authRequired } from '../middleware/auth.js';
 import { MODERATION_FLAG_LABELS, scoreModeration } from '../services/moderation.js';
 import { canModerateOnPlatform, moderateComment } from '../services/moderationActions.js';
 import { logError } from '../services/logger.js';
+import { MAX_BULK_PLATFORM_WRITES, META_SAFETY_CODES } from '../services/metaSafe.js';
 
 const router = express.Router();
 router.use(authRequired);
 
 const ACTIONS = new Set(['hide', 'unhide', 'delete', 'allow', 'flag', 'mark_spam']);
 const MAX_BULK = 100;
+const PLATFORM_ACTIONS = new Set(['hide', 'unhide', 'delete']);
+const META_PLATFORMS = new Set(['facebook', 'instagram']);
 
 function viewFilter(userId, view, platform) {
   const filter = { user: userId };
@@ -137,11 +140,37 @@ router.post('/bulk', async (req, res) => {
 
     const comments = await Comment.find({ _id: { $in: ids }, user: req.userId });
     const results = [];
+    let metaWrites = 0;
+    let metaStopReason = '';
     for (const comment of comments) {
+      const isMetaWrite =
+        PLATFORM_ACTIONS.has(action) &&
+        META_PLATFORMS.has(comment.platform) &&
+        canModerateOnPlatform(comment.platform) &&
+        Boolean(comment.externalId);
+      if (isMetaWrite && !metaStopReason && metaWrites >= MAX_BULK_PLATFORM_WRITES) {
+        metaStopReason = `Meta safety: only ${MAX_BULK_PLATFORM_WRITES} platform actions per batch`;
+      }
+      const localOnly = isMetaWrite && Boolean(metaStopReason);
       try {
-        const { onPlatform } = await moderateComment(req.userId, comment, action);
-        results.push({ id: comment._id, ok: true, onPlatform });
+        const { onPlatform } = await moderateComment(req.userId, comment, action, { localOnly });
+        if (isMetaWrite && onPlatform) metaWrites += 1;
+        if (localOnly) {
+          comment.moderationError = `${metaStopReason} — updated in SocialAiDigital only`;
+          await comment.save();
+        }
+        results.push({ id: comment._id, ok: true, onPlatform, localOnly });
       } catch (err) {
+        if (isMetaWrite && META_SAFETY_CODES.includes(err.code)) {
+          metaStopReason = err.message;
+          const { onPlatform } = await moderateComment(req.userId, comment, action, {
+            localOnly: true,
+          });
+          comment.moderationError = `${err.message} — updated in SocialAiDigital only`;
+          await comment.save();
+          results.push({ id: comment._id, ok: true, onPlatform, localOnly: true });
+          continue;
+        }
         comment.moderationError = err.message;
         await comment.save();
         results.push({ id: comment._id, ok: false, error: err.message });
@@ -150,6 +179,7 @@ router.post('/bulk', async (req, res) => {
 
     const ok = results.filter((r) => r.ok).length;
     const onPlatform = results.filter((r) => r.onPlatform).length;
+    const localOnly = results.filter((r) => r.localOnly).length;
     const failed = results.length - ok;
     if (failed) {
       logError(`Moderation ${action}: ${failed}/${results.length} failed`, {
@@ -162,6 +192,7 @@ router.post('/bulk', async (req, res) => {
 
     let message = `${ok} comment${ok === 1 ? '' : 's'} updated`;
     if (onPlatform) message += ` · ${onPlatform} on platform`;
+    if (localOnly) message += ` · ${localOnly} local only (${metaStopReason})`;
     if (failed) message += ` · ${failed} failed (see row errors)`;
     res.json({ message, results });
   } catch (err) {

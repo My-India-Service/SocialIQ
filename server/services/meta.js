@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import Connection from '../models/Connection.js';
 import { getValidInstagramDirectAccessToken } from './instagramLogin.js';
-import { fetchGraphWithBackoff } from './metaSafe.js';
+import { fetchGraphWithBackoff, paceMetaRead } from './metaSafe.js';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const IG_GRAPH = 'https://graph.instagram.com/v21.0';
@@ -456,6 +456,7 @@ async function scanEdgePosts(
     if (stopOnActivity && withActivity.length >= maxPosts) break;
     const next = data.paging?.next;
     if (!next) break;
+    await paceMetaRead();
     data = await fetchGraphUrl(next);
   }
 
@@ -741,12 +742,14 @@ export async function fetchFacebookComments(
     }
 
     try {
+      await paceMetaRead();
       const first = await fetchCommentsForPost(post.id, connection.accessToken, maxCommentsPerPost);
       pushBatch(first.data);
 
       const nextUrl = first.paging?.next;
       if (nextUrl && fetched < maxCommentsPerPost) {
         try {
+          await paceMetaRead();
           const more = await fetchGraphUrl(nextUrl);
           pushBatch(more.data);
         } catch (err) {
@@ -1021,6 +1024,7 @@ export async function fetchInstagramComments(connection, { maxMedia = 12, maxCom
 
   for (const item of mediaItems) {
     let fetched = 0;
+    await paceMetaRead();
     const res = await instagramGraphGet(connection, `${item.id}/comments`, {
       fields: 'id,text,username,timestamp,like_count,replies{count}',
       limit: Math.min(50, maxCommentsPerMedia),

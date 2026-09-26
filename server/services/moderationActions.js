@@ -6,7 +6,12 @@ import {
   setInstagramCommentHidden,
 } from './meta.js';
 import { setYouTubeCommentModeration } from './youtube.js';
-import { paceOutboundMetaWrite } from './metaSafe.js';
+import {
+  assertMetaWriteAllowed,
+  paceOutboundMetaWrite,
+  recordMetaWrite,
+  withMetaGuard,
+} from './metaSafe.js';
 
 export const PLATFORM_MODERATION = ['facebook', 'instagram', 'youtube'];
 
@@ -19,8 +24,13 @@ export function canModerateOnPlatform(platform) {
  * YouTube cannot delete other people's comments — "delete" rejects it (removed from public view).
  * @returns {{ onPlatform: boolean }}
  */
-export async function applyPlatformModeration(userId, comment, action, { pace = true } = {}) {
-  if (!canModerateOnPlatform(comment.platform) || !comment.externalId) {
+export async function applyPlatformModeration(
+  userId,
+  comment,
+  action,
+  { pace = true, automated = false, localOnly = false } = {}
+) {
+  if (localOnly || !canModerateOnPlatform(comment.platform) || !comment.externalId) {
     return { onPlatform: false };
   }
 
@@ -33,10 +43,6 @@ export async function applyPlatformModeration(userId, comment, action, { pace = 
     throw new Error(`${comment.platform} is not connected — open Connect to moderate on the platform`);
   }
 
-  if (pace && (comment.platform === 'facebook' || comment.platform === 'instagram')) {
-    await paceOutboundMetaWrite();
-  }
-
   if (comment.platform === 'youtube') {
     const status =
       action === 'hide' ? 'heldForReview' : action === 'unhide' ? 'published' : 'rejected';
@@ -44,14 +50,19 @@ export async function applyPlatformModeration(userId, comment, action, { pace = 
     return { onPlatform: true };
   }
 
-  if (comment.platform === 'instagram') {
-    if (action === 'delete') await deleteInstagramComment(connection, comment.externalId);
-    else await setInstagramCommentHidden(connection, comment.externalId, action === 'hide');
-    return { onPlatform: true };
-  }
+  assertMetaWriteAllowed(connection, { automated });
+  if (pace) await paceOutboundMetaWrite();
 
-  if (action === 'delete') await deleteFacebookComment(connection, comment.externalId);
-  else await setFacebookCommentHidden(connection, comment.externalId, action === 'hide');
+  await withMetaGuard(connection, async () => {
+    if (comment.platform === 'instagram') {
+      if (action === 'delete') await deleteInstagramComment(connection, comment.externalId);
+      else await setInstagramCommentHidden(connection, comment.externalId, action === 'hide');
+      return;
+    }
+    if (action === 'delete') await deleteFacebookComment(connection, comment.externalId);
+    else await setFacebookCommentHidden(connection, comment.externalId, action === 'hide');
+  });
+  await recordMetaWrite(connection);
   return { onPlatform: true };
 }
 

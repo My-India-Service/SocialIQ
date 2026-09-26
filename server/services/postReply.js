@@ -3,7 +3,12 @@ import Comment from '../models/Comment.js';
 import { postFacebookCommentReply, postInstagramCommentReply } from './meta.js';
 import { postYouTubeCommentReply } from './youtube.js';
 import { postLinkedInCommentReply } from './linkedin.js';
-import { paceOutboundMetaWrite } from './metaSafe.js';
+import {
+  assertMetaWriteAllowed,
+  paceOutboundMetaWrite,
+  recordMetaWrite,
+  withMetaGuard,
+} from './metaSafe.js';
 
 export {
   META_SYNC_COOLDOWN_MS,
@@ -171,18 +176,23 @@ export async function postCommentReplyToPlatform(userId, comment, message, optio
     throw new Error(`${comment.platform} is not connected — open Connect and link your account`);
   }
 
+  const isMeta = comment.platform === 'facebook' || comment.platform === 'instagram';
+
   try {
-    if (pace && (comment.platform === 'facebook' || comment.platform === 'instagram')) {
-      await paceOutboundMetaWrite();
+    if (isMeta) {
+      assertMetaWriteAllowed(connection, { automated: Boolean(options.automated) });
+      if (pace) await paceOutboundMetaWrite();
+      const platformReplyId = await withMetaGuard(connection, () =>
+        comment.platform === 'instagram'
+          ? postInstagramCommentReply(connection, comment.externalId, text)
+          : postFacebookCommentReply(connection, comment.externalId, text)
+      );
+      await recordMetaWrite(connection);
+      return { platformReplyId, message: text };
     }
 
     if (comment.platform === 'youtube') {
       const platformReplyId = await postYouTubeCommentReply(connection, comment.externalId, text);
-      return { platformReplyId, message: text };
-    }
-
-    if (comment.platform === 'instagram') {
-      const platformReplyId = await postInstagramCommentReply(connection, comment.externalId, text);
       return { platformReplyId, message: text };
     }
 
@@ -196,8 +206,7 @@ export async function postCommentReplyToPlatform(userId, comment, message, optio
       return { platformReplyId, message: text };
     }
 
-    const platformReplyId = await postFacebookCommentReply(connection, comment.externalId, text);
-    return { platformReplyId, message: text };
+    throw new Error(`Posting replies is not supported for ${comment.platform} yet`);
   } catch (err) {
     if (claim && commentId) await clearPendingPlatformReply(commentId);
     throw err;

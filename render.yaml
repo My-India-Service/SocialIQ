@@ -1,4 +1,4 @@
-# Voxa — Render Blueprint
+# SocialAiDigital — Render Blueprint (service names kept as voxa-* to match existing services)
 # Docs: docs/RENDER_DEPLOYMENT.md
 # After create: set secrets in the dashboard, then redeploy.
 
@@ -40,17 +40,25 @@ services:
         sync: false
       - key: META_INSTAGRAM_REDIRECT_URI
         value: https://socialiq-37aa.onrender.com/api/connections/instagram/callback
-      - key: META_WHATSAPP_ACCESS_TOKEN
-        sync: false
-      - key: META_WABA_ID
-        sync: false
-      - key: META_PHONE_NUMBER_ID
-        sync: false
-      - key: META_WEBHOOK_VERIFY_TOKEN
-        sync: false
       - key: META_GRAPH_API_VERSION
         value: v21.0
-      - key: META_WHATSAPP_LEAD_TEMPLATE
+      # Instagram DMs need instagram_business_manage_messages approved in App Review first.
+      - key: META_INSTAGRAM_MESSAGING_ENABLED
+        value: "false"
+      - key: META_INSTAGRAM_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      # WhatsApp stays hidden until WHATSAPP_ENABLED=true; its keys are then required.
+      - key: WHATSAPP_ENABLED
+        value: "false"
+      - key: CRISIS_MONITOR_ENABLED
+        value: "true"
+      - key: ALERT_EMAIL
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
       - key: OPENAI_API_KEY
         sync: false

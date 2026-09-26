@@ -13,6 +13,21 @@ const PLATFORMS = [
   { id: 'x', label: 'X', ready: false, mvp: false },
 ];
 
+function MetaSafetyStatus({ conn }) {
+  if (!conn?.hasOAuth) return null;
+  return (
+    <>
+      {conn.metaPauseReason && <div className="error-banner">{conn.metaPauseReason}</div>}
+      {typeof conn.metaWritesRemaining === 'number' && (
+        <p className="prob">
+          Meta actions left today: {conn.metaWritesRemaining}/{conn.metaWriteBudget} (replies, DMs,
+          hides — capped to protect your account)
+        </p>
+      )}
+    </>
+  );
+}
+
 function instagramAuthLabel(metaAuthType) {
   if (metaAuthType === 'instagram_direct') return 'Via Instagram login';
   if (metaAuthType === 'facebook_page') return 'Via Facebook Page';
@@ -386,6 +401,7 @@ export default function Connections() {
         {ig?.hasOAuth && ig?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(ig.lastSyncedAt).toLocaleString()}</p>
         )}
+        <MetaSafetyStatus conn={ig} />
       </div>
 
       <div className="panel stack-gap">
@@ -444,6 +460,7 @@ export default function Connections() {
         {fb?.hasOAuth && fb?.lastSyncedAt && (
           <p className="prob">Last synced: {new Date(fb.lastSyncedAt).toLocaleString()}</p>
         )}
+        <MetaSafetyStatus conn={fb} />
       </div>
 
       <div className="panel stack-gap">

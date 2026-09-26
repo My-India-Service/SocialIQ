@@ -47,6 +47,14 @@ import {
   verifyTikTokOAuthState,
 } from '../services/tiktok.js';
 import { getClientUrl } from '../utils/clientUrl.js';
+import {
+  clampFacebookSyncOptions,
+  clampInstagramSyncOptions,
+  metaPauseReason,
+  metaWritesRemaining,
+  DAILY_META_WRITE_BUDGET,
+  MAX_AUTO_HIDES_PER_SYNC,
+} from '../services/metaSafe.js';
 
 function appendAutoReplySummary(message, result) {
   let out = message;
@@ -62,7 +70,21 @@ function appendAutoReplySummary(message, result) {
   if (result.autoReplySkippedSyncCap > 0) {
     out += ` Auto-reply capped at 5 per sync for Meta safety (${result.autoReplySkippedSyncCap} skipped). Sync again later for more.`;
   }
+  if (result.autoHidden > 0) {
+    out += ` Auto-hidden: ${result.autoHidden}.`;
+  }
+  if (result.autoHideSkippedCap > 0) {
+    out += ` Auto-hide capped at ${MAX_AUTO_HIDES_PER_SYNC} per sync for Meta safety (${result.autoHideSkippedCap} left flagged for review).`;
+  }
   return out;
+}
+
+/** Reconnecting refreshes the token, so lift any circuit-breaker pause. */
+async function clearMetaPause(userId) {
+  await Connection.updateMany(
+    { user: userId, platform: { $in: ['facebook', 'instagram'] } },
+    { $set: { metaPausedUntil: null, metaPauseReason: '' } }
+  );
 }
 
 async function oauthSuccessRedirect(userId, platform) {
@@ -113,6 +135,14 @@ router.get('/', authRequired, async (req, res) => {
       connectedAt: c.connectedAt,
       metaAuthType: c.metaAuthType || '',
       hasOAuth: Boolean(c.accessToken || c.refreshToken),
+      ...(c.platform === 'facebook' || c.platform === 'instagram'
+        ? {
+            metaPausedUntil: metaPauseReason(c) ? c.metaPausedUntil : null,
+            metaPauseReason: metaPauseReason(c),
+            metaWritesRemaining: metaWritesRemaining(c),
+            metaWriteBudget: DAILY_META_WRITE_BUDGET,
+          }
+        : {}),
     }));
     res.json({ connections });
   } catch (err) {
@@ -219,6 +249,7 @@ router.get('/meta/callback', async (req, res) => {
     const parsed = verifyMetaOAuthState(String(state));
     platform = parsed.platform;
     await exchangeMetaCodeAndSave(parsed.userId, platform, String(code));
+    await clearMetaPause(parsed.userId);
 
     return res.redirect(await oauthSuccessRedirect(parsed.userId, platform));
   } catch (err) {
@@ -260,6 +291,7 @@ router.get('/instagram/callback', async (req, res) => {
 
     const userId = verifyInstagramOAuthState(String(state));
     await exchangeInstagramCodeAndSave(userId, String(code));
+    await clearMetaPause(userId);
 
     return res.redirect(await oauthSuccessRedirect(userId, 'instagram'));
   } catch (err) {
@@ -272,11 +304,10 @@ router.get('/instagram/callback', async (req, res) => {
 
 router.post('/facebook/sync', authRequired, async (req, res) => {
   try {
-    const result = await syncFacebookCommentsForUser(req.userId, {
-      maxPosts: Number(req.body?.maxPosts) || 20,
-      maxCommentsPerPost: Number(req.body?.maxCommentsPerPost) || 25,
-      maxScan: Number(req.body?.maxScan) || 80,
-    });
+    const result = await syncFacebookCommentsForUser(
+      req.userId,
+      clampFacebookSyncOptions(req.body || {})
+    );
     const scan =
       typeof result.scannedPosts === 'number'
         ? ` Scanned ${result.scannedPosts} posts (${result.postsWithCommentSignal ?? 0} with comment signal); checked ${result.postsChecked ?? 0}.`
@@ -302,10 +333,10 @@ router.post('/facebook/sync', authRequired, async (req, res) => {
 
 router.post('/instagram/sync', authRequired, async (req, res) => {
   try {
-    const result = await syncInstagramCommentsForUser(req.userId, {
-      maxMedia: Number(req.body?.maxMedia) || 10,
-      maxCommentsPerMedia: Number(req.body?.maxCommentsPerMedia) || 25,
-    });
+    const result = await syncInstagramCommentsForUser(
+      req.userId,
+      clampInstagramSyncOptions(req.body || {})
+    );
     const scan =
       typeof result.mediaChecked === 'number'
         ? ` Checked ${result.mediaChecked} posts (${result.mediaWithCommentSignal ?? 0} with comment signal).`
