@@ -215,7 +215,7 @@ export async function exchangeYouTubeCode(code) {
   return {
     tokens,
     channelId: channel.id,
-    accountName: channel.snippet?.customUrl || channel.snippet?.title || channel.id,
+    accountName: channel.snippet?.title || channel.snippet?.customUrl || channel.id,
     channelTitle: channel.snippet?.title || 'YouTube',
   };
 }

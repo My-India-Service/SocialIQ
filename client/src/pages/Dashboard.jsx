@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, downloadFile } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { formatDateTime, timeAgo } from '../utils/time';
 
 const CATEGORY_LABELS = {
   sales_opportunity: 'Sales',
@@ -80,6 +81,7 @@ export default function Dashboard() {
   const [platform, setPlatform] = useState('all');
   const [temperature, setTemperature] = useState('all');
   const [status, setStatus] = useState('all');
+  const [range, setRange] = useState('all');
   const [q, setQ] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -97,7 +99,7 @@ export default function Dashboard() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ category, platform, q, temperature, status });
+      const params = new URLSearchParams({ category, platform, q, temperature, status, range });
       const [listData, statsData] = await Promise.all([
         api(`/api/comments?${params}`, { token }),
         api('/api/comments/stats', { token }),
@@ -114,7 +116,7 @@ export default function Dashboard() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, category, platform, temperature, status]);
+  }, [token, category, platform, temperature, status, range]);
 
   async function search(e) {
     e.preventDefault();
@@ -128,6 +130,7 @@ export default function Dashboard() {
       setTemperature('all');
       setStatus('all');
       setPlatform('all');
+      setRange('all');
       return;
     }
     if (kind === 'hot') {
@@ -292,6 +295,7 @@ export default function Dashboard() {
         q,
         temperature,
         status,
+        range,
         scope,
       });
       const result = await downloadFile(`/api/comments/export.csv?${params}`, {
@@ -319,7 +323,18 @@ export default function Dashboard() {
   }
 
   const filtersActive =
-    category !== 'all' || platform !== 'all' || temperature !== 'all' || status !== 'all' || q;
+    category !== 'all' ||
+    platform !== 'all' ||
+    temperature !== 'all' ||
+    status !== 'all' ||
+    range !== 'all' ||
+    q;
+
+  const postedTimes = comments
+    .map((c) => (c.postedAt ? new Date(c.postedAt).getTime() : NaN))
+    .filter((t) => !Number.isNaN(t));
+  const oldestPosted = postedTimes.length ? Math.min(...postedTimes) : null;
+  const newestPosted = postedTimes.length ? Math.max(...postedTimes) : null;
 
   const platformFilterCount =
     platform !== 'all' && stats?.byPlatform ? stats.byPlatform[platform] ?? 0 : null;
@@ -459,6 +474,13 @@ export default function Dashboard() {
           <option value="converted">Converted</option>
           <option value="ignored">Ignored</option>
         </select>
+        <select value={range} onChange={(e) => setRange(e.target.value)} aria-label="Posted">
+          <option value="all">Any time</option>
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+        </select>
         <input
           placeholder="Search comments…"
           value={q}
@@ -477,6 +499,7 @@ export default function Dashboard() {
               setPlatform('all');
               setTemperature('all');
               setStatus('all');
+              setRange('all');
               setQ('');
             }}
           >
@@ -503,6 +526,20 @@ export default function Dashboard() {
           <div className="skeleton-card" />
           <div className="skeleton-card" />
         </div>
+      )}
+
+      {!loading && oldestPosted != null && (
+        <p className="inbox-range-summary">
+          Showing {comments.length} {comments.length === 1 ? 'comment' : 'comments'}{' '}
+          {oldestPosted === newestPosted ? (
+            <>posted {formatDateTime(oldestPosted)}</>
+          ) : (
+            <>
+              posted between <b>{formatDateTime(oldestPosted)}</b> and{' '}
+              <b>{formatDateTime(newestPosted)}</b>
+            </>
+          )}
+        </p>
       )}
 
       <div className="comment-list">
@@ -542,9 +579,16 @@ export default function Dashboard() {
                 <p className="comment-author">
                   {c.author}
                   {c.authorHandle ? <span> · {c.authorHandle}</span> : null}
+                  {c.postedAt && (
+                    <span className="comment-date" title={formatDateTime(c.postedAt)}>
+                      {' '}
+                      · {timeAgo(c.postedAt)}
+                    </span>
+                  )}
                 </p>
                 <p className="comment-text">{c.text}</p>
                 <p className="prob">
+                  {c.postedAt && <>Posted {formatDateTime(c.postedAt)} · </>}
                   {c.postTitle && c.platform !== 'whatsapp' && <>On “{c.postTitle}” · </>}
                   {c.platform === 'whatsapp' && <>WhatsApp · </>}
                   <b>{c.purchaseProbability}%</b> purchase intent

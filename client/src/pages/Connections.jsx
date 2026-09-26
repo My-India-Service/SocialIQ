@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { formatDate, formatDateTime } from '../utils/time';
 
 const PLATFORMS = [
   { id: 'youtube', label: 'YouTube', ready: true, mvp: true },
@@ -196,7 +197,9 @@ export default function Connections() {
                 ? '/api/connections/tiktok/sync'
                 : '/api/connections/instagram/sync';
       const data = await api(path, { method: 'POST', token, body: {} });
-      const summary = `${data.message} Analysis: ${data.analysisMode === 'llm' ? 'OpenAI LLM' : 'rules fallback'}.`;
+      const channelPrefix =
+        platform === 'youtube' && data.channelTitle ? `${data.channelTitle} — ` : '';
+      const summary = `${channelPrefix}${data.message} Analysis: ${data.analysisMode === 'llm' ? 'OpenAI LLM' : 'rules fallback'}.`;
       if (
         (platform === 'facebook' ||
           platform === 'instagram' ||
@@ -325,8 +328,31 @@ export default function Connections() {
         {!integration.youtubeOAuth && (
           <p className="prob">Add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET to server/.env</p>
         )}
+        {yt?.hasOAuth && (
+          <p className="prob">
+            Connected channel: <strong>{yt.accountName || 'Unknown'}</strong>
+            {yt.channelId && (
+              <>
+                {' · '}
+                <a
+                  href={`https://www.youtube.com/channel/${yt.channelId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View channel
+                </a>
+              </>
+            )}
+            {yt.connectedAt && <> · Connected on {formatDate(yt.connectedAt)}</>}
+          </p>
+        )}
+        {yt?.hasOAuth && (
+          <p className="prob">
+            Sync pulls the newest comments (up to 40 each) from your latest 8 videos.
+          </p>
+        )}
         {yt?.hasOAuth && yt?.lastSyncedAt && (
-          <p className="prob">Last synced: {new Date(yt.lastSyncedAt).toLocaleString()}</p>
+          <p className="prob">Last synced: {formatDateTime(yt.lastSyncedAt)}</p>
         )}
       </div>
 

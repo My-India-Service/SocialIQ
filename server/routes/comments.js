@@ -43,14 +43,22 @@ function formatPostReplyError(err) {
   return { message, status: status === 429 ? 429 : status };
 }
 
+const RANGE_MS = {
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
+  '90d': 90 * 24 * 60 * 60 * 1000,
+};
+
 function commentListFilter(userId, query) {
-  const { category, platform, status, q, temperature } = query;
+  const { category, platform, status, q, temperature, range } = query;
   const filter = { user: userId };
   if (category && category !== 'all') filter.category = category;
   if (platform && platform !== 'all') filter.platform = platform;
   if (status && status !== 'all') filter.status = status;
   if (temperature && temperature !== 'all') filter.leadTemperature = temperature;
   if (q) filter.text = { $regex: q, $options: 'i' };
+  if (RANGE_MS[range]) filter.postedAt = { $gte: new Date(Date.now() - RANGE_MS[range]) };
   return filter;
 }
 

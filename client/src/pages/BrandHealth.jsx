@@ -2,15 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import BrandHealthCard from '../components/BrandHealthCard';
-
-function timeAgo(date) {
-  const ms = Date.now() - new Date(date).getTime();
-  const m = Math.round(ms / 60000);
-  if (m < 60) return `${Math.max(1, m)}m ago`;
-  const h = Math.round(m / 60);
-  if (h < 48) return `${h}h ago`;
-  return `${Math.round(h / 24)}d ago`;
-}
+import { timeAgo } from '../utils/time';
 
 export default function BrandHealth() {
   const { token, user } = useAuth();

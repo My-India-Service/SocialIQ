@@ -1463,6 +1463,17 @@ button.stat:hover {
   color: var(--muted);
 }
 
+.comment-author .comment-date {
+  cursor: help;
+  white-space: nowrap;
+}
+
+.inbox-range-summary {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .comment-status {
   width: auto;
   min-width: 9.5rem;
