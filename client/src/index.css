@@ -2901,8 +2901,8 @@ html[data-theme='dark'] .billing-flash.err {
 /* ——— Onboarding wizard ——— */
 .onboarding-page {
   min-height: 100vh;
-  background: #0a0a0f;
-  color: #f5f5f7;
+  background: var(--paper);
+  color: var(--ink);
   display: flex;
   flex-direction: column;
 }
@@ -2933,13 +2933,13 @@ html[data-theme='dark'] .billing-flash.err {
 
 .onboarding-step-label {
   font-size: 0.85rem;
-  color: rgba(245, 245, 247, 0.55);
+  color: var(--muted);
 }
 
 .onboarding-progress {
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--line);
   margin-bottom: 2rem;
   overflow: hidden;
 }
@@ -2963,7 +2963,7 @@ html[data-theme='dark'] .billing-flash.err {
 }
 
 .onboarding-head p {
-  color: rgba(245, 245, 247, 0.65);
+  color: var(--muted);
   margin: 0 0 1.5rem;
 }
 
@@ -3013,8 +3013,8 @@ html[data-theme='dark'] .billing-flash.err {
 .onboarding-stat-chip {
   padding: 0.85rem;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--line);
   text-align: center;
 }
 
@@ -3026,7 +3026,7 @@ html[data-theme='dark'] .billing-flash.err {
 
 .onboarding-stat-chip span {
   font-size: 0.72rem;
-  color: rgba(245, 245, 247, 0.55);
+  color: var(--muted);
 }
 
 .onboarding-field {
@@ -3043,7 +3043,7 @@ html[data-theme='dark'] .billing-flash.err {
 .onboarding-field-label {
   font-size: 0.9rem;
   margin: 0 0 0.5rem;
-  color: rgba(245, 245, 247, 0.75);
+  color: var(--muted);
 }
 
 .onboarding-card-grid {
@@ -3059,8 +3059,8 @@ html[data-theme='dark'] .billing-flash.err {
   text-align: left;
   padding: 1rem;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 2px solid var(--line);
   color: inherit;
   cursor: pointer;
   transition: border-color 0.2s;
@@ -3073,7 +3073,7 @@ html[data-theme='dark'] .billing-flash.err {
 
 .onboarding-card span {
   font-size: 0.85rem;
-  color: rgba(245, 245, 247, 0.55);
+  color: var(--muted);
 }
 
 .onboarding-card.is-selected {
@@ -3095,9 +3095,9 @@ html[data-theme='dark'] .billing-flash.err {
 .onboarding-connect-btn {
   padding: 0.85rem 1rem;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #f5f5f7;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -3110,8 +3110,8 @@ html[data-theme='dark'] .billing-flash.err {
 .onboarding-connect-note {
   padding: 0.85rem 1rem;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: var(--surface);
+  border: 1px dashed var(--line);
 }
 
 .onboarding-connect-note strong {
@@ -3120,7 +3120,7 @@ html[data-theme='dark'] .billing-flash.err {
 
 .onboarding-connect-note span {
   font-size: 0.85rem;
-  color: rgba(245, 245, 247, 0.55);
+  color: var(--muted);
 }
 
 .onboarding-unlock-visual {

@@ -1,3 +1,5 @@
+import ThemeToggle from '../ThemeToggle';
+
 export default function OnboardingShell({
   step,
   totalSteps,
@@ -18,6 +20,7 @@ export default function OnboardingShell({
 
   return (
     <div className="onboarding-shell">
+      <ThemeToggle className="theme-toggle--auth" />
       <div className="onboarding-top">
         <span className="onboarding-step-label">
           Step {step} of {totalSteps}

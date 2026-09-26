@@ -13,8 +13,13 @@ function readStoredTheme() {
   return 'light';
 }
 
+/** Matches --paper so the installed app's title bar follows the theme. */
+const THEME_COLOR = { light: '#f5f7fb', dark: '#05060a' };
+
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', THEME_COLOR[theme]);
 }
 
 export function ThemeProvider({ children }) {
