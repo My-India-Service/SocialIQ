@@ -297,7 +297,7 @@ router.post('/email-preview', async (req, res) => {
 
     res.json({
       to: user.email,
-      from: process.env.REPORT_FROM || 'SocialAiDigital <reports@voxa.app>',
+      from: process.env.REPORT_FROM || 'SocialAiDigital <reports@socialaidigital.com>',
       subject,
       body: text,
       delivered: false,

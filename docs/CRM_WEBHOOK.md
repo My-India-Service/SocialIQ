@@ -1,6 +1,6 @@
 # CRM webhook (Zapier vs Zoho)
 
-Voxa does **not** ship a native Zoho or Zapier SDK. Settings → **CRM webhook URL** receives a JSON `POST` when you **Send to sales** or auto-route a hot lead (`server/services/integrations.js` → `sendToCrm` / `formatLeadPayload`).
+SocialAiDigital does **not** ship a native Zoho or Zapier SDK. Settings → **CRM webhook URL** receives a JSON `POST` when you **Send to sales** or auto-route a hot lead (`server/services/integrations.js` → `sendToCrm` / `formatLeadPayload`).
 
 Paste any HTTPS URL that accepts JSON: Zapier Catch Hook, Zoho Flow webhook, Make, n8n, or your own middleware.
 
@@ -43,20 +43,20 @@ They are **not** substitutes:
 |--|--------|-----------|
 | What it is | Automation **glue** | Actual **CRM** (leads, deals, pipeline) |
 | Stores sales pipeline? | No | Yes |
-| Voxa URL | Catch Hook (webhooks on paid plans) | Zoho Flow / CRM webhook / custom function URL |
-| Replaces Voxa Slack / WA alerts? | Redundant — Voxa already has Slack + WhatsApp notify | No — CRM is for lead records |
+| SocialAiDigital URL | Catch Hook (webhooks on paid plans) | Zoho Flow / CRM webhook / custom function URL |
+| Replaces SocialAiDigital Slack / WA alerts? | Redundant — SocialAiDigital already has Slack + WhatsApp notify | No — CRM is for lead records |
 
 **Recommendation**
 
 1. **Primary CRM: Zoho CRM** (or any real CRM) — better feature + India seat pricing for tracked leads.
 2. **Zapier: optional glue** — use when you need multi-app fan-out (Zoho + Sheets + email). Prefer **Zoho Flow alone** if Zoho is the only destination (avoids paying Zapier task costs).
-3. Do **not** replace Voxa’s native Slack / WhatsApp notify with Zapier unless you need extra destinations.
+3. Do **not** replace SocialAiDigital’s native Slack / WhatsApp notify with Zapier unless you need extra destinations.
 4. Full WhatsApp conversation CRM (threads, reply UI) is a separate product — see [WHATSAPP_WEBHOOK.md](./WHATSAPP_WEBHOOK.md) (e.g. self-hosted wacrm). Zoho here = traditional sales CRM for comment-originated leads.
 
 ### Pricing snapshot (approx — verify on vendor sites)
 
 - **Zapier:** task-based (USD). Free ~100 tasks/mo is for testing; Professional ~$20/mo annual unlocks webhooks. Cost grows with every lead POST.
-- **Zoho CRM (India):** per-user INR (e.g. Free for 3 users; Standard ~₹800/user/mo annual). You pay seats, not per Voxa lead (edition API/webhook caps still apply).
+- **Zoho CRM (India):** per-user INR (e.g. Free for 3 users; Standard ~₹800/user/mo annual). You pay seats, not per SocialAiDigital lead (edition API/webhook caps still apply).
 
 Zapier + Zoho together means **paying both** — only worth it for multi-app Zaps.
 

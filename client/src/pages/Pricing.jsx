@@ -7,7 +7,7 @@ import usePageMeta from '../hooks/usePageMeta';
 function planCta(plan, loggedIn) {
   if (plan.contactSales) {
     return {
-      to: 'mailto:sales@voxa.app?subject=Enterprise%20plan',
+      to: 'mailto:sales@socialaidigital.com?subject=Enterprise%20plan',
       external: true,
       label: 'Contact sales',
     };
@@ -62,6 +62,7 @@ export default function Pricing() {
         <div className="section-head">
           <h1>India-first pricing for D2C brands.</h1>
           <p>Pay by comments processed — from ₹999/mo for creators to ₹7,999 for high-volume brands.</p>
+          <p className="pricing-trial-note">1 month free with full Pro access — no card needed.</p>
         </div>
 
         <div className="pricing-grid">

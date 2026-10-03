@@ -1,11 +1,11 @@
-# Render Deployment Guide — Voxa
+# Render Deployment Guide — SocialAiDigital
 
 This project is a **two-package monorepo** (`client/` + `server/`). On Render you create **two services** from the same GitHub repo.
 
 ## Architecture
 
 ```
-GitHub repo (SocialIQ / Voxa)
+GitHub repo (SocialIQ / SocialAiDigital)
 ├── Web Service  → Express API  (Node.js, rootDir: server)
 ├── Static Site  → React build  (Vite → client/dist)
 └── MongoDB Atlas (database)

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { getPlan } from '../data/plans';
 
 function webhookUrlLooksWrong(url) {
   if (!url) return false;
@@ -420,8 +421,14 @@ export default function Settings() {
           <p>Tone, average order value, Slack/CRM routing, WhatsApp Cloud API, and Auto DM.</p>
         </div>
         <Link to="/app/billing" className="btn btn-ghost btn-sm settings-plan-chip">
-          Plan: {user?.subscription?.planId || 'starter'}
-          {user?.subscription?.status ? ` · ${user.subscription.status}` : ''} — Manage
+          {user?.subscription?.trialActive && user.subscription.effectivePlanId === 'business' ? (
+            <>Pro trial · {user.subscription.trialDaysLeft} days left — Manage</>
+          ) : (
+            <>
+              Plan: {getPlan(user?.subscription?.planId || 'starter')?.name || 'Starter'}
+              {user?.subscription?.status ? ` · ${user.subscription.status}` : ''} — Manage
+            </>
+          )}
         </Link>
       </div>
 
@@ -739,9 +746,10 @@ export default function Settings() {
         <div className="panel">
           <h2>Instagram sales agent on sync</h2>
           <p className="prob">
-            Like Delulu: when someone comments a keyword (LINK, price) or Hinglish buying intent
-            (kitne ka, COD hai), Voxa posts your public reply on the comment and sends catalogue
-            details in DM. Requires Growth plan + Instagram Messaging after Meta App Review.
+            When someone comments a keyword (LINK, price) or Hinglish buying intent (kitne ka, COD
+            hai), SocialAiDigital posts your public reply on the comment and sends catalogue details
+            in DM. Requires Growth or above (included in the free trial) + Instagram Messaging after
+            Meta App Review.
           </p>
           <label className="check-row">
             <input

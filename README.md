@@ -1,4 +1,4 @@
-# Voxa — AI Social Revenue Platform
+# SocialAiDigital — AI Social Revenue Platform
 
 We turn every Instagram & YouTube comment into revenue.
 

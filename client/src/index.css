@@ -2409,7 +2409,66 @@ html[data-theme='dark'] .billing-flash.err {
 }
 
 .pricing-card.billing-current-card {
-  outline: 2px solid var(--ink-soft);
+  position: relative;
+}
+
+.plan-badge {
+  align-self: flex-start;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.billing-trial {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  font-weight: 600;
+  background: rgba(var(--brand-rgb), 0.12);
+  color: var(--ink);
+}
+
+.billing-trial.ended,
+.trial-banner.ended {
+  background: rgba(220, 120, 40, 0.14);
+}
+
+.trial-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(var(--brand-rgb), 0.12);
+  color: var(--ink);
+}
+
+.trial-banner a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.pricing-trial-note {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.plan-badge-current {
+  border-color: var(--brand);
+  color: var(--ink);
+  background: rgba(var(--brand-rgb), 0.12);
 }
 
 .pricing-card.billing-highlight {
@@ -4719,6 +4778,17 @@ button.content-idea:hover {
 .health-ring-value span {
   font-size: 0.72rem;
   color: var(--muted);
+}
+.health-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.health-note a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .health-summary {
   flex: 1;

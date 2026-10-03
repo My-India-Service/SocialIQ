@@ -124,6 +124,7 @@ export default function Register() {
           <>
             <h1>Start with SocialAiDigital</h1>
             <p>Connect social comments. Capture sales. Catch complaints early.</p>
+            <p className="pricing-trial-note">1 month free with full Pro access — no card needed.</p>
             {error && <div className="error-banner">{error}</div>}
             {authConfig.googleLogin && (
               <GoogleSignInButton

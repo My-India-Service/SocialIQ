@@ -30,7 +30,7 @@ export default function Revenue() {
       <div className="page-head">
         <div>
           <h1>Revenue & ROI</h1>
-          <p>Sales influenced through Voxa — conversions, pipeline, and recovered complaints.</p>
+          <p>Sales influenced through SocialAiDigital — conversions, pipeline, and recovered complaints.</p>
         </div>
       </div>
 

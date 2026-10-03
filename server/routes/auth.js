@@ -11,6 +11,7 @@ import {
   isGoogleLoginEnabled,
   isWhatsAppEnabled,
 } from '../config/features.js';
+import { effectivePlanId, isTrialActive, trialDaysLeft } from '../config/plans.js';
 import {
   fetchGoogleProfile,
   getGoogleLoginUrl,
@@ -124,6 +125,10 @@ function publicUser(user) {
       planId: user.subscription?.planId || 'starter',
       status: user.subscription?.status || 'trialing',
       updatedAt: user.subscription?.updatedAt || null,
+      trialEndsAt: user.subscription?.trialEndsAt || null,
+      trialActive: isTrialActive(user),
+      trialDaysLeft: trialDaysLeft(user),
+      effectivePlanId: effectivePlanId(user),
     },
     onboarding: {
       platforms: user.onboarding?.platforms || [],

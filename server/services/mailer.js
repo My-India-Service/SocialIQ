@@ -35,7 +35,7 @@ export async function sendEmail({ to, subject, text, html }) {
 
   try {
     const info = await transport.sendMail({
-      from: process.env.REPORT_FROM || 'SocialAiDigital <reports@voxa.app>',
+      from: process.env.REPORT_FROM || 'SocialAiDigital <reports@socialaidigital.com>',
       to,
       subject,
       text,

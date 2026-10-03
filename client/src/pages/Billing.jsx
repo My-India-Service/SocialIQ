@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { getPlan, PLANS } from '../data/plans';
+import { formatDate } from '../utils/time';
 
 export default function Billing() {
   const { user, token, setUser } = useAuth();
@@ -18,6 +19,9 @@ export default function Billing() {
   const currentId = user?.subscription?.planId || 'starter';
   const currentPlan = getPlan(currentId) || PLANS[0];
   const status = user?.subscription?.status || 'trialing';
+  const trialActive = Boolean(user?.subscription?.trialActive);
+  const trialDays = user?.subscription?.trialDaysLeft || 0;
+  const trialEndsAt = user?.subscription?.trialEndsAt;
 
   useEffect(() => {
     if (highlightPlan && document.getElementById(`plan-${highlightPlan}`)) {
@@ -139,6 +143,17 @@ export default function Billing() {
                 ? ` · Updated ${new Date(user.subscription.updatedAt).toLocaleDateString()}`
                 : null}
             </p>
+            {trialActive ? (
+              <p className="billing-trial">
+                Free trial: full Pro access — {trialDays} day{trialDays === 1 ? '' : 's'} left
+                {trialEndsAt ? ` (ends ${formatDate(trialEndsAt)})` : ''}
+              </p>
+            ) : trialEndsAt && currentId === 'starter' ? (
+              <p className="billing-trial ended">
+                Your free trial ended — you&apos;re on Starter limits. Choose a plan to keep Pro
+                features.
+              </p>
+            ) : null}
             {usage ? (
               <div className="billing-usage">
                 <p className="muted">
@@ -182,10 +197,15 @@ export default function Billing() {
               <article
                 id={`plan-${plan.id}`}
                 key={plan.id}
-                className={`pricing-card${plan.featured ? ' featured' : ''}${
+                className={`pricing-card${isCurrent ? ' featured billing-current-card' : ''}${
                   highlighted ? ' billing-highlight' : ''
-                }${isCurrent ? ' billing-current-card' : ''}`}
+                }`}
               >
+                {isCurrent ? (
+                  <span className="plan-badge plan-badge-current">Current plan</span>
+                ) : plan.featured ? (
+                  <span className="plan-badge">Most popular</span>
+                ) : null}
                 <h3>{plan.name}</h3>
                 <p className="price">
                   {plan.price}
@@ -200,7 +220,7 @@ export default function Billing() {
                 </ul>
                 {plan.contactSales ? (
                   <a
-                    href="mailto:sales@voxa.app?subject=Enterprise%20plan"
+                    href="mailto:sales@socialaidigital.com?subject=Enterprise%20plan"
                     className="btn btn-primary btn-sm"
                   >
                     Contact sales
@@ -212,7 +232,7 @@ export default function Billing() {
                 ) : (
                   <button
                     type="button"
-                    className={`btn ${plan.featured ? 'btn-citrus' : 'btn-primary'} btn-sm`}
+                    className="btn btn-primary btn-sm"
                     disabled={Boolean(busyId)}
                     onClick={() =>
                       stripeConfigured ? checkoutPlan(plan.id) : switchPlan(plan.id)

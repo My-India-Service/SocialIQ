@@ -7,7 +7,7 @@ import { fetchFacebookComments, fetchInstagramComments } from './meta.js';
 import { fetchLinkedInComments } from './linkedin.js';
 import { fetchTikTokComments } from './tiktok.js';
 import { routeLead } from './integrations.js';
-import { planCommentLimit } from '../config/plans.js';
+import { effectivePlanId, planCommentLimit } from '../config/plans.js';
 import { runInstagramSalesAgentFlow } from './instagramMessaging.js';
 import { appendConversationMessage } from './conversationService.js';
 import {
@@ -38,7 +38,7 @@ export async function ingestRawComments(userId, platform, rawComments, user) {
   let autoHidden = 0;
   let autoHideSkippedCap = 0;
 
-  const planId = user?.subscription?.planId || 'starter';
+  const planId = effectivePlanId(user);
   const limit = planCommentLimit(planId);
   if (limit != null) {
     const currentCount = await Comment.countDocuments({ user: userId });

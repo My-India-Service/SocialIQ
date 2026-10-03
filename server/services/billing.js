@@ -1,4 +1,10 @@
-import { getPlan, planCommentLimit } from '../config/plans.js';
+import {
+  effectivePlanId,
+  getPlan,
+  isTrialActive,
+  planCommentLimit,
+  trialDaysLeft,
+} from '../config/plans.js';
 
 export function getBillingCatalog() {
   return {
@@ -55,7 +61,7 @@ export async function createStripeCheckoutSession({ planId, userEmail, successUr
 }
 
 export function usageForUser(user, commentCount) {
-  const planId = user.subscription?.planId || 'starter';
+  const planId = effectivePlanId(user);
   const limit = planCommentLimit(planId);
   return {
     planId,
@@ -63,5 +69,8 @@ export function usageForUser(user, commentCount) {
     commentLimit: limit,
     remaining: limit != null ? Math.max(0, limit - commentCount) : null,
     salesAgent: getPlan(planId).salesAgent,
+    trialActive: isTrialActive(user),
+    trialEndsAt: user.subscription?.trialEndsAt || null,
+    trialDaysLeft: trialDaysLeft(user),
   };
 }

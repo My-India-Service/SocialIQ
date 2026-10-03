@@ -315,7 +315,7 @@ export default function Dashboard() {
       });
       const result = await downloadFile(`/api/comments/export.csv?${params}`, {
         token,
-        fallbackFilename: scope === 'all' ? 'voxa-comments.csv' : 'voxa-leads.csv',
+        fallbackFilename: scope === 'all' ? 'socialaidigital-comments.csv' : 'socialaidigital-leads.csv',
       });
       if (scope === 'leads' && result.exportCount === 0) {
         setNotice(
@@ -651,8 +651,8 @@ export default function Dashboard() {
               <select
                 className="comment-status"
                 value={c.status}
-                aria-label="Voxa team status (does not post to the platform — use Post reply for that)"
-                title="Voxa team tracking only — use Post reply & mark done to publish on the platform"
+                aria-label="Team status (does not post to the platform — use Post reply for that)"
+                title="Team tracking only — use Post reply & mark done to publish on the platform"
                 disabled={savingId === c._id || postingId === c._id}
                 onChange={(e) => {
                   const next = e.target.value;
@@ -700,8 +700,8 @@ export default function Dashboard() {
                     </label>
                     <p className="reply-platform-hint">
                       {POST_REPLY_PLATFORMS.includes(c.platform)
-                        ? 'Post reply sends to YouTube/Facebook/Instagram and marks done in Voxa. Or copy & paste manually.'
-                        : 'Copy the reply to the platform yourself, then Save without posting in Voxa.'}
+                        ? 'Post reply sends to YouTube/Facebook/Instagram and marks done in SocialAiDigital. Or copy & paste manually.'
+                        : 'Copy the reply to the platform yourself, then Save without posting in SocialAiDigital.'}
                       {c.postedReplyAt
                         ? ` · Posted ${new Date(c.postedReplyAt).toLocaleString()}`
                         : null}
@@ -751,7 +751,7 @@ export default function Dashboard() {
                             suggestedReply: c.suggestedReply,
                             status: 'replied',
                           },
-                          { successMessage: 'Reply saved & marked done (Voxa only)' }
+                          { successMessage: 'Reply saved & marked done (not posted to the platform)' }
                         )
                       }
                     >

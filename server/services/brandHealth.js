@@ -6,6 +6,7 @@ const LOST_AFTER_MS = 48 * 60 * 60 * 1000;
 const RISK_WEIGHT = { critical: 1, high: 0.6, medium: 0.3, low: 0.15 };
 const RESPONDED = new Set(['replied', 'sent_to_sales', 'converted', 'reviewed']);
 const WEIGHTS = { sentiment: 0.3, complaints: 0.25, response: 0.25, resolution: 0.2 };
+const MIN_SAMPLE = 10;
 
 function clamp(n) {
   return Math.max(0, Math.min(100, Math.round(n)));
@@ -57,6 +58,7 @@ function scoreComponents(comments, tickets) {
 
   return {
     score,
+    sampleSize: n,
     components: [
       {
         key: 'sentiment',
@@ -155,10 +157,26 @@ export function computeBrandHealth(comments, tickets = [], { avgOrderValue = 249
     });
   }
 
+  const sampleSize = current.sampleSize;
+  const dataState = sampleSize === 0 ? 'none' : sampleSize < MIN_SAMPLE ? 'low' : 'ok';
+  const components =
+    dataState === 'none'
+      ? current.components.map((c) =>
+          c.key === 'resolution' && tickets?.length
+            ? c
+            : { ...c, score: null, detail: 'Needs synced comments' }
+        )
+      : current.components;
+  let label = healthLabel(current.score);
+  if (dataState === 'none') label = 'No data yet';
+  else if (dataState === 'low') label = `${label} (early estimate)`;
+
   return {
-    score: current.score,
-    label: healthLabel(current.score),
-    components: current.components,
+    score: dataState === 'none' ? null : current.score,
+    label,
+    dataState,
+    sampleSize,
+    components,
     trend,
     revenue: computeRevenueHealth(comments, { avgOrderValue, now }),
   };

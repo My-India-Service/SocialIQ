@@ -52,7 +52,7 @@ Keep `META_APP_ID` / `META_APP_SECRET` unchanged for Facebook Page connect.
 
 ### Verify Render env (after redeploy)
 
-1. Open Voxa → **Connect** → integration strip should show **Instagram Login: On**
+1. Open SocialAiDigital → **Connect** → integration strip should show **Instagram Login: On**
 2. If **Off**, add the three `META_INSTAGRAM_*` keys above and redeploy
 3. Click **Connect with Instagram** — browser URL should include `client_id=1102250409082500`
 
@@ -71,7 +71,7 @@ Instagram → **API setup with Instagram login** should show:
 
 **Do not** put `/api/connections/instagram/callback` in **Section 2 — Configure webhooks**.
 
-| Section | URL purpose | Voxa endpoint |
+| Section | URL purpose | SocialAiDigital endpoint |
 |---------|-------------|---------------|
 | **Section 2 — Webhooks** | Real-time events (`hub.challenge` verify) | **Not implemented** — skip |
 | **Section 3 — Business login** | OAuth return after instagram.com login | `/api/connections/instagram/callback` |
@@ -83,7 +83,7 @@ If you click **Verify and save** in Section 2 with the OAuth callback URL, Meta 
 GET /api/connections/instagram/callback?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...
 ```
 
-Voxa’s callback expects `code` + `state` (OAuth), not webhook verification — Meta shows:
+SocialAiDigital’s callback expects `code` + `state` (OAuth), not webhook verification — Meta shows:
 
 > The callback URL or verify token couldn't be validated.
 
@@ -98,7 +98,7 @@ Add OAuth redirect URIs here (Business login settings / OAuth redirect URIs):
 - `https://api.socialaidigital.com/api/connections/instagram/callback`
 - `http://localhost:5001/api/connections/instagram/callback` (local dev)
 
-Voxa route: `GET /api/connections/instagram/callback` — OAuth return after user logs in at instagram.com.
+SocialAiDigital route: `GET /api/connections/instagram/callback` — OAuth return after user logs in at instagram.com.
 
 ### Scopes
 
@@ -126,7 +126,7 @@ Expected: `appId: 1102250409082500`
 
 ---
 
-## 5. Test in Voxa
+## 5. Test in SocialAiDigital
 
 | Step | Expected |
 |------|----------|
@@ -174,7 +174,7 @@ Test send does **not** create inbox items. Send a real message **to** your busin
 
 ### Instagram DM sales agent (comment → private reply)
 
-Voxa can run the full sales loop: public reply ("Sent you the details in DM ❤️") + private DM catalogue message.
+SocialAiDigital can run the full sales loop: public reply ("Sent you the details in DM ❤️") + private DM catalogue message.
 
 | Requirement | Details |
 |-------------|---------|
@@ -201,13 +201,13 @@ Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff 
 1. Instagram → API setup with Instagram login
 2. **Section 2 — Configure webhooks:** clear Callback URL and Verify token; do not click Verify and save
 3. **Section 3 — Set up Instagram business login:** add OAuth redirect URI `https://api.socialaidigital.com/api/connections/instagram/callback`
-4. In Voxa → Connect → **Connect with Instagram** (not Meta Verify)
+4. In SocialAiDigital → Connect → **Connect with Instagram** (not Meta Verify)
 
 ## What NOT to do
 
 - Do not put `/api/connections/instagram/callback` in Instagram **Configure webhooks** (Section 2)
 - Do not use the WhatsApp verify token (`META_WEBHOOK_VERIFY_TOKEN`) for Instagram webhooks
-- Do not expect **Verify and save** in Section 2 to succeed — Voxa has no Instagram webhook handler
+- Do not expect **Verify and save** in Section 2 to succeed — SocialAiDigital has no Instagram webhook handler
 - Do not use main App ID `1645663120309703` for Instagram Login — use `1102250409082500`
 
 ## Checklist
@@ -217,5 +217,5 @@ Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff 
 - [ ] OAuth redirect in **Section 3 Business login**
 - [ ] Render env: `META_INSTAGRAM_APP_ID=1102250409082500` + secret + redirect URI
 - [ ] API redeployed on Render
-- [ ] Connect with Instagram tested from Voxa (`client_id=1102250409082500`)
+- [ ] Connect with Instagram tested from SocialAiDigital (`client_id=1102250409082500`)
 - [ ] Sync comments tested

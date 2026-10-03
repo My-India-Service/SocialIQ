@@ -28,8 +28,8 @@ export default function Login() {
     : '';
   const [mode, setMode] = useState('password'); // password | otp
   const [otpPhase, setOtpPhase] = useState('email'); // email | code
-  const [email, setEmail] = useState('demo@voxa.app');
-  const [password, setPassword] = useState('demo1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [devHint, setDevHint] = useState('');

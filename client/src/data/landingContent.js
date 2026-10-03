@@ -9,7 +9,7 @@ export const TRUST_BADGE = 'AI Sales Agent for Indian D2C brands';
 export const HOW_IT_WORKS = [
   {
     title: 'Instagram Reel goes live',
-    body: 'Connect your account — Voxa watches comments on every reel and post you sync.',
+    body: 'Connect your account — SocialAiDigital watches comments on every reel and post you sync.',
     mockVariant: 'connect',
   },
   {
@@ -64,7 +64,7 @@ export const LANDING_FEATURES = [
 export const TESTIMONIALS = [
   {
     quote:
-      'We were missing “price?” and “do you deliver?” comments every day. Voxa surfaced them in minutes.',
+      'We were missing “price?” and “do you deliver?” comments every day. SocialAiDigital surfaced them in minutes.',
     name: 'Priya M.',
     role: 'Founder, D2C apparel',
     rating: 5,

@@ -26,7 +26,7 @@ Run after deploy to confirm posting works in your Meta/Google apps. Dev mode onl
 | **Instagram** | Same → verify reply on IG post | ☐ |
 | **LinkedIn** | Same → verify reply on Company Page post | ☐ |
 
-After each post, confirm in Voxa:
+After each post, confirm in SocialAiDigital:
 
 - [ ] `Posted on platform` badge shows (no Post button)
 - [ ] `postedReplyAt` timestamp in helper text

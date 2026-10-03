@@ -236,7 +236,7 @@ export default function Landing() {
                 </ul>
                 {plan.contactSales ? (
                   <a
-                    href="mailto:sales@voxa.app?subject=Enterprise%20plan"
+                    href="mailto:sales@socialaidigital.com?subject=Enterprise%20plan"
                     className="btn btn-primary btn-sm"
                   >
                     Contact sales

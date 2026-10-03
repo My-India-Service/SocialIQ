@@ -1,8 +1,8 @@
-# Facebook comments: Comments Manager shows them, Voxa Sync finds none
+# Facebook comments: Comments Manager shows them, SocialAiDigital Sync finds none
 
 ## Short summary
 
-Voxa Sync **is working**. It lists your Facebook Page posts via the Meta Graph API.  
+SocialAiDigital Sync **is working**. It lists your Facebook Page posts via the Meta Graph API.  
 **Comments Manager** (Facebook’s own UI) can still show comments that Graph returns as empty (`data: []`).  
 That is a **Meta app / Development mode / App Review** visibility limit — not a broken Inbox filter.
 
@@ -34,7 +34,7 @@ Token: … granted=[… pages_read_engagement, pages_read_user_content …]
 ```text
 Comments Manager  →  shows all Page comments (native Facebook)
 Graph API (Dev)  →  often only comments from Admin / Developer / Tester on the app
-Voxa Sync         →  only what Graph returns  →  Inbox stays empty for Facebook
+SocialAiDigital Sync         →  only what Graph returns  →  Inbox stays empty for Facebook
 ```
 
 ---
@@ -49,7 +49,7 @@ Voxa Sync         →  only what Graph returns  →  Inbox stays empty for Faceb
 ### 2. Test comment (confirms Dev-mode filtering)
 
 1. On a Page post, leave a comment **as that same role account** (e.g. `TEST from admin`).  
-2. In Voxa → **Connect** → **Sync comments** (Facebook).  
+2. In SocialAiDigital → **Connect** → **Sync comments** (Facebook).  
 3. Check Inbox → platform **Facebook**.
 
 | Result | Conclusion |
@@ -63,7 +63,7 @@ Voxa Sync         →  only what Graph returns  →  Inbox stays empty for Faceb
    - `pages_read_engagement`  
    - `pages_read_user_content`  
 2. Set the app to **Live**.  
-3. In Voxa: **Reconnect Facebook** → **Sync comments**.
+3. In SocialAiDigital: **Reconnect Facebook** → **Sync comments**.
 
 Without Live + approved permissions, random users’ comments usually **never** appear in Graph — even if Comments Manager shows them.
 
@@ -77,7 +77,7 @@ After Connect, you must stay logged in: on the Render API set `CLIENT_URL=https:
 
 ---
 
-## What Voxa already does (code)
+## What SocialAiDigital already does (code)
 
 - Deep-scans posts (paging, up to ~250).  
 - Merges `published_posts` + `feed` + `posts`.  
@@ -140,7 +140,7 @@ node scripts/cursor-mcp-ipv4-proxy.mjs
 3. Facebook → **Continue**. The proxy forwards IPv4 to Cursor.
 4. Stop the proxy with Ctrl+C after MCP shows connected.
 
-This does not change Voxa’s API callback (`https://api.socialaidigital.com/api/connections/meta/callback`).
+This does not change SocialAiDigital’s API callback (`https://api.socialaidigital.com/api/connections/meta/callback`).
 
 ---
 

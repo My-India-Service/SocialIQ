@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom';
 import { GUIDE_STEPS, MAIN_OBJECTIVE, OBJECTIVES } from '../data/helpContent';
 import { FaqList } from './Faq';
+import usePageMeta from '../hooks/usePageMeta';
 
 export default function Help() {
+  usePageMeta({ title: 'Guide', noindex: true });
   return (
     <div className="help-page">
       <div className="page-head">
         <div>
-          <h1>How to use Voxa</h1>
+          <h1>How to use SocialAiDigital</h1>
           <p>{MAIN_OBJECTIVE.title}</p>
         </div>
       </div>

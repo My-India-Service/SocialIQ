@@ -6,6 +6,7 @@ function formatMoney(n, currency = 'INR') {
 }
 
 function tone(score) {
+  if (score == null) return 'none';
   if (score >= 80) return 'good';
   if (score >= 60) return 'watch';
   if (score >= 40) return 'risk';
@@ -18,28 +19,34 @@ function tone(score) {
  */
 export default function BrandHealthCard({ health, currency = 'INR', activeAlerts = 0, compact = false }) {
   if (!health) return null;
+  const noData = health.score == null;
   const t = tone(health.score);
   const revenue = health.revenue || {};
   const circumference = 2 * Math.PI * 42;
-  const dash = (health.score / 100) * circumference;
+  const dash = ((health.score ?? 0) / 100) * circumference;
 
   return (
     <section className={`panel health-card health-${t}`}>
       <div className="health-top">
-        <div className="health-ring" aria-label={`Brand health ${health.score} out of 100`}>
+        <div
+          className="health-ring"
+          aria-label={noData ? 'Brand health: no data yet' : `Brand health ${health.score} out of 100`}
+        >
           <svg viewBox="0 0 100 100" width="104" height="104" aria-hidden="true">
             <circle cx="50" cy="50" r="42" className="health-ring-track" />
-            <circle
-              cx="50"
-              cy="50"
-              r="42"
-              className="health-ring-fill"
-              strokeDasharray={`${dash} ${circumference}`}
-              transform="rotate(-90 50 50)"
-            />
+            {!noData && (
+              <circle
+                cx="50"
+                cy="50"
+                r="42"
+                className="health-ring-fill"
+                strokeDasharray={`${dash} ${circumference}`}
+                transform="rotate(-90 50 50)"
+              />
+            )}
           </svg>
           <div className="health-ring-value">
-            <strong>{health.score}</strong>
+            <strong>{noData ? '—' : health.score}</strong>
             <span>/100</span>
           </div>
         </div>
@@ -53,7 +60,19 @@ export default function BrandHealthCard({ health, currency = 'INR', activeAlerts
               </Link>
             )}
           </h2>
-          {!compact && (
+          {noData && (
+            <p className="health-note">
+              Connect a channel and sync comments to see your community health.{' '}
+              <Link to="/app/connections">Open Connect</Link>
+            </p>
+          )}
+          {health.dataState === 'low' && (
+            <p className="health-note">
+              Based on {health.sampleSize} comment{health.sampleSize === 1 ? '' : 's'} — score firms
+              up after 10+.
+            </p>
+          )}
+          {!compact && !noData && (
             <div className="health-trend" aria-label="Weekly trend">
               {(health.trend || []).map((w) => (
                 <div key={w.weekEnding} className="health-trend-bar" title={`Week ending ${w.weekEnding}: ${w.score ?? '—'}`}>
@@ -74,10 +93,10 @@ export default function BrandHealthCard({ health, currency = 'INR', activeAlerts
           <div key={c.key} className="health-component">
             <div className="health-component-head">
               <span>{c.label}</span>
-              <strong>{c.score}</strong>
+              <strong>{c.score ?? '—'}</strong>
             </div>
             <div className="health-bar">
-              <span className={`health-${tone(c.score)}`} style={{ width: `${c.score}%` }} />
+              <span className={`health-${tone(c.score)}`} style={{ width: `${c.score ?? 0}%` }} />
             </div>
             {!compact && <small>{c.detail}</small>}
           </div>

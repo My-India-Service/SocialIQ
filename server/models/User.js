@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { DAY_MS, TRIAL_DAYS } from '../config/plans.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -71,6 +72,7 @@ const userSchema = new mongoose.Schema(
         default: 'trialing',
       },
       updatedAt: { type: Date, default: Date.now },
+      trialEndsAt: { type: Date, default: () => new Date(Date.now() + TRIAL_DAYS * DAY_MS) },
     },
     onboarding: {
       platforms: { type: [String], default: [] },

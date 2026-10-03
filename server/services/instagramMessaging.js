@@ -3,7 +3,7 @@ import Conversation from '../models/Conversation.js';
 import { getInstagramGraphBase, resolveInstagramMetaAuthType } from './meta.js';
 import { getValidInstagramDirectAccessToken } from './instagramLogin.js';
 import { buildAutoDmPreview } from './ai.js';
-import { planHasSalesAgent } from '../config/plans.js';
+import { effectivePlanId, planHasSalesAgent } from '../config/plans.js';
 import {
   canAutoReplyToday,
   dailyAutoReplyLimitMessage,
@@ -119,7 +119,7 @@ export async function runInstagramSalesAgentFlow({ user, comment, connection, ca
     return { ok: false, reason: 'no_instagram_connection' };
   }
 
-  const planId = user.subscription?.planId || 'starter';
+  const planId = effectivePlanId(user);
   if (!planHasSalesAgent(planId)) {
     return {
       ok: false,

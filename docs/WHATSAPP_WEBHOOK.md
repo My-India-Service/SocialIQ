@@ -1,6 +1,6 @@
 # WhatsApp Cloud API (Meta)
 
-Voxa talks to WhatsApp **directly** via the official Meta WhatsApp Cloud API.
+SocialAiDigital talks to WhatsApp **directly** via the official Meta WhatsApp Cloud API.
 
 Meta does **not** give you a webhook URL. Your API publishes the Callback URL; you paste that URL into Meta Developers.
 
@@ -8,7 +8,7 @@ Meta does **not** give you a webhook URL. Your API publishes the Callback URL; y
 
 ## What WhatsApp provides (not a CRM)
 
-WhatsApp in Voxa is **not** a CRM (no contacts DB, deals, pipeline, or ownership). It does two jobs:
+WhatsApp in SocialAiDigital is **not** a CRM (no contacts DB, deals, pipeline, or ownership). It does two jobs:
 
 1. **Inbox channel** — customer messages the business number → Meta webhook → scored Inbox items (`Comment` with `platform=whatsapp`), same workflow as IG/YouTube comments.
 2. **Sales alert channel** — hot-lead ping to the sales notify phone via Cloud API, **parallel** to Slack and CRM webhooks (not a replacement for them).
@@ -17,14 +17,14 @@ WhatsApp in Voxa is **not** a CRM (no contacts DB, deals, pipeline, or ownership
 Customer WhatsApp
     → Meta Cloud API
     → GET/POST {SERVER_URL}/api/whatsapp/webhook
-    → Voxa Inbox (Comment)
+    → SocialAiDigital Inbox (Comment)
     → Send to sales / auto-route
          → Slack webhook
          → WhatsApp sales phone (Graph text)
          → CRM webhook (JSON only)
 ```
 
-| | WhatsApp in Voxa | CRM in Voxa |
+| | WhatsApp in SocialAiDigital | CRM in SocialAiDigital |
 |--|------------------|---------------|
 | Role | Inbox + sales alert | Outbound JSON webhook only |
 | Config | `whatsappNotifyPhone` + server Meta env | `crmWebhookUrl` |
@@ -39,10 +39,10 @@ Mental model: **comments inbox + sales ping** — not Intercom / HubSpot WhatsAp
 
 ### Full WhatsApp CRM (separate deploy — do not merge)
 
-For shared inbox threads, reply-to-customer, contacts, pipelines, broadcasts, and automations, use a **separate** self-hosted WhatsApp CRM (e.g. fork [wacrm](https://github.com/ArnasDon/wacrm) / [wacrm.tech](https://wacrm.tech/)), not an in-repo merge into Voxa.
+For shared inbox threads, reply-to-customer, contacts, pipelines, broadcasts, and automations, use a **separate** self-hosted WhatsApp CRM (e.g. fork [wacrm](https://github.com/ArnasDon/wacrm) / [wacrm.tech](https://wacrm.tech/)), not an in-repo merge into SocialAiDigital.
 
-- **Why separate:** wacrm is Next.js + Supabase; Voxa is Express + Mongo. Merging means dual auth, dual backends, and two apps fighting over one Meta webhook URL per phone number.
-- **Product split:** social comments + intent scoring + Slack/CRM ping stay in Voxa; day-to-day WhatsApp sales conversations live in the CRM deploy.
+- **Why separate:** wacrm is Next.js + Supabase; SocialAiDigital is Express + Mongo. Merging means dual auth, dual backends, and two apps fighting over one Meta webhook URL per phone number.
+- **Product split:** social comments + intent scoring + Slack/CRM ping stay in SocialAiDigital; day-to-day WhatsApp sales conversations live in the CRM deploy.
 - **Meta:** Prefer a dedicated WABA/number for the CRM. Do not point two apps at the same webhook without a single ingress owner.
 - **Later (optional):** Settings deep-link or `routeLead` → CRM API — not copying CRM source into `client/` / `server/`.
 
@@ -79,7 +79,7 @@ There is **no** `WHATSAPP_CALLBACK_URL` variable. On the Render **API** service 
 
 Also set `META_WHATSAPP_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID`, `META_APP_SECRET`, then **redeploy** the API. If Verify fails, hit `/api/health` first (wake cold start), then click Verify and save again.
 
-Webhook URL Voxa exposes:
+Webhook URL SocialAiDigital exposes:
 
 `{SERVER_URL}/api/whatsapp/webhook`
 
@@ -93,9 +93,9 @@ Sales notify phones: bare 10-digit Indian mobiles (`9696187534`) are auto-prefix
 
 | Role | What it is | Example |
 |------|------------|---------|
-| **Business / test number** | Meta sandbox *sender* (Phone Number ID). Voxa sends *from* this via Graph. | `+1 (555) 668-1875` |
+| **Business / test number** | Meta sandbox *sender* (Phone Number ID). SocialAiDigital sends *from* this via Graph. | `+1 (555) 668-1875` |
 | **Recipient** | A real phone you add under Meta → Try it out → Recipient | Your personal WhatsApp |
-| **Sales notify phone** (Settings) | Where Voxa sends hot-lead *alerts* (`to` in Graph) | Same as your Meta recipient, e.g. `9198xxxxxxxx` |
+| **Sales notify phone** (Settings) | Where SocialAiDigital sends hot-lead *alerts* (`to` in Graph) | Same as your Meta recipient, e.g. `9198xxxxxxxx` |
 
 Do **not** put the +1 555 business test number in Sales notify phone. That causes `#131030 Recipient phone number not in allowed list`.
 
@@ -105,7 +105,7 @@ Outbound test steps:
 2. Settings → Sales notify phone = that personal number (digits only).
 3. Save → **Test send to sales phone**.
 
-Meta’s “Generate token” on Try it out is separate from Voxa’s `META_WHATSAPP_ACCESS_TOKEN` in env.
+Meta’s “Generate token” on Try it out is separate from SocialAiDigital’s `META_WHATSAPP_ACCESS_TOKEN` in env.
 
 ---
 
@@ -115,12 +115,12 @@ Meta’s “Generate token” on Try it out is separate from Voxa’s `META_WHAT
 2. Attach a WhatsApp Business Account and phone number; note **Phone number ID** and **WABA ID**.
 3. Create a permanent/system user access token with WhatsApp permissions; set `META_WHATSAPP_ACCESS_TOKEN`.
 4. Set all env vars on the Render **API** service and redeploy.
-5. Voxa serves `GET`/`POST /api/whatsapp/webhook`.
+5. SocialAiDigital serves `GET`/`POST /api/whatsapp/webhook`.
 6. In Meta → WhatsApp → Configuration → Webhooks, set:
-   - **Callback URL** = the URL from Voxa Settings (or `{SERVER_URL}/api/whatsapp/webhook`)
+   - **Callback URL** = the URL from SocialAiDigital Settings (or `{SERVER_URL}/api/whatsapp/webhook`)
    - **Verify token** = same as `META_WEBHOOK_VERIFY_TOKEN`
 7. Subscribe to the **messages** field.
-8. In Voxa → Settings → **Enable WhatsApp inbox** (creates a `Connection` for your user).
+8. In SocialAiDigital → Settings → **Enable WhatsApp inbox** (creates a `Connection` for your user).
 9. Send a WhatsApp message to the business number → it appears in Inbox (filter WhatsApp).
 
 ---

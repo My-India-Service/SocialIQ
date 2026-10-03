@@ -1,10 +1,33 @@
-import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { needsEmailVerification, needsOnboarding } from '../utils/onboarding';
 import BrandLogo from './BrandLogo';
 import ThemeToggle from './ThemeToggle';
 import usePageMeta from '../hooks/usePageMeta';
+
+function TrialBanner({ subscription }) {
+  if (subscription?.trialActive) {
+    const days = subscription.trialDaysLeft || 0;
+    return (
+      <div className="trial-banner">
+        <span>
+          Free trial: {days} day{days === 1 ? '' : 's'} of Pro access left
+        </span>
+        <Link to="/app/billing">See plans</Link>
+      </div>
+    );
+  }
+  if (subscription?.trialEndsAt && (subscription.planId || 'starter') === 'starter') {
+    return (
+      <div className="trial-banner ended">
+        <span>Trial ended — you&apos;re on Starter limits</span>
+        <Link to="/app/billing">Upgrade</Link>
+      </div>
+    );
+  }
+  return null;
+}
 
 export default function AppLayout() {
   usePageMeta({ title: 'Dashboard', noindex: true });
@@ -106,6 +129,7 @@ export default function AppLayout() {
         </div>
       </aside>
       <main className="main">
+        <TrialBanner subscription={user.subscription} />
         <Outlet />
       </main>
     </div>
