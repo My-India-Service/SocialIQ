@@ -5,9 +5,10 @@ import { GUIDE_STEPS, MAIN_OBJECTIVE, OBJECTIVES } from '../data/helpContent';
 
 export default function About() {
   usePageMeta({
-    title: 'About',
+    fullTitle: 'About: Social Media Comment-to-Sales AI | SocialAiDigital',
     description:
-      'What SocialAiDigital does: one inbox for social comments with AI lead detection, complaint alerts, brand-tone replies and revenue tracking for Indian brands.',
+      'One inbox for Instagram, YouTube and Facebook comments with AI lead detection, complaint alerts, brand-tone replies and revenue tracking.',
+    keywords: ['about SocialAiDigital', 'unified comment inbox', 'complaint alerts', 'revenue tracking'],
     path: '/about',
   });
   return (

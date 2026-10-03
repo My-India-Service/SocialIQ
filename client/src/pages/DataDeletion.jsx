@@ -6,9 +6,10 @@ const CONTACT = 'myindiaservice1@gmail.com';
 
 export default function DataDeletion() {
   usePageMeta({
-    title: 'User data deletion',
+    title: 'Delete Your Data',
     description:
-      'How to delete your SocialAiDigital account and data, and disconnect Facebook, Instagram or YouTube access.',
+      'How to delete your SocialAiDigital account and data, and remove Facebook, Instagram or YouTube access. Requests are handled within 14 days.',
+    keywords: ['delete account', 'data deletion request', 'remove Facebook access', 'revoke YouTube access'],
     path: '/data-deletion',
   });
   return (

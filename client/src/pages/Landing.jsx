@@ -42,9 +42,10 @@ function LandingFaq({ items }) {
 
 export default function Landing() {
   usePageMeta({
-    title: 'AI Sales Agent for Social Media',
+    fullTitle: 'AI Sales Agent for Social Media Comments | SocialAiDigital',
     description:
-      'Turn YouTube, Instagram and Facebook comments into sales leads. SocialAiDigital detects buying intent, drafts brand-tone replies, flags complaints and tracks revenue.',
+      'Turn Instagram, YouTube and Facebook comments into sales. AI detects buying intent (incl. Hinglish), drafts brand-tone replies and flags complaints.',
+    keywords: ['AI comment replies', 'social commerce India', 'comment inbox', 'buying intent AI'],
     path: '/',
   });
   const faqPreview = FAQS.slice(0, 6);

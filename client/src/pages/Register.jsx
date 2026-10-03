@@ -13,9 +13,10 @@ import usePageMeta from '../hooks/usePageMeta';
 
 export default function Register() {
   usePageMeta({
-    title: 'Create your account',
+    fullTitle: 'Sign up free: AI Comment Sales Agent | SocialAiDigital',
     description:
-      'Start with SocialAiDigital: connect your social channels and turn comments into sales leads. Sign up with email or Google.',
+      'Create your SocialAiDigital account with email or Google. Connect Instagram, YouTube and Facebook and turn comments into sales leads in minutes.',
+    keywords: ['SocialAiDigital sign up', 'free trial', 'sign up with Google'],
     path: '/register',
   });
   const { user, loginSuccess, logout } = useAuth();

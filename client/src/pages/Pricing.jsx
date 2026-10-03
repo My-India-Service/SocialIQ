@@ -20,9 +20,10 @@ function planCta(plan, loggedIn) {
 
 export default function Pricing() {
   usePageMeta({
-    title: 'Pricing',
+    fullTitle: 'Pricing: AI Comment Sales Agent from ₹999 | SocialAiDigital',
     description:
-      'SocialAiDigital plans in INR for creators, D2C brands and agencies. Compare comment limits, AI replies, lead routing and Instagram DM sales agent features.',
+      'SocialAiDigital plans in INR for creators, D2C brands and agencies. Compare comment limits, AI replies, lead routing and Instagram DM sales agent.',
+    keywords: ['SocialAiDigital pricing', 'plans in INR', 'comment limits', 'Instagram DM sales agent', 'agency plan'],
     path: '/pricing',
   });
   const { user } = useAuth();

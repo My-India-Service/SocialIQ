@@ -6,9 +6,10 @@ import { FAQS } from '../data/helpContent';
 
 export default function Faq() {
   usePageMeta({
-    title: 'FAQ',
+    fullTitle: 'FAQ: Instagram & YouTube Comment AI | SocialAiDigital',
     description:
-      'Answers about SocialAiDigital: connecting YouTube, Instagram and Facebook, how purchase intent is scored, Hinglish support, pricing and data privacy.',
+      'Answers on connecting YouTube, Instagram and Facebook, how purchase intent is scored, Hinglish support, pricing and how your data is protected.',
+    keywords: ['SocialAiDigital FAQ', 'purchase intent score', 'connect Instagram', 'connect YouTube'],
     path: '/faq',
   });
   return (

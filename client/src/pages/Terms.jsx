@@ -7,7 +7,9 @@ const CONTACT = 'myindiaservice1@gmail.com';
 export default function Terms() {
   usePageMeta({
     title: 'Terms of Service',
-    description: 'The terms that govern your use of SocialAiDigital.',
+    description:
+      'Terms for using SocialAiDigital, the AI sales agent for social media comments: accounts, connected platforms, acceptable use, billing and liability.',
+    keywords: ['terms of service', 'acceptable use', 'billing terms'],
     path: '/terms',
   });
   return (

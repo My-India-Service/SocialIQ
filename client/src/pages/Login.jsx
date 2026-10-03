@@ -14,7 +14,9 @@ import usePageMeta from '../hooks/usePageMeta';
 export default function Login() {
   usePageMeta({
     title: 'Log in',
-    description: 'Log in to SocialAiDigital with email or Google.',
+    description:
+      'Log in to SocialAiDigital with email or Google to manage your Instagram, YouTube and Facebook comments, leads and AI replies in one inbox.',
+    keywords: ['SocialAiDigital login', 'sign in with Google'],
     path: '/login',
   });
   const { user, loginSuccess } = useAuth();

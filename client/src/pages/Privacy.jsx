@@ -7,6 +7,7 @@ const CONTACT = 'myindiaservice1@gmail.com';
 export default function Privacy() {
   usePageMeta({
     title: 'Privacy Policy',
+    keywords: ['privacy policy', 'Google API user data', 'Meta user data', 'data protection'],
     description:
       'How SocialAiDigital collects, uses and protects data, including Google (YouTube, Sign-In) and Meta (Facebook, Instagram) user data.',
     path: '/privacy',
