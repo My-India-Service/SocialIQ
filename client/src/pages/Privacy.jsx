@@ -54,8 +54,8 @@ export default function Privacy() {
         <li>
           <strong>Data accessed:</strong> for Google Sign-In, your Google account ID, name, and
           email. For YouTube, with your consent, your channel ID and name, comments on your videos,
-          and the ability to post replies and set comment moderation status (
-          <code>youtube.readonly</code>, <code>youtube.force-ssl</code>).
+          and the ability to post replies and set comment moderation status (scope{' '}
+          <code>youtube.force-ssl</code>).
         </li>
         <li>
           <strong>How we use it:</strong> to sign you in, sync comments into your inbox,

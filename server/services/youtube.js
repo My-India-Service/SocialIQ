@@ -1,10 +1,8 @@
 import jwt from 'jsonwebtoken';
 import Connection from '../models/Connection.js';
 
-const SCOPES = [
-  'https://www.googleapis.com/auth/youtube.readonly',
-  'https://www.googleapis.com/auth/youtube.force-ssl',
-].join(' ');
+/** force-ssl covers reading channel, uploads and comments plus posting replies. */
+const SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl'].join(' ');
 
 function getConfig() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
