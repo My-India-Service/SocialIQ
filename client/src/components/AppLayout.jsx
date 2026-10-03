@@ -4,8 +4,10 @@ import { useTheme } from '../context/ThemeContext';
 import { needsEmailVerification, needsOnboarding } from '../utils/onboarding';
 import BrandLogo from './BrandLogo';
 import ThemeToggle from './ThemeToggle';
+import usePageMeta from '../hooks/usePageMeta';
 
 export default function AppLayout() {
+  usePageMeta({ title: 'Dashboard', noindex: true });
   const { user, token, loading, sessionError, logout, retrySession } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();

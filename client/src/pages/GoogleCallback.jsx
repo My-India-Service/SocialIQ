@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { postAuthPath } from '../utils/onboarding';
+import usePageMeta from '../hooks/usePageMeta';
 
 /** Landing page after Google OAuth; the server passes the JWT in the URL hash. */
 export default function GoogleCallback() {
+  usePageMeta({ title: 'Signing in', noindex: true });
   const { loginSuccess } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');

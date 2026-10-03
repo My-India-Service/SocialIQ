@@ -9,8 +9,14 @@ import OtpInput from '../components/OtpInput';
 import InstallAppBanner from '../components/InstallAppBanner';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import useAuthConfig from '../hooks/useAuthConfig';
+import usePageMeta from '../hooks/usePageMeta';
 
 export default function Login() {
+  usePageMeta({
+    title: 'Log in',
+    description: 'Log in to SocialAiDigital with email or Google.',
+    path: '/login',
+  });
   const { user, loginSuccess } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

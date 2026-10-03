@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom';
 import LegalPage from './LegalPage';
+import usePageMeta from '../hooks/usePageMeta';
 import { GUIDE_STEPS, MAIN_OBJECTIVE, OBJECTIVES } from '../data/helpContent';
 
 export default function About() {
+  usePageMeta({
+    title: 'About',
+    description:
+      'What SocialAiDigital does: one inbox for social comments with AI lead detection, complaint alerts, brand-tone replies and revenue tracking for Indian brands.',
+    path: '/about',
+  });
   return (
     <LegalPage title="About SocialAiDigital" updated="25 August 2026">
       <h2>Main objective</h2>

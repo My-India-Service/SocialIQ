@@ -6,9 +6,11 @@ import { needsEmailVerification, postAuthPath } from '../utils/onboarding';
 import BrandLogo from '../components/BrandLogo';
 import ThemeToggle from '../components/ThemeToggle';
 import OtpInput from '../components/OtpInput';
+import usePageMeta from '../hooks/usePageMeta';
 
 /** Standalone verify page for sessions that registered but never confirmed email. */
 export default function VerifyEmail() {
+  usePageMeta({ title: 'Verify email', noindex: true });
   const { user, token, loading, loginSuccess, logout } = useAuth();
   const navigate = useNavigate();
   const [otp, setOtp] = useState('');

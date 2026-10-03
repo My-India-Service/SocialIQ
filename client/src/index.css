@@ -839,6 +839,10 @@ html[data-theme='dark'] .kpi-change-down {
   text-decoration: underline;
 }
 
+.legal-prose a.btn {
+  text-decoration: none;
+}
+
 .guide-list {
   display: grid;
   gap: 0.85rem;

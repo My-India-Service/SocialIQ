@@ -12,6 +12,7 @@ import {
 } from '../data/landingContent';
 import BrandLogo from '../components/BrandLogo';
 import ThemeToggle from '../components/ThemeToggle';
+import usePageMeta from '../hooks/usePageMeta';
 import PhoneMockup from '../components/landing/PhoneMockup';
 
 function LandingFaq({ items }) {
@@ -40,6 +41,12 @@ function LandingFaq({ items }) {
 }
 
 export default function Landing() {
+  usePageMeta({
+    title: 'AI Sales Agent for Social Media',
+    description:
+      'Turn YouTube, Instagram and Facebook comments into sales leads. SocialAiDigital detects buying intent, drafts brand-tone replies, flags complaints and tracks revenue.',
+    path: '/',
+  });
   const faqPreview = FAQS.slice(0, 6);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);

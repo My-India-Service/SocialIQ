@@ -3,8 +3,10 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import BrandLogo from '../components/BrandLogo';
+import usePageMeta from '../hooks/usePageMeta';
 
 export default function ResetPassword() {
+  usePageMeta({ title: 'Reset password', noindex: true });
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

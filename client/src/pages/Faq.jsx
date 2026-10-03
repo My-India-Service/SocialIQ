@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LegalPage from './LegalPage';
+import usePageMeta from '../hooks/usePageMeta';
 import { FAQS } from '../data/helpContent';
 
 export default function Faq() {
+  usePageMeta({
+    title: 'FAQ',
+    description:
+      'Answers about SocialAiDigital: connecting YouTube, Instagram and Facebook, how purchase intent is scored, Hinglish support, pricing and data privacy.',
+    path: '/faq',
+  });
   return (
     <LegalPage title="FAQ" updated="18 August 2026">
       <p>

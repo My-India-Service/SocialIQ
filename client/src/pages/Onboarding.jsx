@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import OnboardingShell from '../components/onboarding/OnboardingShell';
 import PhoneMockup from '../components/landing/PhoneMockup';
 import BrandLogo from '../components/BrandLogo';
+import usePageMeta from '../hooks/usePageMeta';
 import { needsEmailVerification } from '../utils/onboarding';
 import {
   GOAL_OPTIONS,
@@ -17,6 +18,7 @@ import {
 const STEP_KEY = 'voxa_onboarding_step';
 
 export default function Onboarding() {
+  usePageMeta({ title: 'Get started', noindex: true });
   const { user, token, loading, setUser } = useAuth();
   const platformOptions = user?.features?.whatsapp
     ? PLATFORM_OPTIONS

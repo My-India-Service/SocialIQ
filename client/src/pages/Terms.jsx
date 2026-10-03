@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom';
 import LegalPage from './LegalPage';
+import usePageMeta from '../hooks/usePageMeta';
 
 const CONTACT = 'myindiaservice1@gmail.com';
 
 export default function Terms() {
+  usePageMeta({
+    title: 'Terms of Service',
+    description: 'The terms that govern your use of SocialAiDigital.',
+    path: '/terms',
+  });
   return (
     <LegalPage title="Terms of Service" updated="16 August 2026">
       <p>

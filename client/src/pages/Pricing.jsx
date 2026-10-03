@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PLANS } from '../data/plans';
 import BrandLogo from '../components/BrandLogo';
+import usePageMeta from '../hooks/usePageMeta';
 
 function planCta(plan, loggedIn) {
   if (plan.contactSales) {
@@ -18,6 +19,12 @@ function planCta(plan, loggedIn) {
 }
 
 export default function Pricing() {
+  usePageMeta({
+    title: 'Pricing',
+    description:
+      'SocialAiDigital plans in INR for creators, D2C brands and agencies. Compare comment limits, AI replies, lead routing and Instagram DM sales agent features.',
+    path: '/pricing',
+  });
   const { user } = useAuth();
   const loggedIn = Boolean(user);
 

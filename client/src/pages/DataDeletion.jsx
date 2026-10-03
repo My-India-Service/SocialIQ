@@ -1,9 +1,16 @@
 import { Link } from 'react-router-dom';
 import LegalPage from './LegalPage';
+import usePageMeta from '../hooks/usePageMeta';
 
 const CONTACT = 'myindiaservice1@gmail.com';
 
 export default function DataDeletion() {
+  usePageMeta({
+    title: 'User data deletion',
+    description:
+      'How to delete your SocialAiDigital account and data, and disconnect Facebook, Instagram or YouTube access.',
+    path: '/data-deletion',
+  });
   return (
     <LegalPage title="User data deletion" updated="16 August 2026">
       <p>

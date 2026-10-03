@@ -3,8 +3,10 @@ import { Link, Navigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import BrandLogo from '../components/BrandLogo';
+import usePageMeta from '../hooks/usePageMeta';
 
 export default function ForgotPassword() {
+  usePageMeta({ title: 'Forgot password', noindex: true });
   const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');

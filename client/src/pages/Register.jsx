@@ -9,8 +9,15 @@ import OtpInput from '../components/OtpInput';
 import InstallAppBanner from '../components/InstallAppBanner';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import useAuthConfig from '../hooks/useAuthConfig';
+import usePageMeta from '../hooks/usePageMeta';
 
 export default function Register() {
+  usePageMeta({
+    title: 'Create your account',
+    description:
+      'Start with SocialAiDigital: connect your social channels and turn comments into sales leads. Sign up with email or Google.',
+    path: '/register',
+  });
   const { user, loginSuccess, logout } = useAuth();
   const authConfig = useAuthConfig();
   const navigate = useNavigate();

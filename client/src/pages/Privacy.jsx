@@ -1,9 +1,16 @@
 import { Link } from 'react-router-dom';
 import LegalPage from './LegalPage';
+import usePageMeta from '../hooks/usePageMeta';
 
 const CONTACT = 'myindiaservice1@gmail.com';
 
 export default function Privacy() {
+  usePageMeta({
+    title: 'Privacy Policy',
+    description:
+      'How SocialAiDigital collects, uses and protects data, including Google (YouTube, Sign-In) and Meta (Facebook, Instagram) user data.',
+    path: '/privacy',
+  });
   return (
     <LegalPage title="Privacy Policy" updated="26 September 2026">
       <p>
@@ -78,6 +85,18 @@ export default function Privacy() {
           </a>
           , including the Limited Use requirements.
         </strong>
+      </p>
+
+      <h2>Analytics</h2>
+      <p>
+        Our website uses Google Analytics, which sets cookies to measure how visitors use the site
+        (for example pages viewed, device type and approximate location). We use this only to
+        improve SocialAiDigital. Learn how Google uses this data at{' '}
+        <a href="https://policies.google.com/technologies/partner-sites">
+          policies.google.com/technologies/partner-sites
+        </a>
+        . You can block these cookies in your browser settings or with the{' '}
+        <a href="https://tools.google.com/dlpage/gaoptout">Google Analytics opt-out add-on</a>.
       </p>
 
       <h2>Sharing</h2>

@@ -33,11 +33,13 @@ import Posts from './pages/Posts';
 import Tickets from './pages/Tickets';
 import BrandHealth from './pages/BrandHealth';
 import Checkout from './pages/Checkout';
+import NotFound from './pages/NotFound';
 
 /** Host redirects can drop the callback path but keep the hash; finish Google sign-in anyway. */
-function CatchAll() {
+function CatchAll({ fallback = 'notFound' }) {
   if (/(^#|&)token=/.test(window.location.hash)) return <GoogleCallback />;
-  return <Navigate to="/" replace />;
+  if (fallback === 'home') return <Navigate to="/" replace />;
+  return <NotFound />;
 }
 
 export default function App() {
@@ -79,7 +81,7 @@ export default function App() {
               <Route path="billing" element={<Billing />} />
               <Route path="help" element={<Help />} />
             </Route>
-            <Route path="/index.html" element={<CatchAll />} />
+            <Route path="/index.html" element={<CatchAll fallback="home" />} />
             <Route path="*" element={<CatchAll />} />
           </Routes>
         </BrowserRouter>
