@@ -20,6 +20,7 @@ import healthRoutes from './routes/health.js';
 import ticketRoutes from './routes/tickets.js';
 import checkoutRoutes from './routes/checkout.js';
 import intelRoutes from './routes/intel.js';
+import adminRoutes from './routes/admin.js';
 import { isYouTubeConfigured } from './services/youtube.js';
 import { isMetaConfigured } from './services/meta.js';
 import { getLinkedInOAuthScopes, isLinkedInConfigured } from './services/linkedin.js';
@@ -105,6 +106,7 @@ app.use('/api/brand-health', healthRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/intel', intelRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Express error handler — logs + alerts, then JSON response
 app.use((err, req, res, _next) => {

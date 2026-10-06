@@ -16,6 +16,9 @@ export default function LegalPage({ title, updated, children }) {
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
             <Link to="/data-deletion">Data deletion</Link>
+            <Link to="/admin/login" className="btn btn-ghost btn-sm">
+              Admin
+            </Link>
             <Link to="/login" className="btn btn-ghost btn-sm">
               Log in
             </Link>
@@ -43,6 +46,8 @@ export default function LegalPage({ title, updated, children }) {
           <Link to="/terms">Terms</Link>
           {' · '}
           <Link to="/data-deletion">Data deletion</Link>
+          {' · '}
+          <Link to="/admin/login">Admin</Link>
         </span>
       </footer>
     </div>

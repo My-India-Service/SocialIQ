@@ -33,6 +33,8 @@ import Posts from './pages/Posts';
 import Tickets from './pages/Tickets';
 import BrandHealth from './pages/BrandHealth';
 import Checkout from './pages/Checkout';
+import Admin from './pages/Admin';
+import AdminLogin from './pages/AdminLogin';
 import NotFound from './pages/NotFound';
 
 /** Host redirects can drop the callback path but keep the hash; finish Google sign-in anyway. */
@@ -62,6 +64,8 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/faq" element={<Faq />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/app" element={<AppLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="connections" element={<Connections />} />

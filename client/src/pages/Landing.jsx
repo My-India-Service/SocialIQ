@@ -92,6 +92,9 @@ export default function Landing() {
               <Link to="/pricing" className="btn btn-ghost btn-sm lq-nav-link" onClick={closeMenu}>
                 Pricing
               </Link>
+              <Link to="/admin/login" className="btn btn-ghost btn-sm lq-nav-link" onClick={closeMenu}>
+                Admin
+              </Link>
               <Link to="/login" className="btn btn-ghost btn-sm lq-nav-link" onClick={closeMenu}>
                 Log in
               </Link>
@@ -292,6 +295,8 @@ export default function Landing() {
           <Link to="/terms">Terms</Link>
           {' · '}
           <Link to="/data-deletion">Data deletion</Link>
+          {' · '}
+          <Link to="/admin/login">Admin</Link>
         </span>
       </footer>
     </div>

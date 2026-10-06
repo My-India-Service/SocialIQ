@@ -112,6 +112,11 @@ export default function AppLayout() {
           <NavLink to="/app/help">Guide</NavLink>
         </nav>
         <div className="side-foot">
+          <a className="member-support" href="tel:+918448255663">
+            <span>Member support</span>
+            <strong>+91 84482 55663</strong>
+            <span>Registered members · call for a quick response</span>
+          </a>
           <ThemeToggle className="theme-toggle--sidebar" />
           <div className="who">
             <span className="who-avatar" aria-hidden="true">
