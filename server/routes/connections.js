@@ -14,6 +14,7 @@ import {
   exchangeYouTubeCode,
   getYouTubeAuthUrl,
   isYouTubeConfigured,
+  revokeGoogleToken,
   saveYouTubeConnection,
   verifyYouTubeOAuthState,
 } from '../services/youtube.js';
@@ -537,7 +538,13 @@ router.post('/tiktok/sync', authRequired, async (req, res) => {
 
 router.delete('/:platform', authRequired, async (req, res) => {
   try {
-    await Connection.findOneAndDelete({ user: req.userId, platform: req.params.platform });
+    const removed = await Connection.findOneAndDelete({
+      user: req.userId,
+      platform: req.params.platform,
+    });
+    if (removed && req.params.platform === 'youtube') {
+      await revokeGoogleToken(removed.refreshToken || removed.accessToken);
+    }
     res.json({ message: 'Disconnected' });
   } catch (err) {
     res.status(500).json({ message: err.message });

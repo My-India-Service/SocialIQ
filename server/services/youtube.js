@@ -20,6 +20,20 @@ function getConfig() {
   return { clientId, clientSecret, redirectUri };
 }
 
+/** Best-effort revoke so Disconnect also removes SocialAiDigital from the user's Google account. */
+export async function revokeGoogleToken(token) {
+  if (!token) return;
+  try {
+    await fetch('https://oauth2.googleapis.com/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token }),
+    });
+  } catch {
+    /* token already invalid or Google unreachable; local tokens are deleted regardless */
+  }
+}
+
 export function isYouTubeConfigured() {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }

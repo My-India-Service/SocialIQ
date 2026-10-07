@@ -13,7 +13,7 @@ export default function Terms() {
     path: '/terms',
   });
   return (
-    <LegalPage title="Terms of Service" updated="16 August 2026">
+    <LegalPage title="Terms of Service" updated="7 October 2026">
       <p>
         These terms govern your use of SocialAiDigital, including connecting social accounts through Facebook
         Login, Instagram, and YouTube. By creating an account or using the product, you agree to
@@ -48,6 +48,11 @@ export default function Terms() {
         while an app is in Development mode or before App Review). SocialAiDigital does not guarantee that
         every comment on a platform will appear in the inbox.
       </p>
+      <p>
+        SocialAiDigital uses YouTube API Services. By connecting a YouTube channel you also agree
+        to be bound by the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a>{' '}
+        and acknowledge the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.
+      </p>
 
       <h2>Acceptable use</h2>
       <ul>
@@ -65,7 +70,7 @@ export default function Terms() {
 
       <h2>Privacy</h2>
       <p>
-        How we handle personal data is described in our <Link to="/privacy">Privacy Policy</Link>.
+        How we handle personal data is described in our <a href="/privacy-policy.html">Privacy Policy</a>.
         How to delete data is described at <Link to="/data-deletion">User data deletion</Link>.
       </p>
 

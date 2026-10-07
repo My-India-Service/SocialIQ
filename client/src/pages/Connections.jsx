@@ -390,7 +390,35 @@ export default function Connections() {
               Remove stub
             </button>
           )}
+          {yt?.hasOAuth && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                if (window.confirm('Disconnect YouTube and revoke SocialAiDigital access to this channel?')) {
+                  disconnect('youtube');
+                }
+              }}
+            >
+              Disconnect
+            </button>
+          )}
         </div>
+        <p className="prob">
+          SocialAiDigital uses YouTube API Services. By connecting you agree to the{' '}
+          <a href="https://www.youtube.com/t/terms" target="_blank" rel="noreferrer">
+            YouTube Terms of Service
+          </a>{' '}
+          and{' '}
+          <a href="/privacy-policy.html" target="_blank" rel="noreferrer">
+            our Privacy Policy
+          </a>
+          ; see also the{' '}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">
+            Google Privacy Policy
+          </a>
+          .
+        </p>
         {!integration.youtubeOAuth && (
           <p className="prob">Add GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET to server/.env</p>
         )}

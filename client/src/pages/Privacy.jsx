@@ -13,7 +13,7 @@ export default function Privacy() {
     path: '/privacy',
   });
   return (
-    <LegalPage title="Privacy Policy" updated="26 September 2026">
+    <LegalPage title="Privacy Policy" updated="7 October 2026">
       <p>
         SocialAiDigital (“we”, “our”) is a revenue intelligence dashboard that helps brands read, categorize,
         and reply to comments from connected social accounts. This policy explains what we collect
@@ -50,6 +50,17 @@ export default function Privacy() {
       </ul>
 
       <h2>Google user data (YouTube and Google Sign-In)</h2>
+      <p>
+        SocialAiDigital uses YouTube API Services. By connecting a YouTube channel you agree to
+        the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a>, and Google
+        handles your data under the{' '}
+        <a href="https://policies.google.com/privacy">Google Privacy Policy</a>. You can revoke
+        SocialAiDigital&apos;s access at any time from your{' '}
+        <a href="https://security.google.com/settings/security/permissions">
+          Google security settings
+        </a>
+        .
+      </p>
       <ul>
         <li>
           <strong>Data accessed:</strong> for Google Sign-In, your Google account ID, name, and

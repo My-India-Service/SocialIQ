@@ -290,7 +290,7 @@ export default function Landing() {
           {' · '}
           <Link to="/pricing">Pricing</Link>
           {' · '}
-          <Link to="/privacy">Privacy</Link>
+          <a href="/privacy-policy.html">Privacy Policy</a>
           {' · '}
           <Link to="/terms">Terms</Link>
           {' · '}
