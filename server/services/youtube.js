@@ -293,9 +293,85 @@ async function listUploadsSince(accessToken, playlistId, since, until) {
   return videos;
 }
 
+const CHANNEL_QUICK_PAGES = 2;
+const CHANNEL_DATED_PAGES = 10;
+
+function mapThread(item, videoId, postTitle) {
+  const top = item.snippet?.topLevelComment?.snippet;
+  return {
+    externalId: item.snippet?.topLevelComment?.id || item.id,
+    videoId,
+    postTitle,
+    author: top.authorDisplayName || 'YouTube user',
+    authorHandle: top.authorChannelUrl || '',
+    text: top.textOriginal || top.textDisplay || '',
+    likes: top.likeCount || 0,
+    replies: item.snippet?.totalReplyCount || 0,
+    postedAt: top.publishedAt ? new Date(top.publishedAt) : new Date(),
+    platform: 'youtube',
+  };
+}
+
+/** Newest-first top-level comments across every video on the channel, filtered by comment date. */
+export async function fetchChannelCommentThreads(
+  accessToken,
+  channelId,
+  { since = null, until = null, maxTotal = BACKFILL_MAX_TOTAL, maxPages = CHANNEL_QUICK_PAGES } = {}
+) {
+  const threads = [];
+  let pageToken;
+  let pages = 0;
+  let reachedOlder = false;
+
+  do {
+    pages += 1;
+    const res = await youtubeGet(accessToken, 'commentThreads', {
+      part: 'snippet',
+      allThreadsRelatedToChannelId: channelId,
+      order: 'time',
+      maxResults: 100,
+      textFormat: 'plainText',
+      pageToken,
+    });
+
+    for (const item of res.items || []) {
+      const top = item.snippet?.topLevelComment?.snippet;
+      if (!top?.textDisplay && !top?.textOriginal) continue;
+      const posted = top.publishedAt ? new Date(top.publishedAt) : null;
+      if (posted && until && posted > until) continue;
+      if (posted && since && posted < since) {
+        reachedOlder = true;
+        break;
+      }
+      threads.push(item);
+      if (threads.length >= maxTotal) break;
+    }
+
+    pageToken = res.nextPageToken;
+  } while (pageToken && !reachedOlder && pages < maxPages && threads.length < maxTotal);
+
+  return threads;
+}
+
+/** Map of videoId → title, 50 ids per videos.list call. */
+export async function fetchVideoTitles(accessToken, videoIds) {
+  const titles = new Map();
+  const ids = [...new Set(videoIds.filter(Boolean))];
+  for (let i = 0; i < ids.length; i += 50) {
+    const res = await youtubeGet(accessToken, 'videos', {
+      part: 'snippet',
+      id: ids.slice(i, i + 50).join(','),
+      maxResults: 50,
+    });
+    for (const v of res.items || []) titles.set(v.id, v.snippet?.title || 'Untitled video');
+  }
+  return titles;
+}
+
 /**
- * Fetch top-level comments from recent uploads (official YouTube Data API).
- * With `since`, pages back through uploads to import older comments in [since, until].
+ * Fetch top-level comments (official YouTube Data API).
+ * Reads the channel-wide comment list newest-first so new comments on older videos are included;
+ * `since` / `until` filter by when the comment was posted. Falls back to per-video reads.
  */
 export async function fetchYouTubeComments(
   connection,
@@ -309,10 +385,47 @@ export async function fetchYouTubeComments(
   });
   const channel = channelRes.items?.[0];
   if (!channel) throw new Error('YouTube channel not found');
+  const channelTitle = channel.snippet?.title || connection.accountName;
+
+  try {
+    const dated = Boolean(since || until);
+    const threads = await fetchChannelCommentThreads(accessToken, channel.id, {
+      since,
+      until,
+      maxTotal: dated ? BACKFILL_MAX_TOTAL : CHANNEL_QUICK_PAGES * 100,
+      maxPages: dated ? CHANNEL_DATED_PAGES : CHANNEL_QUICK_PAGES,
+    });
+    const titles = await fetchVideoTitles(
+      accessToken,
+      threads.map((t) => t.snippet?.videoId)
+    ).catch(() => new Map());
+    const comments = threads.map((t) => {
+      const videoId = t.snippet?.videoId || '';
+      return mapThread(t, videoId, titles.get(videoId) || 'YouTube video');
+    });
+    return { channelTitle, comments };
+  } catch (err) {
+    if (err.code !== 400 && err.code !== 403) throw err;
+  }
 
   const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
   if (!uploadsPlaylistId) throw new Error('Could not find uploads playlist');
 
+  const comments = await fetchCommentsFromUploads(accessToken, uploadsPlaylistId, {
+    maxVideos,
+    maxCommentsPerVideo,
+    since,
+    until,
+  });
+  return { channelTitle, comments };
+}
+
+/** Per-video fallback: comments from recent uploads (or uploads published since `since`). */
+async function fetchCommentsFromUploads(
+  accessToken,
+  uploadsPlaylistId,
+  { maxVideos, maxCommentsPerVideo, since, until }
+) {
   let videos;
   if (since) {
     videos = await listUploadsSince(accessToken, uploadsPlaylistId, since, until);
@@ -366,18 +479,7 @@ export async function fetchYouTubeComments(
           if (comments.length >= BACKFILL_MAX_TOTAL || fetched >= perVideoCap) break;
         }
 
-        comments.push({
-          externalId: item.snippet?.topLevelComment?.id || item.id,
-          videoId: video.videoId,
-          postTitle: video.title,
-          author: top.authorDisplayName || 'YouTube user',
-          authorHandle: top.authorChannelUrl || '',
-          text: top.textOriginal || top.textDisplay || '',
-          likes: top.likeCount || 0,
-          replies: item.snippet?.totalReplyCount || 0,
-          postedAt: top.publishedAt ? new Date(top.publishedAt) : new Date(),
-          platform: 'youtube',
-        });
+        comments.push(mapThread(item, video.videoId, video.title));
         fetched += 1;
       }
 
@@ -391,8 +493,5 @@ export async function fetchYouTubeComments(
     );
   }
 
-  return {
-    channelTitle: channel.snippet?.title || connection.accountName,
-    comments,
-  };
+  return comments;
 }

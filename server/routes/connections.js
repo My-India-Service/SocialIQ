@@ -223,18 +223,19 @@ router.post('/youtube/sync', authRequired, async (req, res) => {
     if (since && until && since > until) {
       return res.status(400).json({ message: 'From date must be before To date.' });
     }
-    const backfillSince = since || (until ? new Date(until.getTime() - 365 * 86400000) : null);
     if (until && until > new Date()) until = null;
 
     const result = await syncYouTubeCommentsForUser(req.userId, {
       maxVideos: Number(req.body?.maxVideos) || 8,
       maxCommentsPerVideo: Number(req.body?.maxCommentsPerVideo) || 40,
-      since: backfillSince,
+      since,
       until,
     });
-    const period = backfillSince
-      ? ` from ${formatSyncDay(backfillSince)} – ${formatSyncDay(until || new Date())}`
-      : '';
+    const period = since
+      ? ` posted ${formatSyncDay(since)} – ${formatSyncDay(until || new Date())}`
+      : until
+        ? ` posted up to ${formatSyncDay(until)}`
+        : '';
     res.json({
       ...result,
       analysisMode: isLLMConfigured() ? 'llm' : 'rules',

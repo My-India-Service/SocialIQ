@@ -339,7 +339,7 @@ export default function Connections() {
               View channel
             </a>
           )}
-          {yt?.connectedAt && <span className="muted">since {formatDate(yt.connectedAt)}</span>}
+          {yt?.connectedAt && <span className="muted">connected {formatDate(yt.connectedAt)}</span>}
         </ConnectedAs>
         <div className="reply-actions">
           <button
@@ -424,8 +424,9 @@ export default function Connections() {
         )}
         {yt?.hasOAuth && (
           <p className="prob">
-            Quick sync reads your latest 8 videos. Pick a From date to import older comments (up
-            to 500 per sync).
+            Sync pulls the newest comments from all your videos. Pick From / To to import comments
+            posted in that period (up to 500 per sync). Comments YouTube holds for review appear
+            after you approve them in YouTube Studio.
           </p>
         )}
         {yt?.hasOAuth && yt?.lastSyncedAt && (
