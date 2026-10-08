@@ -94,8 +94,38 @@ export default function Dashboard() {
   const [savingId, setSavingId] = useState(null);
   const [postingId, setPostingId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [connectedPlatforms, setConnectedPlatforms] = useState(null);
 
   const currency = user?.currency || 'INR';
+
+  useEffect(() => {
+    if (!token) return;
+    api('/api/connections', { token })
+      .then((data) => {
+        const set = new Set(
+          (data.connections || []).filter((c) => c.hasOAuth).map((c) => c.platform)
+        );
+        if (whatsappEnabled) set.add('whatsapp');
+        setConnectedPlatforms(set);
+      })
+      .catch(() => {
+        /* unknown state: keep treating platforms as connected */
+      });
+  }, [token, whatsappEnabled]);
+
+  /** Until connections load, assume connected so buttons don't flicker. */
+  function isPlatformConnected(p) {
+    return !connectedPlatforms || connectedPlatforms.has(p);
+  }
+
+  const disconnectedFilter =
+    platform !== 'all' && POST_REPLY_PLATFORMS.includes(platform) && !isPlatformConnected(platform);
+  const disconnectedInList =
+    platform === 'all'
+      ? [...new Set(comments.map((c) => c.platform))].filter(
+          (p) => POST_REPLY_PLATFORMS.includes(p) && !isPlatformConnected(p)
+        )
+      : [];
 
   async function load() {
     setLoading(true);
@@ -558,6 +588,25 @@ export default function Dashboard() {
       )}
       {notice && <div className="success-banner">{notice}</div>}
 
+      {disconnectedFilter && (
+        <div className="platform-disconnected">
+          <span>
+            {formatPlatform(platform)} is disconnected — these are comments synced earlier. Connect{' '}
+            {formatPlatform(platform)} to sync new comments and post replies.
+          </span>
+          <Link to="/app/connections" className="btn btn-primary btn-sm">
+            Connect {formatPlatform(platform)}
+          </Link>
+        </div>
+      )}
+      {disconnectedInList.length > 0 && (
+        <p className="platform-disconnected-inline">
+          {disconnectedInList.map(formatPlatform).join(', ')}{' '}
+          {disconnectedInList.length === 1 ? 'is' : 'are'} disconnected — replies to those comments
+          can&apos;t be posted until you <Link to="/app/connections">reconnect</Link>.
+        </p>
+      )}
+
       {loading && (
         <div className="comment-list" aria-busy="true">
           <div className="skeleton-card" />
@@ -699,9 +748,11 @@ export default function Dashboard() {
                       ) : null}
                     </label>
                     <p className="reply-platform-hint">
-                      {POST_REPLY_PLATFORMS.includes(c.platform)
-                        ? 'Post reply sends to YouTube/Facebook/Instagram and marks done in SocialAiDigital. Or copy & paste manually.'
-                        : 'Copy the reply to the platform yourself, then Save without posting in SocialAiDigital.'}
+                      {POST_REPLY_PLATFORMS.includes(c.platform) && !isPlatformConnected(c.platform)
+                        ? `${formatPlatform(c.platform)} is disconnected — reconnect to post this reply, or Copy reply and paste it on ${formatPlatform(c.platform)}.`
+                        : POST_REPLY_PLATFORMS.includes(c.platform)
+                          ? 'Post reply sends to YouTube/Facebook/Instagram and marks done in SocialAiDigital. Or copy & paste manually.'
+                          : 'Copy the reply to the platform yourself, then Save without posting in SocialAiDigital.'}
                       {c.postedReplyAt
                         ? ` · Posted ${new Date(c.postedReplyAt).toLocaleString()}`
                         : null}
@@ -718,6 +769,10 @@ export default function Dashboard() {
                   {c.suggestedReply && POST_REPLY_PLATFORMS.includes(c.platform) && (
                     isAlreadyPosted(c) ? (
                       <span className="pill wa-pill-ready">Posted on platform</span>
+                    ) : !isPlatformConnected(c.platform) ? (
+                      <Link to="/app/connections" className="btn btn-citrus btn-sm">
+                        Connect {formatPlatform(c.platform)}
+                      </Link>
                     ) : (
                       <button
                         type="button"

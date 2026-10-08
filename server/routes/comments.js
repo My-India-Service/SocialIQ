@@ -1,5 +1,6 @@
 import express from 'express';
 import Comment from '../models/Comment.js';
+import Connection from '../models/Connection.js';
 import Conversation from '../models/Conversation.js';
 import User from '../models/User.js';
 import { authRequired } from '../middleware/auth.js';
@@ -393,6 +394,14 @@ router.post('/:id/regenerate-reply', async (req, res) => {
 });
 
 /** Post reply on YouTube/Facebook/Instagram and mark SocialAiDigital status replied. */
+const PLATFORM_NAMES = {
+  youtube: 'YouTube',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  linkedin: 'LinkedIn',
+  tiktok: 'TikTok',
+};
+
 router.post('/:id/post-reply', async (req, res) => {
   try {
     const comment = await Comment.findOne({ _id: req.params.id, user: req.userId });
@@ -401,6 +410,15 @@ router.post('/:id/post-reply', async (req, res) => {
     if (!canPostReplyToPlatform(comment.platform)) {
       return res.status(400).json({
         message: `Posting replies is not supported for ${comment.platform} yet. Use Copy reply.`,
+      });
+    }
+
+    const connection = await Connection.findOne({ user: req.userId, platform: comment.platform });
+    if (!connection?.accessToken && !connection?.refreshToken) {
+      const name = PLATFORM_NAMES[comment.platform] || comment.platform;
+      return res.status(409).json({
+        message: `${name} is disconnected. Open Connect and reconnect ${name} to post replies.`,
+        code: 'platform_disconnected',
       });
     }
 
