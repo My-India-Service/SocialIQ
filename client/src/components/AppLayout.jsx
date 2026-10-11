@@ -3,8 +3,29 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { needsEmailVerification, needsOnboarding } from '../utils/onboarding';
 import BrandLogo from './BrandLogo';
+import Icon from './Icon';
 import ThemeToggle from './ThemeToggle';
 import usePageMeta from '../hooks/usePageMeta';
+
+const NAV = [
+  { to: '/app', end: true, label: 'Inbox', icon: 'inbox' },
+  { to: '/app/report', label: 'CEO dashboard', icon: 'chart' },
+  { to: '/app/revenue', label: 'Revenue & ROI', icon: 'revenue' },
+  { to: '/app/conversations', label: 'Conversations', icon: 'chat' },
+  { to: '/app/leads', label: 'Lead Center', icon: 'users' },
+  { to: '/app/checkout', label: 'Checkout', icon: 'card' },
+  { to: '/app/complaints', label: 'Complaints', icon: 'alert' },
+  { to: '/app/tickets', label: 'Tickets', icon: 'ticket' },
+  { to: '/app/moderation', label: 'Moderation', icon: 'shield' },
+  { to: '/app/brand-health', label: 'Brand health', icon: 'heart' },
+  { to: '/app/posts', label: 'Posts', icon: 'image' },
+  { to: '/app/insights', label: 'Insights', icon: 'spark' },
+  { to: '/app/connections', label: 'Connect', icon: 'plug' },
+  { to: '/app/ai-setup', label: 'AI Setup', icon: 'bot' },
+  { to: '/app/settings', label: 'Settings', icon: 'gear' },
+  { to: '/app/billing', label: 'Billing', icon: 'billing' },
+  { to: '/app/help', label: 'Guide', icon: 'book' },
+];
 
 function TrialBanner({ subscription }) {
   if (subscription?.trialActive) {
@@ -91,29 +112,19 @@ export default function AppLayout() {
           <BrandLogo variant={theme === 'dark' ? 'onDark' : 'default'} />
         </NavLink>
         <nav className="side-nav">
-          <NavLink to="/app" end>
-            Inbox
-          </NavLink>
-          <NavLink to="/app/report">CEO dashboard</NavLink>
-          <NavLink to="/app/revenue">Revenue & ROI</NavLink>
-          <NavLink to="/app/conversations">Conversations</NavLink>
-          <NavLink to="/app/leads">Lead Center</NavLink>
-          <NavLink to="/app/checkout">Checkout</NavLink>
-          <NavLink to="/app/complaints">Complaints</NavLink>
-          <NavLink to="/app/tickets">Tickets</NavLink>
-          <NavLink to="/app/moderation">Moderation</NavLink>
-          <NavLink to="/app/brand-health">Brand health</NavLink>
-          <NavLink to="/app/posts">Posts</NavLink>
-          <NavLink to="/app/insights">Insights</NavLink>
-          <NavLink to="/app/connections">Connect</NavLink>
-          <NavLink to="/app/ai-setup">AI Setup</NavLink>
-          <NavLink to="/app/settings">Settings</NavLink>
-          <NavLink to="/app/billing">Billing</NavLink>
-          <NavLink to="/app/help">Guide</NavLink>
+          {NAV.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end}>
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
         </nav>
         <div className="side-foot">
           <a className="member-support" href="tel:+918448255663">
-            <span>Member support</span>
+            <span className="member-support-label">
+              <Icon name="phone" size={14} />
+              Member support
+            </span>
             <strong>+91 84482 55663</strong>
             <span>Registered members · call for a quick response</span>
           </a>
@@ -129,6 +140,7 @@ export default function AppLayout() {
             </span>
           </div>
           <button type="button" className="btn btn-ghost btn-sm sidebar-logout" onClick={logout}>
+            <Icon name="logout" />
             Log out
           </button>
         </div>

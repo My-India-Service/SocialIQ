@@ -6,6 +6,7 @@ import Comment from '../models/Comment.js';
 import { adminCredentialsMatch, adminEmail } from '../config/admin.js';
 import { ADMIN_TOKEN_PURPOSE, adminRequired } from '../middleware/admin.js';
 import { buildAdminOverview } from '../services/adminOverview.js';
+import { publicPlanCatalog, savePlanCatalog } from '../services/planCatalog.js';
 
 const router = express.Router();
 
@@ -30,6 +31,20 @@ router.post('/login', (req, res) => {
 });
 
 router.use(adminRequired);
+
+router.get('/plans', (_req, res) => {
+  res.json(publicPlanCatalog());
+});
+
+router.put('/plans', async (req, res) => {
+  try {
+    const saved = await savePlanCatalog(req.body || {});
+    res.json(saved);
+  } catch (err) {
+    const status = /must|required|Unknown plan/.test(err.message) ? 400 : 500;
+    res.status(status).json({ message: err.message || 'Could not save plans' });
+  }
+});
 
 router.get('/overview', async (_req, res) => {
   try {

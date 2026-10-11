@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { formatDate, formatDateTime } from '../utils/time';
+import Icon from '../components/Icon';
 
 const PLATFORMS = [
   { id: 'youtube', label: 'YouTube', ready: true, mvp: true },
@@ -267,7 +268,7 @@ export default function Connections() {
   const igAuthLabel = instagramAuthLabel(ig?.metaAuthType);
 
   return (
-    <div>
+    <div className="connections-page">
       <div className="page-head">
         <div>
           <h1>Connect channels</h1>
@@ -317,6 +318,7 @@ export default function Connections() {
           </p>
           <div className="reply-actions">
             <Link className="btn btn-citrus btn-sm" to="/app/settings">
+              <Icon name="gear" />
               Open WhatsApp settings
             </Link>
           </div>
@@ -348,6 +350,7 @@ export default function Connections() {
             onClick={connectYouTube}
             disabled={Boolean(busy) || !integration.youtubeOAuth}
           >
+            <Icon name="plug" />
             {busy === 'youtube' ? 'Redirecting…' : yt?.hasOAuth ? 'Reconnect YouTube' : 'Connect with Google'}
           </button>
           {yt?.hasOAuth && (
@@ -377,7 +380,8 @@ export default function Connections() {
                 onClick={() => syncPlatform('youtube')}
                 disabled={Boolean(syncing)}
               >
-                {syncing === 'youtube'
+              <Icon name="refresh" />
+              {syncing === 'youtube'
                   ? 'Syncing…'
                   : ytSince || ytUntil
                     ? 'Sync this period'
@@ -387,6 +391,7 @@ export default function Connections() {
           )}
           {yt && !yt.hasOAuth && (
             <button type="button" className="btn btn-ghost" onClick={() => disconnect('youtube')}>
+              <Icon name="unlink" />
               Remove stub
             </button>
           )}
@@ -457,6 +462,7 @@ export default function Connections() {
             onClick={connectInstagramDirect}
             disabled={Boolean(busy) || !integration.instagramDirectOAuth}
           >
+            <Icon name="plug" />
             {busy === 'instagram-direct'
               ? 'Redirecting…'
               : ig?.hasOAuth && ig?.metaAuthType === 'instagram_direct'
@@ -470,6 +476,7 @@ export default function Connections() {
               onClick={() => syncPlatform('instagram')}
               disabled={Boolean(syncing)}
             >
+              <Icon name="refresh" />
               {syncing === 'instagram' ? 'Syncing…' : 'Sync comments'}
             </button>
           )}
@@ -479,10 +486,12 @@ export default function Connections() {
             onClick={() => connectMeta('instagram')}
             disabled={Boolean(busy) || !integration.metaOAuth}
           >
+            <Icon name="plug" />
             {busy === 'instagram' ? 'Redirecting…' : 'Connect via Facebook Page'}
           </button>
           {ig && !ig.hasOAuth && (
             <button type="button" className="btn btn-ghost" onClick={() => disconnect('instagram')}>
+              <Icon name="unlink" />
               Remove stub
             </button>
           )}
@@ -526,6 +535,7 @@ export default function Connections() {
             onClick={() => connectMeta('facebook')}
             disabled={Boolean(busy) || !integration.metaOAuth}
           >
+            <Icon name="plug" />
             {busy === 'facebook'
               ? 'Redirecting…'
               : fb?.hasOAuth
@@ -539,11 +549,13 @@ export default function Connections() {
               onClick={() => syncPlatform('facebook')}
               disabled={Boolean(syncing)}
             >
+              <Icon name="refresh" />
               {syncing === 'facebook' ? 'Syncing…' : 'Sync comments'}
             </button>
           )}
           {fb && !fb.hasOAuth && (
             <button type="button" className="btn btn-ghost" onClick={() => disconnect('facebook')}>
+              <Icon name="unlink" />
               Remove stub
             </button>
           )}
@@ -590,6 +602,7 @@ export default function Connections() {
             onClick={connectLinkedIn}
             disabled={Boolean(busy) || !integration.linkedinOAuth}
           >
+            <Icon name="plug" />
             {busy === 'linkedin'
               ? 'Redirecting…'
               : li?.hasOAuth
@@ -603,11 +616,13 @@ export default function Connections() {
               onClick={() => syncPlatform('linkedin')}
               disabled={Boolean(syncing)}
             >
+              <Icon name="refresh" />
               {syncing === 'linkedin' ? 'Syncing…' : 'Sync comments'}
             </button>
           )}
           {li && !li.hasOAuth && (
             <button type="button" className="btn btn-ghost" onClick={() => disconnect('linkedin')}>
+              <Icon name="unlink" />
               Remove stub
             </button>
           )}
@@ -635,6 +650,7 @@ export default function Connections() {
             onClick={connectTikTok}
             disabled={Boolean(busy) || !integration.tiktokOAuth}
           >
+            <Icon name="plug" />
             {busy === 'tiktok' ? 'Redirecting…' : tt?.hasOAuth ? 'Reconnect TikTok' : 'Connect TikTok'}
           </button>
           {tt?.hasOAuth && (
@@ -644,11 +660,13 @@ export default function Connections() {
               onClick={() => syncPlatform('tiktok')}
               disabled={Boolean(syncing)}
             >
+              <Icon name="refresh" />
               {syncing === 'tiktok' ? 'Syncing…' : 'Sync comments'}
             </button>
           )}
           {tt && !tt.hasOAuth && (
             <button type="button" className="btn btn-ghost" onClick={() => disconnect('tiktok')}>
+              <Icon name="unlink" />
               Remove stub
             </button>
           )}
@@ -702,6 +720,7 @@ export default function Connections() {
                     className="btn btn-ghost btn-sm"
                     onClick={() => disconnect(p.id)}
                   >
+                    <Icon name="unlink" />
                     Disconnect
                   </button>
                 ) : (

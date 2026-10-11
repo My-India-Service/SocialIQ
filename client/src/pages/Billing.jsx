@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { getPlan, PLANS } from '../data/plans';
+import { usePlanCatalog } from '../hooks/usePlanCatalog';
 import { formatDate } from '../utils/time';
 
 export default function Billing() {
@@ -16,8 +16,9 @@ export default function Billing() {
   const [usage, setUsage] = useState(null);
   const [stripeConfigured, setStripeConfigured] = useState(false);
 
+  const { plans } = usePlanCatalog();
   const currentId = user?.subscription?.planId || 'starter';
-  const currentPlan = getPlan(currentId) || PLANS[0];
+  const currentPlan = plans.find((plan) => plan.id === currentId) || plans[0];
   const status = user?.subscription?.status || 'trialing';
   const trialActive = Boolean(user?.subscription?.trialActive);
   const trialDays = user?.subscription?.trialDaysLeft || 0;
@@ -67,7 +68,7 @@ export default function Billing() {
         body: { planId },
       });
       setUser(data.user);
-      setMessage(`Switched to ${getPlan(planId)?.name || planId}.`);
+      setMessage(`Switched to ${plans.find((plan) => plan.id === planId)?.name || planId}.`);
     } catch (err) {
       setError(err.message || 'Could not update plan');
     } finally {
@@ -96,7 +97,7 @@ export default function Billing() {
           body: { planId },
         });
         setUser(sub.user);
-        setMessage(data.message || `Switched to ${getPlan(planId)?.name}.`);
+        setMessage(data.message || `Switched to ${plans.find((plan) => plan.id === planId)?.name}.`);
       }
     } catch (err) {
       setError(err.message || 'Checkout failed');
@@ -190,7 +191,7 @@ export default function Billing() {
       <section className="billing-plans">
         <h2>All plans</h2>
         <div className="pricing-grid">
-          {PLANS.map((plan) => {
+          {plans.map((plan) => {
             const isCurrent = plan.id === currentId;
             const highlighted = plan.id === highlightPlan;
             return (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PLANS } from '../data/plans';
+import { trialLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 import { FAQS } from '../data/helpContent';
 import {
   BENEFITS,
@@ -11,6 +11,7 @@ import {
   TRUST_BADGE,
 } from '../data/landingContent';
 import BrandLogo from '../components/BrandLogo';
+import Icon from '../components/Icon';
 import ThemeToggle from '../components/ThemeToggle';
 import usePageMeta from '../hooks/usePageMeta';
 import PhoneMockup from '../components/landing/PhoneMockup';
@@ -49,6 +50,7 @@ export default function Landing() {
     path: '/',
   });
   const faqPreview = FAQS.slice(0, 6);
+  const { plans, trialDays } = usePlanCatalog();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
 
@@ -114,9 +116,11 @@ export default function Landing() {
               </p>
               <div className="hero-cta">
                 <Link to="/register" className="btn btn-citrus">
+                  <Icon name="arrow" />
                   Start free
                 </Link>
                 <a href="#how" className="btn btn-ghost lq-ghost-btn">
+                  <Icon name="spark" />
                   See how it works
                 </a>
               </div>
@@ -218,10 +222,10 @@ export default function Landing() {
           <div className="lq-section-head">
             <p className="lq-kicker">Pricing</p>
             <h2>Priced by comments processed</h2>
-            <p>Enterprise pays for saved time and recovered revenue — not just AI replies.</p>
+            <p>{trialLabel(trialDays)}</p>
           </div>
           <div className="pricing-grid">
-            {PLANS.map((plan) => (
+            {plans.map((plan) => (
               <article
                 key={plan.id}
                 className={`pricing-card${plan.featured ? ' featured' : ''}`}

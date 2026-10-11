@@ -9,6 +9,7 @@ import OtpInput from '../components/OtpInput';
 import InstallAppBanner from '../components/InstallAppBanner';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import useAuthConfig from '../hooks/useAuthConfig';
+import { trialLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 import usePageMeta from '../hooks/usePageMeta';
 
 export default function Register() {
@@ -20,6 +21,7 @@ export default function Register() {
     path: '/register',
   });
   const { user, loginSuccess, logout } = useAuth();
+  const { trialDays } = usePlanCatalog();
   const authConfig = useAuthConfig();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -124,7 +126,7 @@ export default function Register() {
           <>
             <h1>Start with SocialAiDigital</h1>
             <p>Connect social comments. Capture sales. Catch complaints early.</p>
-            <p className="pricing-trial-note">1 month free with full Pro access — no card needed.</p>
+            <p className="pricing-trial-note">{trialLabel(trialDays)}</p>
             {error && <div className="error-banner">{error}</div>}
             {authConfig.googleLogin && (
               <GoogleSignInButton

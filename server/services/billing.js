@@ -5,17 +5,15 @@ import {
   planCommentLimit,
   trialDaysLeft,
 } from '../config/plans.js';
+import { publicPlanCatalog } from './planCatalog.js';
 
 export function getBillingCatalog() {
+  const catalog = publicPlanCatalog();
   return {
     currency: 'INR',
     stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY),
-    plans: [
-      { id: 'starter', priceInr: 999, commentLimit: 2000, salesAgent: false },
-      { id: 'growth', priceInr: 2999, commentLimit: 15000, salesAgent: true },
-      { id: 'business', priceInr: 7999, commentLimit: 75000, salesAgent: true },
-      { id: 'enterprise', priceInr: null, commentLimit: null, salesAgent: true, contactSales: true },
-    ],
+    trialDays: catalog.trialDays,
+    plans: catalog.plans,
   };
 }
 

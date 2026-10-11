@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { PLANS } from '../data/plans';
+import { trialLabel, usePlanCatalog } from '../hooks/usePlanCatalog';
 import BrandLogo from '../components/BrandLogo';
 import usePageMeta from '../hooks/usePageMeta';
 
@@ -27,6 +27,7 @@ export default function Pricing() {
     path: '/pricing',
   });
   const { user } = useAuth();
+  const { plans, trialDays } = usePlanCatalog();
   const loggedIn = Boolean(user);
 
   return (
@@ -65,11 +66,11 @@ export default function Pricing() {
         <div className="section-head">
           <h1>India-first pricing for D2C brands.</h1>
           <p>Pay by comments processed — from ₹999/mo for creators to ₹7,999 for high-volume brands.</p>
-          <p className="pricing-trial-note">1 month free with full Pro access — no card needed.</p>
+          <p className="pricing-trial-note">{trialLabel(trialDays)}</p>
         </div>
 
         <div className="pricing-grid">
-          {PLANS.map((plan) => {
+          {plans.map((plan) => {
             const cta = planCta(plan, loggedIn);
             const btnClass = `btn ${plan.featured ? 'btn-citrus' : 'btn-primary'} btn-sm`;
             return (

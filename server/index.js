@@ -28,7 +28,8 @@ import { isTikTokConfigured } from './services/tiktok.js';
 import { logError, logFatal, logInfo } from './services/logger.js';
 import { startCrisisMonitor } from './services/crisisMonitor.js';
 import User from './models/User.js';
-import { DAY_MS, TRIAL_DAYS } from './config/plans.js';
+import { DAY_MS, trialDays } from './config/plans.js';
+import { loadPlanCatalog } from './services/planCatalog.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -137,12 +138,14 @@ async function start() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/voxa';
   await mongoose.connect(uri);
   logInfo('MongoDB connected');
+  await loadPlanCatalog();
   try {
+    const days = trialDays();
     const { modifiedCount } = await User.updateMany(
       { 'subscription.trialEndsAt': { $exists: false } },
-      { $set: { 'subscription.trialEndsAt': new Date(Date.now() + TRIAL_DAYS * DAY_MS) } }
+      { $set: { 'subscription.trialEndsAt': new Date(Date.now() + days * DAY_MS) } }
     );
-    if (modifiedCount) logInfo(`Started ${TRIAL_DAYS}-day trial for ${modifiedCount} existing user(s)`);
+    if (modifiedCount) logInfo(`Started ${days}-day trial for ${modifiedCount} existing user(s)`);
   } catch (err) {
     logError(err, { route: 'startup:trial-backfill' });
   }

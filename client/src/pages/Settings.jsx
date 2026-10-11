@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { getPlan } from '../data/plans';
+import { usePlanCatalog } from '../hooks/usePlanCatalog';
 
 function webhookUrlLooksWrong(url) {
   if (!url) return false;
@@ -123,6 +123,7 @@ function mapWhatsAppError(rawMessage, notifyPhone) {
 
 export default function Settings() {
   const { token, user, setUser } = useAuth();
+  const { plans } = usePlanCatalog();
   const whatsappEnabled = Boolean(user?.features?.whatsapp);
   const [brandName, setBrandName] = useState(user?.brandName || '');
   const [brandTone, setBrandTone] = useState(user?.brandTone || 'friendly');
@@ -425,7 +426,7 @@ export default function Settings() {
             <>Pro trial · {user.subscription.trialDaysLeft} days left — Manage</>
           ) : (
             <>
-              Plan: {getPlan(user?.subscription?.planId || 'starter')?.name || 'Starter'}
+              Plan: {plans.find((plan) => plan.id === (user?.subscription?.planId || 'starter'))?.name || 'Starter'}
               {user?.subscription?.status ? ` · ${user.subscription.status}` : ''} — Manage
             </>
           )}

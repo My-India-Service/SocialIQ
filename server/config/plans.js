@@ -1,20 +1,23 @@
-/** Server-side plan limits (mirror client/src/data/plans.js). */
+import { currentCatalog } from '../services/planCatalog.js';
+
+/** Server-side plan limits. Names, prices, and features can be edited in admin. */
 export const PLAN_IDS = ['starter', 'growth', 'business', 'enterprise'];
 
-export const PLANS = [
-  { id: 'starter', commentLimit: 2000, salesAgent: false },
-  { id: 'growth', commentLimit: 15000, salesAgent: true },
-  { id: 'business', commentLimit: 75000, salesAgent: true },
-  { id: 'enterprise', commentLimit: null, salesAgent: true },
-];
-
 export const DAY_MS = 24 * 60 * 60 * 1000;
+/** Fallback when the catalog has not been loaded yet. */
 export const TRIAL_DAYS = 30;
 /** Plan whose limits apply while the free trial is active. */
 export const TRIAL_PLAN_ID = 'business';
 
+export function trialDays() {
+  const days = Number(currentCatalog().trialDays);
+  if (!Number.isFinite(days) || days < 0) return TRIAL_DAYS;
+  return Math.round(days);
+}
+
 export function getPlan(planId) {
-  return PLANS.find((p) => p.id === planId) || PLANS[0];
+  const plans = currentCatalog().plans;
+  return plans.find((p) => p.id === planId) || plans[0];
 }
 
 export function planCommentLimit(planId) {

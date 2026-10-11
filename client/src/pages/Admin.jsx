@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { api } from '../api';
 import { clearAdminSession, getAdminEmail, getAdminToken } from '../adminSession';
+import AdminPlans from '../components/AdminPlans';
 import BrandLogo from '../components/BrandLogo';
 import ThemeToggle from '../components/ThemeToggle';
 import { formatDateTime } from '../utils/time';
@@ -149,6 +150,7 @@ export default function Admin() {
   return (
     <AdminSite email={email} onLogout={logout}>
       <div className="admin-page">
+        <AdminPlans token={token} />
         <div className="admin-hero">
           <div>
             <p className="admin-kicker">Platform</p>
