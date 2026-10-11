@@ -1,0 +1,93 @@
+name: Deploy SocialAiDigital to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-aws-socialaidigital
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SQ_AWS_HOST: ${{ secrets.SQ_AWS_HOST }}
+      SQ_AWS_USER: ${{ secrets.SQ_AWS_USER }}
+      SQ_AWS_SSH_KEY: ${{ secrets.SQ_AWS_SSH_KEY }}
+      STATIC_DIR: /var/www/socialaidigital
+      API_ROOT: /var/www/socialaidigital-api
+    steps:
+      - name: Check deploy secrets
+        id: secrets
+        run: |
+          if [ -n "$SQ_AWS_HOST" ] && [ -n "$SQ_AWS_USER" ] && [ -n "$SQ_AWS_SSH_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SQ_AWS_HOST / SQ_AWS_USER / SQ_AWS_SSH_KEY not set; skipping AWS deploy (see deploy/socialaidigital/RUNBOOK.md)."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Build client (same-origin API)
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: client
+        env:
+          VITE_API_URL: ''
+        run: |
+          npm ci
+          npm run build
+          # Served from www.socialaidigital.com with /api on the same origin: no API override.
+          cat > dist/runtime-config.js <<'EOF'
+          /** AWS deploy: API is same-origin (/api), so no override. */
+          EOF
+
+      - name: SSH setup
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SQ_AWS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SQ_AWS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload site and API
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          SSH="ssh -i ~/.ssh/deploy_key"
+          $SSH "$SQ_AWS_USER@$SQ_AWS_HOST" "test -f $API_ROOT/server/.env || { echo 'FATAL: $API_ROOT/server/.env missing (see RUNBOOK step 4)'; exit 1; }"
+          rsync -az --delete -e "$SSH" client/dist/ "$SQ_AWS_USER@$SQ_AWS_HOST:$STATIC_DIR/"
+          rsync -az --delete -e "$SSH" \
+            --exclude '.env' --exclude 'node_modules/' --exclude 'logs/' \
+            server/ "$SQ_AWS_USER@$SQ_AWS_HOST:$API_ROOT/server/"
+          rsync -az -e "$SSH" deploy/socialaidigital/ecosystem.config.cjs "$SQ_AWS_USER@$SQ_AWS_HOST:$API_ROOT/ecosystem.config.cjs"
+
+      - name: Install and reload API
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          ssh -i ~/.ssh/deploy_key "$SQ_AWS_USER@$SQ_AWS_HOST" "API_ROOT=$API_ROOT bash -s" <<'EOF'
+          set -euo pipefail
+          cd "$API_ROOT/server"
+          npm ci --omit=dev --no-audit --no-fund
+          pm2 startOrReload "$API_ROOT/ecosystem.config.cjs" --only socialaidigital-api --update-env
+          pm2 save
+          for i in $(seq 1 15); do
+            if curl -fsS localhost:5600/api/health >/dev/null; then
+              echo "API healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy"
+          pm2 logs socialaidigital-api --lines 40 --nostream || true
+          exit 1
+          EOF

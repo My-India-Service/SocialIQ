@@ -33,6 +33,7 @@ import { loadPlanCatalog } from './services/planCatalog.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+app.set('trust proxy', 'loopback');
 
 /** Comma-separated CLIENT_URL values; always allow local Vite in non-production. */
 function corsOrigins() {
