@@ -91,6 +91,19 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+app.get('/api/health/live', (_req, res) => {
+  res.json({ ok: true, uptime: Math.round(process.uptime()) });
+});
+
+app.get('/api/health/ready', (_req, res) => {
+  const connected = mongoose.connection.readyState === 1;
+  res.status(connected ? 200 : 503).json({
+    ok: connected,
+    db: connected ? 'connected' : 'disconnected',
+    uptime: Math.round(process.uptime()),
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/connections', connectionRoutes);
