@@ -14,7 +14,7 @@ function getTransport() {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
     secure: Number(process.env.SMTP_PORT) === 465,
-    // Hosts that block SMTP (e.g. Render free) would otherwise hang requests ~2 min.
+    // Hosts that block SMTP would otherwise hang requests ~2 min.
     connectionTimeout: 8000,
     greetingTimeout: 8000,
     socketTimeout: 10000,

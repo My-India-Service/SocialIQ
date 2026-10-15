@@ -71,9 +71,9 @@ Without Live + approved permissions, random users’ comments usually **never** 
 
 Always: **Reconnect Facebook** → **Sync comments** → Inbox filter **Facebook**.
 
-Deploy note: Graph/sync logic lives on the **API** service. Redeploy the API on Render after code pushes; the static client alone is not enough.
+Deploy note: after code pushes, run `git pull` in `~/socialiq` on cPanel and Restart the Node.js app.
 
-After Connect, you must stay logged in: on the Render API set `CLIENT_URL=https://www.socialaidigital.com` (not localhost first) and redeploy the API so OAuth returns to the live site with your JWT.
+After Connect, you must stay logged in: in `~/socialiq/server/.env` set `CLIENT_URL=https://www.socialaidigital.com` (not localhost first) and Restart the app so OAuth returns to the live site with your JWT.
 
 ---
 
@@ -115,8 +115,8 @@ Then ask the agent to list apps and show basic settings. Cross-check against liv
 | Privacy Policy | `https://www.socialaidigital.com/privacy` |
 | Terms of Service | `https://www.socialaidigital.com/terms` |
 | User data deletion | `https://www.socialaidigital.com/data-deletion` |
-| Valid OAuth Redirect URI | `https://api.socialaidigital.com/api/connections/meta/callback` |
-| App Domains | `socialaidigital.com`, `api.socialaidigital.com` |
+| Valid OAuth Redirect URI | `https://www.socialaidigital.com/api/connections/meta/callback` |
+| App Domains | `socialaidigital.com` |
 
 If redirect URI or domains do not match, fix them in [Meta Developer Console](https://developers.facebook.com/apps) — not via MCP.
 
@@ -140,7 +140,7 @@ node scripts/cursor-mcp-ipv4-proxy.mjs
 3. Facebook → **Continue**. The proxy forwards IPv4 to Cursor.
 4. Stop the proxy with Ctrl+C after MCP shows connected.
 
-This does not change SocialAiDigital’s API callback (`https://api.socialaidigital.com/api/connections/meta/callback`).
+This does not change SocialAiDigital’s API callback (`https://www.socialaidigital.com/api/connections/meta/callback`).
 
 ---
 
@@ -148,4 +148,4 @@ This does not change SocialAiDigital’s API callback (`https://api.socialaidigi
 
 - Connect UI copy: `client/src/pages/Connections.jsx` (Facebook panel)  
 - Sync / Graph: `server/services/meta.js`  
-- Deploy: `docs/RENDER_DEPLOYMENT.md`
+- Deploy: `deploy/spidyhost/RUNBOOK.md`

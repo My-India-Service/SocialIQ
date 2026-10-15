@@ -22,7 +22,7 @@ META_APP_SECRET=<Facebook app secret>
 
 META_INSTAGRAM_APP_ID=1102250409082500
 META_INSTAGRAM_APP_SECRET=<Instagram app secret from dashboard>
-META_INSTAGRAM_REDIRECT_URI=https://api.socialaidigital.com/api/connections/instagram/callback
+META_INSTAGRAM_REDIRECT_URI=https://www.socialaidigital.com/api/connections/instagram/callback
 ```
 
 For local OAuth testing, also allow:
@@ -35,25 +35,25 @@ Restart API after changes: `cd server && npm run dev`
 
 ---
 
-## 2. Render (production)
+## 2. Production server env
 
-**Render → API service → Environment:**
+**cPanel → `~/socialiq/server/.env`:**
 
 | Key | Value |
 |-----|--------|
 | `META_INSTAGRAM_APP_ID` | `1102250409082500` |
 | `META_INSTAGRAM_APP_SECRET` | Full Instagram app secret (from Meta Dashboard) |
-| `META_INSTAGRAM_REDIRECT_URI` | `https://api.socialaidigital.com/api/connections/instagram/callback` |
-| `SERVER_URL` | `https://api.socialaidigital.com` |
+| `META_INSTAGRAM_REDIRECT_URI` | `https://www.socialaidigital.com/api/connections/instagram/callback` |
+| `SERVER_URL` | `https://www.socialaidigital.com` |
 
 Keep `META_APP_ID` / `META_APP_SECRET` unchanged for Facebook Page connect.
 
-**Save → Manual Deploy / Redeploy** the API service.
+**Save → Restart** the Node.js app in cPanel.
 
-### Verify Render env (after redeploy)
+### Verify server env (after restart)
 
 1. Open SocialAiDigital → **Connect** → integration strip should show **Instagram Login: On**
-2. If **Off**, add the three `META_INSTAGRAM_*` keys above and redeploy
+2. If **Off**, add the three `META_INSTAGRAM_*` keys above and Restart
 3. Click **Connect with Instagram** — browser URL should include `client_id=1102250409082500`
 
 ---
@@ -95,7 +95,7 @@ Comment sync uses **Sync comments** on Connect, not Instagram webhooks.
 
 Add OAuth redirect URIs here (Business login settings / OAuth redirect URIs):
 
-- `https://api.socialaidigital.com/api/connections/instagram/callback`
+- `https://www.socialaidigital.com/api/connections/instagram/callback`
 - `http://localhost:5001/api/connections/instagram/callback` (local dev)
 
 SocialAiDigital route: `GET /api/connections/instagram/callback` — OAuth return after user logs in at instagram.com.
@@ -145,7 +145,7 @@ Expected: `appId: 1102250409082500`
 | **Verify and save** fails on Instagram webhooks | OAuth URL used in Section 2 webhooks | Skip Section 2; add URL only in Section 3 Business login |
 | Invalid redirect URI on Connect | Redirect not in Business login settings | Add URI in Section 3 (not webhooks) |
 | Wrong client_id in URL | Using main App ID instead of Instagram App ID | Set `META_INSTAGRAM_APP_ID=1102250409082500` |
-| Instagram Login Off on Connect | Missing env on API | Set `META_INSTAGRAM_*` on Render and redeploy |
+| Instagram Login Off on Connect | Missing env on API | Set `META_INSTAGRAM_*` in `server/.env` and Restart |
 | Scope / permission denied | Scopes or account type | Enable scopes; IG must be Business/Creator |
 | Still fails | Page-linked IG path | Use **Connect via Facebook Page** |
 | **Sync returns 0 comments** | Dev mode hides public commenters; no comments on recent posts; missing scopes | Post test comment as app Admin/Developer/Tester → Sync. For public users: App Review + Live mode |
@@ -200,7 +200,7 @@ Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff 
 
 1. Instagram → API setup with Instagram login
 2. **Section 2 — Configure webhooks:** clear Callback URL and Verify token; do not click Verify and save
-3. **Section 3 — Set up Instagram business login:** add OAuth redirect URI `https://api.socialaidigital.com/api/connections/instagram/callback`
+3. **Section 3 — Set up Instagram business login:** add OAuth redirect URI `https://www.socialaidigital.com/api/connections/instagram/callback`
 4. In SocialAiDigital → Connect → **Connect with Instagram** (not Meta Verify)
 
 ## What NOT to do
@@ -215,7 +215,7 @@ Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff 
 - [x] Instagram product added in Meta Dashboard
 - [ ] **Skip** Section 2 webhooks (ignore Verify error — expected)
 - [ ] OAuth redirect in **Section 3 Business login**
-- [ ] Render env: `META_INSTAGRAM_APP_ID=1102250409082500` + secret + redirect URI
-- [ ] API redeployed on Render
+- [ ] Server env: `META_INSTAGRAM_APP_ID=1102250409082500` + secret + redirect URI
+- [ ] Node.js app restarted in cPanel
 - [ ] Connect with Instagram tested from SocialAiDigital (`client_id=1102250409082500`)
 - [ ] Sync comments tested

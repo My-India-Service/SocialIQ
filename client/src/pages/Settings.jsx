@@ -504,7 +504,7 @@ export default function Settings() {
             <li>
               Set API env: <code>META_WHATSAPP_*</code> and{' '}
               <code>META_WEBHOOK_VERIFY_TOKEN</code>. The verify token is a string{' '}
-              <strong>you invent</strong> — same value in Render <code>.env</code> and the Meta
+              <strong>you invent</strong> — same value in the server <code>.env</code> and the Meta
               form. Meta does not generate it.
             </li>
             <li>
@@ -533,7 +533,7 @@ export default function Settings() {
               {webhookUrlLooksWrong(waStatus.webhookUrl) && (
                 <div className="wa-warn">
                   <code>SERVER_URL</code> must be the API origin only (e.g.{' '}
-                  <code>https://your-api.onrender.com</code>), not the OAuth callback path.
+                  <code>https://www.socialaidigital.com</code>), not the OAuth callback path.
                 </div>
               )}
 

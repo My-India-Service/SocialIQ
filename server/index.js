@@ -41,7 +41,7 @@ app.set('trust proxy', 'loopback');
 /** Built React app (committed client/dist); served only when present, so Vite dev is unaffected. */
 const CLIENT_DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'client', 'dist');
 const CLIENT_INDEX = path.join(CLIENT_DIST, 'index.html');
-const NO_CACHE_FILES = new Set(['index.html', 'runtime-config.js', 'sw.js']);
+const NO_CACHE_FILES = new Set(['index.html', 'sw.js']);
 
 const CANONICAL_HOST = (process.env.CANONICAL_HOST || '').trim();
 if (CANONICAL_HOST) {

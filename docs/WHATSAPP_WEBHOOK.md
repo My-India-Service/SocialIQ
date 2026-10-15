@@ -48,10 +48,10 @@ For shared inbox threads, reply-to-customer, contacts, pipelines, broadcasts, an
 
 ---
 
-## Environment (Render API / `server/.env`)
+## Environment (`server/.env`)
 
 ```env
-SERVER_URL=https://api.socialaidigital.com
+SERVER_URL=https://www.socialaidigital.com
 META_APP_ID=
 META_APP_SECRET=
 META_WHATSAPP_ACCESS_TOKEN=
@@ -66,24 +66,24 @@ META_WHATSAPP_LEAD_TEMPLATE_LANG=en
 
 Never put the access token, app secret, or verify token in React / `VITE_*` vars.
 
-`SERVER_URL` must be the **API origin only** (e.g. `https://api.socialaidigital.com`). Do not put `/api/connections/meta/callback` in `SERVER_URL` — that belongs in `META_REDIRECT_URI`. Wrong `SERVER_URL` produces a broken WhatsApp Callback URL.
+`SERVER_URL` must be the **site origin only** (the API is served on it under `/api`) (e.g. `https://www.socialaidigital.com`). Do not put `/api/connections/meta/callback` in `SERVER_URL` — that belongs in `META_REDIRECT_URI`. Wrong `SERVER_URL` produces a broken WhatsApp Callback URL.
 
-### Render: which env for the WhatsApp Callback URL?
+### Which env builds the WhatsApp Callback URL?
 
-There is **no** `WHATSAPP_CALLBACK_URL` variable. On the Render **API** service set:
+There is **no** `WHATSAPP_CALLBACK_URL` variable. In `~/socialiq/server/.env` set:
 
-| Meta form field | Render env | Example |
+| Meta form field | Env | Example |
 |-----------------|------------|---------|
 | Callback URL (you paste) | built from `SERVER_URL` | Meta gets `{SERVER_URL}/api/whatsapp/webhook` |
 | Verify token | `META_WEBHOOK_VERIFY_TOKEN` | same string as Meta, e.g. `voxa-wa-verify-k7m9p2` |
 
-Also set `META_WHATSAPP_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID`, `META_APP_SECRET`, then **redeploy** the API. If Verify fails, hit `/api/health` first (wake cold start), then click Verify and save again.
+Also set `META_WHATSAPP_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID`, `META_APP_SECRET`, then **Restart** the Node.js app. If Verify fails, hit `/api/health` first (wake the app), then click Verify and save again.
 
 Webhook URL SocialAiDigital exposes:
 
 `{SERVER_URL}/api/whatsapp/webhook`
 
-Example: `https://api.socialaidigital.com/api/whatsapp/webhook`
+Example: `https://www.socialaidigital.com/api/whatsapp/webhook`
 
 Sales notify phones: bare 10-digit Indian mobiles (`9696187534`) are auto-prefixed with `91` before Graph send.
 
@@ -114,7 +114,7 @@ Meta’s “Generate token” on Try it out is separate from SocialAiDigital’s
 1. Create/configure a Meta Developer app with the **WhatsApp** product.
 2. Attach a WhatsApp Business Account and phone number; note **Phone number ID** and **WABA ID**.
 3. Create a permanent/system user access token with WhatsApp permissions; set `META_WHATSAPP_ACCESS_TOKEN`.
-4. Set all env vars on the Render **API** service and redeploy.
+4. Set all env vars in `server/.env` and Restart the Node.js app.
 5. SocialAiDigital serves `GET`/`POST /api/whatsapp/webhook`.
 6. In Meta → WhatsApp → Configuration → Webhooks, set:
    - **Callback URL** = the URL from SocialAiDigital Settings (or `{SERVER_URL}/api/whatsapp/webhook`)
@@ -145,7 +145,7 @@ Meta’s “Generate token” on Try it out is separate from SocialAiDigital’s
 4. Verify & save in Meta (GET challenge must succeed).
 5. Enable inbox in Settings; message the test number; check Inbox + API logs.
 
-On Render, use the public API host (not the static client host) as Callback URL.
+Use `https://www.socialaidigital.com/api/whatsapp/webhook` as Callback URL.
 
 ---
 

@@ -1,7 +1,5 @@
-const API_BASE =
-  (typeof window !== 'undefined' && window.__SOCIALIQ_API_URL__) ||
-  import.meta.env.VITE_API_URL ||
-  '';
+/** API is served on the same origin as the site (/api/*); Vite proxies /api in dev. */
+const API_BASE = '';
 
 const FETCH_TIMEOUT_MS = 12_000;
 

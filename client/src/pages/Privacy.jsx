@@ -116,7 +116,7 @@ export default function Privacy() {
       <ul>
         <li>Meta (Facebook/Instagram APIs) and Google (YouTube) when you connect those accounts.</li>
         <li>OpenAI, if an API key is configured, for comment analysis.</li>
-        <li>Hosting and database providers (for example Render and MongoDB Atlas).</li>
+        <li>Hosting and database providers (for example Spidyhost and MongoDB Atlas).</li>
         <li>Email delivery providers if SMTP is configured.</li>
       </ul>
 
