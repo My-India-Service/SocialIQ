@@ -92,4 +92,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://socialiq-37aa.onrender.com
+        value: https://api.myindiaservice.com
