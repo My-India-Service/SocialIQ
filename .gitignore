@@ -12,3 +12,4 @@ server/logs/
 deploy/aws/
 deploy/gcp/
 .env.dev
+mis
