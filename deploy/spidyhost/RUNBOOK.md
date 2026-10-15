@@ -1,94 +1,157 @@
-# SocialIQ API on Spidyhost (cPanel Node.js app)
+# SocialAiDigital on Spidyhost (cPanel Node.js app, MIS style)
 
-The API runs as a cPanel **Setup Node.js App** (Phusion Passenger) at `https://api.myindiaservice.com`.
-The frontend stays on Render (`www.socialaidigital.com`) and calls the API cross-origin (bearer token auth, CORS via `CLIENT_URL`).
-The Render API keeps running until cutover (step 7) and is the rollback.
+One cPanel **Setup Node.js App** runs the whole product at `https://www.socialaidigital.com`:
 
-| Endpoint | Meaning |
-|---|---|
-| `GET /api/health/live` | Always 200 while the Node process is up |
-| `GET /api/health/ready` | 200 when MongoDB is connected, 503 otherwise |
-| `GET /api/health` | Product info and which OAuth providers are configured |
-
-## 1. Subdomain and SSL
-
-1. cPanel → **Domains** → Create a New Domain → `api.myindiaservice.com`. Uncheck "share document root"; the default root (e.g. `~/api.myindiaservice.com`) is fine, the Node app overrides it.
-2. If `myindiaservice.com` DNS is not on this cPanel, add an `A` record `api` → the cPanel server IP at your DNS provider. If it is behind Cloudflare, set SSL mode to **Full** for that zone.
-3. cPanel → **SSL/TLS Status** → select `api.myindiaservice.com` → **Run AutoSSL**.
-
-## 2. Upload the server code
-
-On your Mac, from the repo root:
-
-```bash
-cd server && zip -r ../socialiq-api.zip . -x 'node_modules/*' '.env' 'logs/*' && cd ..
+```
+Browser ──► Cloudflare ──► cPanel Node app (~/socialiq, startup server/app.cjs)
+                              ├── /api/*  → Express API
+                              └── /*      → client/dist (committed React build, SPA fallback)
+                                   │
+                                   ▼
+                              MongoDB Atlas
 ```
 
-cPanel → **File Manager** → create `~/socialiq-api` → Upload `socialiq-api.zip` → Extract → delete the zip.
-`~/socialiq-api` must directly contain `app.cjs`, `index.js`, `package.json`, `package-lock.json`, `routes/`, `services/`, …
+- Same origin: the site calls `/api` on its own domain (no CORS, no API URL setting). OAuth callbacks use `https://www.socialaidigital.com/api/...`, the domain already verified with Google.
+- Render keeps running until the DNS switch in step 6 and is the rollback.
 
-(Alternative: cPanel → Git Version Control → clone the repo, then point the app root at `<clone>/server`. A private GitHub repo needs a cPanel SSH key added as a GitHub deploy key.)
+## CloudLinux rules (same as MIS)
 
-## 3. Setup Node.js App
+1. **npm installs only from the app-root `package.json`** into a virtualenv (`~/socialiq/node_modules` is a symlink). The root [package.json](../../package.json) therefore lists the server's runtime `dependencies`; `server/tests/rootDeps.test.js` fails if they drift. When you add a server dependency, add it to both.
+2. **devDependencies are never installed**, so Vite cannot run on the server. Build locally and commit `client/dist`.
+3. Upload code with **git**, not ZIPs (cPanel antivirus flags archives).
+4. Activate the virtualenv in every new Terminal session: `source ~/nodevenv/socialiq/20/bin/activate && cd ~/socialiq`.
 
-cPanel → **Setup Node.js App** → Create Application:
-
-| Field | Value |
+| Check | Expected |
 |---|---|
-| Node.js version | 22 (or the highest available, at least 20) |
-| Application mode | Production |
-| Application root | `socialiq-api` |
-| Application URL | `api.myindiaservice.com` |
-| Application startup file | `app.cjs` |
+| `/api/health/live` | 200 while the process is up |
+| `/api/health/ready` | 200 when MongoDB is connected, 503 otherwise |
+| `/api/health` | product info + OAuth providers configured |
 
-Then:
+---
 
-1. **Environment variables:** add every non-empty key from [env/production.env.example](env/production.env.example) with the real values from Render. (Or create `~/socialiq-api/.env` in File Manager with the same content; `server/loadEnv.js` reads it.) Do not set `PORT`. Keep `CRISIS_MONITOR_ENABLED=false`.
-2. Click **Save** → **Run NPM Install** (wait until it finishes) → **Restart**.
+## 1. Render: stop the static site auto-deploy (before pushing this change)
 
-## 4. MongoDB Atlas
+Render → **voxa-web** → Settings → Build & Deploy → **Auto-Deploy: Off**.
+`runtime-config.js` now assumes the API is on the same origin; if Render rebuilt the static site it would call a `/api` that does not exist there. With auto-deploy off, Render keeps serving the current build until DNS moves.
 
-Find the host's outbound IP: cPanel → **Terminal** → `curl -s ifconfig.me` (or the "Shared IP Address" on the cPanel home page; ask Spidyhost support if they differ).
-Atlas (SocialIQ project) → **Network Access** → Add IP Address → `<that IP>/32` → then Restart the Node app.
+## 2. Code on the server
 
-## 5. Verify
+cPanel → **Terminal**:
 
 ```bash
-curl -i https://api.myindiaservice.com/api/health/live    # 200 {"ok":true,...}
-curl -i https://api.myindiaservice.com/api/health/ready   # 200 {"db":"connected"}
-curl -s https://api.myindiaservice.com/api/health         # oauth.youtube / meta true
-curl -i -X POST https://api.myindiaservice.com/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"<socialiq user>","password":"<password>"}' # 200 with token
+ssh-keygen -t ed25519 -N '' -C spidyhost-socialiq -f ~/.ssh/socialiq_deploy
+cat ~/.ssh/socialiq_deploy.pub
 ```
 
-Troubleshooting:
-- "Incomplete response" / 503 page from Passenger → the app crashed at startup. Open `~/socialiq-api/stderr.log` (or the log path shown in Setup Node.js App). Usual causes: missing env vars, Atlas IP not allowed (`MongooseServerSelectionError`), NPM install not run.
-- After changing env vars or uploading code → **Restart** the app (or `touch ~/socialiq-api/tmp/restart.txt`).
+GitHub → `My-India-Service/SocialIQ` → Settings → **Deploy keys** → Add key → paste → read-only.
 
-## 6. OAuth and webhooks (add new URLs, keep the Render ones)
+```bash
+cat >> ~/.ssh/config <<'EOF'
+Host github-socialiq
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/socialiq_deploy
+  IdentitiesOnly yes
+EOF
+chmod 600 ~/.ssh/config
+git clone github-socialiq:My-India-Service/SocialIQ.git ~/socialiq
+ls ~/socialiq/client/dist/index.html ~/socialiq/server/app.cjs
+```
 
-- **Google Cloud** (same OAuth client):
-  - Authorized redirect URIs: `https://api.myindiaservice.com/api/connections/youtube/callback`, `https://api.myindiaservice.com/api/auth/google/callback`.
-  - Google Auth Platform → Branding → Authorized domains: add `myindiaservice.com`. The domain must be verified in Google Search Console by the same Google account. Adding a domain can trigger a re-review of the pending verification; expect that.
-- **Meta** (Facebook app): App Domains add `myindiaservice.com`; Facebook Login → Valid OAuth Redirect URIs add `https://api.myindiaservice.com/api/connections/meta/callback`.
-- **Meta** (Instagram app): redirect `https://api.myindiaservice.com/api/connections/instagram/callback`; webhook `https://api.myindiaservice.com/api/instagram/webhook` (only if Instagram messaging is enabled).
-- **LinkedIn / TikTok** (if used): `/api/connections/linkedin/callback`, `/api/connections/tiktok/callback` on the new host.
-- **Razorpay** → Webhooks: `https://api.myindiaservice.com/api/checkout/razorpay/webhook` (same secret).
+## 3. Domain and Node.js app
 
-## 7. Cutover
+1. cPanel → **Domains** → Create a New Domain → `socialaidigital.com` (uncheck "share document root"). `www` is included automatically.
+2. cPanel → **Setup Node.js App** → Create Application:
 
-1. In the repo, edit `client/public/runtime-config.js` so `www.socialaidigital.com` / `socialaidigital.com` use `https://api.myindiaservice.com` (keep `*.onrender.com` on the Render API), then push to `main`. Render rebuilds the static site in a few minutes.
-2. Spidyhost: set `CRISIS_MONITOR_ENABLED=true` → Restart. Render (voxa-api): set `CRISIS_MONITOR_ENABLED=false`.
-3. Open `https://www.socialaidigital.com/login` with DevTools → Network: requests must go to `api.myindiaservice.com`. Test login, Inbox, Connect YouTube + Sync, Billing.
+   | Field | Value |
+   |---|---|
+   | Node.js version | 20 (or 22 if listed) |
+   | Application mode | Production |
+   | Application root | `socialiq` |
+   | Application URL | `socialaidigital.com` |
+   | Application startup file | `server/app.cjs` |
 
-**Rollback:** revert `runtime-config.js`, push, and swap `CRISIS_MONITOR_ENABLED` back.
+3. **Environment:** create `~/socialiq/server/.env` from [env/production.env.example](env/production.env.example) with the real values (copy from Render → voxa-api → Environment, or from the current `~/api/.env`):
+   ```bash
+   nano ~/socialiq/server/.env && chmod 600 ~/socialiq/server/.env
+   ```
+   Leave the panel's Environment variables **empty**: panel values override `.env` (this caused the old Google client ID to stick on `~/api`). Keep `CRISIS_MONITOR_ENABLED=false` until cutover.
+4. **Run NPM Install** → **Restart**.
+5. MongoDB Atlas → Network Access must include the server IP (`curl -s ifconfig.me`; already added for `~/api`).
 
-After a quiet week: remove the `socialiq-37aa.onrender.com` redirect URIs from Google/Meta and suspend the Render API service.
+## 4. Test before DNS
 
-## Caveats
+On your Mac, point the domain at cPanel temporarily (find the IP on the cPanel home page, "Shared IP Address"):
 
-- **Idle shutdown:** Passenger on shared hosting stops idle apps, which also pauses the hourly crisis monitor. Add a free uptime monitor (e.g. UptimeRobot) on `https://api.myindiaservice.com/api/health/live` every 5 minutes, or a cPanel cron: `*/5 * * * * curl -fsS https://api.myindiaservice.com/api/health/live >/dev/null`.
-- **Timeouts:** long YouTube syncs can hit the host's proxy timeout (often 60–120 s). If a full sync fails with 502/504, ask Spidyhost support for the limit.
-- **Memory:** check the plan's per-app memory limit (CloudLinux LVE, cPanel home → Resource Usage). The API needs about 200–300 MB; `npm install` needs more briefly.
-- **Updates:** re-upload changed files (or the full zip without `node_modules`), Run NPM Install if `package.json` changed, then Restart.
+```bash
+sudo sh -c 'echo "<CPANEL_IP> www.socialaidigital.com socialaidigital.com" >> /etc/hosts'
+```
+
+Then check (`-k` because the certificate may not be issued yet):
+
+```bash
+curl -sk https://www.socialaidigital.com/api/health/ready
+curl -sk https://www.socialaidigital.com/ | head -5
+curl -skI https://www.socialaidigital.com/privacy-policy.html | head -3
+```
+
+Open `https://www.socialaidigital.com/login` in a private window and test login, Inbox, Billing. Remove the `/etc/hosts` line afterwards (`sudo nano /etc/hosts`).
+
+## 5. OAuth and webhooks (add www URLs, keep the old ones)
+
+- **Google** (client `618678023530-…`) → Authorized redirect URIs:
+  `https://www.socialaidigital.com/api/connections/youtube/callback`, `https://www.socialaidigital.com/api/auth/google/callback`.
+- **Meta** (Facebook app): Valid OAuth Redirect URIs `https://www.socialaidigital.com/api/connections/meta/callback`.
+- **Meta** (Instagram app): redirect `https://www.socialaidigital.com/api/connections/instagram/callback`; webhook `https://www.socialaidigital.com/api/instagram/webhook` (verify token from `.env`).
+- **Razorpay** → Webhooks: `https://www.socialaidigital.com/api/checkout/razorpay/webhook`.
+
+## 6. Cutover
+
+1. Cloudflare → **socialaidigital.com** → DNS: set `@` and `www` to **A → `<CPANEL_IP>`**, Proxied (replacing the Render CNAMEs).
+2. SSL/TLS mode **Full**. cPanel → SSL/TLS Status → Run **AutoSSL** for `socialaidigital.com` + `www` (or install a Cloudflare Origin Certificate via cPanel → SSL/TLS → Manage SSL sites). Then switch Cloudflare to **Full (strict)**.
+3. `~/socialiq/server/.env`: `CRISIS_MONITOR_ENABLED=true` → Restart. Render voxa-api: `CRISIS_MONITOR_ENABLED=false`.
+4. Verify: `curl -sI https://www.socialaidigital.com` (no `x-render-origin-server` header), login, Connect YouTube + Sync, `tail -n 50 ~/socialiq/stderr.log`.
+5. cPanel → Cron Jobs: `*/5 * * * * curl -fsS https://www.socialaidigital.com/api/health/live >/dev/null 2>&1` (keeps the app warm and the hourly monitor running).
+
+**Rollback:** point `@` and `www` back to the Render CNAMEs and swap `CRISIS_MONITOR_ENABLED` back. Render was not changed.
+
+## 7. Deploying updates
+
+Local:
+
+```bash
+npm run build:client                 # needed for any client change
+git add -A client/dist client/src server
+git commit -m "…" && git push
+```
+
+Server (Terminal):
+
+```bash
+source ~/nodevenv/socialiq/20/bin/activate && cd ~/socialiq
+git pull
+```
+
+Root `package.json` changed → **Run NPM Install**. Always → **Restart** (or `touch ~/socialiq/tmp/restart.txt`).
+
+| Change | Local | Server |
+|---|---|---|
+| Client only | build, commit `client/dist`, push | `git pull`, Restart |
+| Server only | commit, push | `git pull`, Restart (+ NPM Install if deps changed) |
+
+## 8. Cleanup (after a quiet week)
+
+- Render: suspend voxa-api and voxa-web.
+- cPanel: remove the old `api` Node app (`~/api`) or point `api.myindiaservice.com` at `~/socialiq` as an alias.
+- Google / Meta: remove `socialiq-37aa.onrender.com` and `api.myindiaservice.com` redirect URIs.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| 503 page | `tail -n 40 ~/socialiq/stderr.log`; or in Terminal (venv on) `node server/app.cjs` to see the error |
+| `Cannot find package 'express'` | Root `package.json` missing the dependency → add it, push, `git pull`, Run NPM Install |
+| Site blank but `/api/health` works | `client/dist` missing → build locally, commit, `git pull` |
+| Old settings still used after editing `.env` | Panel Environment variables override `.env` → delete them there; then `touch ~/socialiq/tmp/restart.txt` and `pkill -u $USER -f lsnode` |
+| `redirect_uri_mismatch` | Check the live client: `curl -s https://www.socialaidigital.com/api/auth/google \| grep -o 'client_id=[^&]*'` and add the URI to that client |
+| `ready` returns 503 | Atlas IP allowlist / `MONGODB_URI` |

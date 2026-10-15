@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Committed build served by the cPanel Node app (cPanel cannot run Vite)
+!client/dist/
 .env
 .env*
 .envbackup

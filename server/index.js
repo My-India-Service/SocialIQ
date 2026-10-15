@@ -1,4 +1,7 @@
 import './loadEnv.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -34,6 +37,20 @@ import { loadPlanCatalog } from './services/planCatalog.js';
 const app = express();
 const PORT = process.env.PORT || 5001;
 app.set('trust proxy', 'loopback');
+
+/** Built React app (committed client/dist); served only when present, so Vite dev is unaffected. */
+const CLIENT_DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'client', 'dist');
+const CLIENT_INDEX = path.join(CLIENT_DIST, 'index.html');
+const NO_CACHE_FILES = new Set(['index.html', 'runtime-config.js', 'sw.js']);
+
+const CANONICAL_HOST = (process.env.CANONICAL_HOST || '').trim();
+if (CANONICAL_HOST) {
+  const bareHost = CANONICAL_HOST.replace(/^www\./, '');
+  app.use((req, res, next) => {
+    if (req.hostname !== bareHost || req.path === '/api' || req.path.startsWith('/api/')) return next();
+    res.redirect(301, `https://${CANONICAL_HOST}${req.originalUrl}`);
+  });
+}
 
 /** Comma-separated CLIENT_URL values; always allow local Vite in non-production. */
 function corsOrigins() {
@@ -122,6 +139,25 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/intel', intelRoutes);
 app.use('/api/admin', adminRoutes);
+
+if (fs.existsSync(CLIENT_INDEX)) {
+  app.use('/assets', express.static(path.join(CLIENT_DIST, 'assets'), { maxAge: '1y', immutable: true }));
+  app.use(
+    express.static(CLIENT_DIST, {
+      index: false,
+      setHeaders(res, filePath) {
+        if (NO_CACHE_FILES.has(path.basename(filePath))) res.setHeader('Cache-Control', 'no-cache');
+      },
+    })
+  );
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    if (req.path === '/api' || req.path.startsWith('/api/') || req.path.startsWith('/assets/')) return next();
+    if (req.path === '/app' || req.path.startsWith('/app/')) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(CLIENT_INDEX);
+  });
+}
 
 // Express error handler — logs + alerts, then JSON response
 app.use((err, req, res, _next) => {
