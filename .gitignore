@@ -1,9 +1,12 @@
 node_modules/
 dist/
 .env
+.env*
+.envbackup
 *.log
 server/logs/
 .DS_Store
 # Unaffected Healthcare deploy docs (other project; contain server details)
 deploy/aws/
 deploy/gcp/
+.env.dev
