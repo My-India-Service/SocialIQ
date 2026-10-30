@@ -39,7 +39,31 @@ SocialAiDigital Sync         →  only what Graph returns  →  Inbox stays empt
 
 ---
 
-## How to fix (do in this order)
+## Facebook Login red screen (“updating additional details”)
+
+Connect Facebook and **Connect via Facebook Page** both open Facebook Login. If Meta shows:
+
+> Facebook Login is currently unavailable for this app, since we are updating additional details for this app.
+
+that is a **Meta app block**, not a SocialAiDigital callback bug. SocialIQ already sends:
+
+`https://www.socialaidigital.com/api/connections/meta/callback`
+
+Do this on [Meta app `1532499568646880`](https://developers.facebook.com/apps/1532499568646880) in order:
+
+1. **Settings → Basic:** Privacy Policy `https://www.socialaidigital.com/privacy`, User data deletion `https://www.socialaidigital.com/data-deletion`, Terms `https://www.socialaidigital.com/terms`, app icon, category. Save.
+2. **Facebook Login → Settings:** Valid OAuth Redirect URI exactly  
+   `https://www.socialaidigital.com/api/connections/meta/callback`  
+   (https, `www`, no trailing slash).
+3. **App Review → Permissions and Features:** set `public_profile` and `email` to **Advanced Access**. Complete **Business Verification** and any **Data Use Checkup** Meta shows.
+4. **Until Live:** add each customer’s Facebook user (the Page admin) as **Tester / Developer / Admin** under App roles. Development-mode Login only works for role users.
+5. For public customers: App Review for `pages_show_list`, `pages_read_engagement`, `pages_read_user_content`, `pages_manage_metadata`, `pages_manage_engagement`, `instagram_basic`, `instagram_manage_comments`, then switch the app to **Live**.
+
+Then retry **Connect Facebook**. Instagram Login (`instagram.com`) does **not** use this dialog — see [META_INSTAGRAM_SETUP.md](./META_INSTAGRAM_SETUP.md).
+
+---
+
+## How to fix empty Sync (do in this order)
 
 ### 1. App roles (required)
 
@@ -105,7 +129,7 @@ Cursor can read Meta app settings via [Developer Tools MCP](https://developers.f
 Config: user `~/.cursor/mcp.json` and this repo [`.cursor/mcp.json`](../.cursor/mcp.json). After adding the server:
 
 1. Cursor **Settings → Tools & Integrations** → **Meta Developer Tools** → **Needs login**.
-2. Sign in with the Meta account that admins app `1645663120309703`.
+2. Sign in with the Meta account that admins app `1532499568646880`.
 3. Grant **Read** on that app.
 
 Then ask the agent to list apps and show basic settings. Cross-check against live:

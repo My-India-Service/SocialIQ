@@ -6,21 +6,21 @@ Meta app **My India Service** uses **two different App IDs**:
 
 | Credential | Value | Env var |
 |------------|-------|---------|
-| Meta App ID (Facebook Login) | `1645663120309703` | `META_APP_ID` |
-| **Instagram App ID** | `1102250409082500` | `META_INSTAGRAM_APP_ID` |
+| Meta App ID (Facebook Login) | `1532499568646880` | `META_APP_ID` |
+| **Instagram App ID** | `935884949135556` | `META_INSTAGRAM_APP_ID` |
 | Instagram App Secret | From Meta Dashboard → Instagram → API setup | `META_INSTAGRAM_APP_SECRET` |
 
-**Important:** Do **not** use `1645663120309703` for Instagram Login. Copy the **Instagram App ID** from **Instagram → API setup with Instagram login**. The server fallback to `META_APP_ID` only works when both IDs are the same (not true for this app).
+**Important:** Do **not** use `1532499568646880` for Instagram Login. Copy the **Instagram App ID** from **Instagram → API setup with Instagram login**. The server fallback to `META_APP_ID` only works when both IDs are the same (not true for this app).
 
 ---
 
 ## 1. Local env (`.env`)
 
 ```env
-META_APP_ID=1645663120309703
+META_APP_ID=1532499568646880
 META_APP_SECRET=<Facebook app secret>
 
-META_INSTAGRAM_APP_ID=1102250409082500
+META_INSTAGRAM_APP_ID=935884949135556
 META_INSTAGRAM_APP_SECRET=<Instagram app secret from dashboard>
 META_INSTAGRAM_REDIRECT_URI=https://www.socialaidigital.com/api/connections/instagram/callback
 ```
@@ -41,7 +41,7 @@ Restart API after changes: `cd server && npm run dev`
 
 | Key | Value |
 |-----|--------|
-| `META_INSTAGRAM_APP_ID` | `1102250409082500` |
+| `META_INSTAGRAM_APP_ID` | `935884949135556` |
 | `META_INSTAGRAM_APP_SECRET` | Full Instagram app secret (from Meta Dashboard) |
 | `META_INSTAGRAM_REDIRECT_URI` | `https://www.socialaidigital.com/api/connections/instagram/callback` |
 | `SERVER_URL` | `https://www.socialaidigital.com` |
@@ -54,7 +54,7 @@ Keep `META_APP_ID` / `META_APP_SECRET` unchanged for Facebook Page connect.
 
 1. Open SocialAiDigital → **Connect** → integration strip should show **Instagram Login: On**
 2. If **Off**, add the three `META_INSTAGRAM_*` keys above and Restart
-3. Click **Connect with Instagram** — browser URL should include `client_id=1102250409082500`
+3. Click **Connect with Instagram** — browser URL should include `client_id=935884949135556`
 
 ---
 
@@ -65,7 +65,7 @@ Keep `META_APP_ID` / `META_APP_SECRET` unchanged for Facebook Page connect.
 Instagram → **API setup with Instagram login** should show:
 
 - Instagram app name: My India Service - IG
-- Instagram app ID: `1102250409082500`
+- Instagram app ID: `935884949135556`
 
 ### Webhooks — **skip Section 2** (do not Verify and save)
 
@@ -100,6 +100,10 @@ Add OAuth redirect URIs here (Business login settings / OAuth redirect URIs):
 
 SocialAiDigital route: `GET /api/connections/instagram/callback` — OAuth return after user logs in at instagram.com.
 
+This URI must be saved on Instagram App ID `935884949135556` (the `client_id` in the authorize URL). Adding it only on Facebook app `1532499568646880` still yields `Invalid redirect_uri`.
+
+A real connect is **Connected as @username** plus Channels `OAuth · @username`. **Instagram Login: Ready** on Connect only means server credentials exist — not that this user is linked.
+
 ### Scopes
 
 Enable for testing / App Review:
@@ -118,11 +122,11 @@ import { resolveInstagramCredentials, getInstagramAuthUrl } from './services/ins
 const c = resolveInstagramCredentials();
 console.log('appId:', c.appId);
 console.log('redirect:', c.redirectUri);
-console.log('auth:', getInstagramAuthUrl('test').includes('client_id=1102250409082500') ? 'OK' : 'WRONG client_id');
+console.log('auth:', getInstagramAuthUrl('test').includes('client_id=935884949135556') ? 'OK' : 'WRONG client_id');
 "
 ```
 
-Expected: `appId: 1102250409082500`
+Expected: `appId: 935884949135556`
 
 ---
 
@@ -131,7 +135,7 @@ Expected: `appId: 1102250409082500`
 | Step | Expected |
 |------|----------|
 | Connect → **Instagram Login** = On | Yes |
-| **Connect with Instagram** | Opens `instagram.com/oauth/authorize?client_id=1102250409082500...` |
+| **Connect with Instagram** | Opens `instagram.com/oauth/authorize?client_id=935884949135556...` |
 | After login | Success on Connect page |
 | Badge | **Via Instagram login** |
 | **Sync comments** | IG comments in Inbox |
@@ -144,7 +148,7 @@ Expected: `appId: 1102250409082500`
 |-------|--------|-----|
 | **Verify and save** fails on Instagram webhooks | OAuth URL used in Section 2 webhooks | Skip Section 2; add URL only in Section 3 Business login |
 | Invalid redirect URI on Connect | Redirect not in Business login settings | Add URI in Section 3 (not webhooks) |
-| Wrong client_id in URL | Using main App ID instead of Instagram App ID | Set `META_INSTAGRAM_APP_ID=1102250409082500` |
+| Wrong client_id in URL | Using main App ID instead of Instagram App ID | Set `META_INSTAGRAM_APP_ID=935884949135556` |
 | Instagram Login Off on Connect | Missing env on API | Set `META_INSTAGRAM_*` in `server/.env` and Restart |
 | Scope / permission denied | Scopes or account type | Enable scopes; IG must be Business/Creator |
 | Still fails | Page-linked IG path | Use **Connect via Facebook Page** |
@@ -208,14 +212,14 @@ Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff 
 - Do not put `/api/connections/instagram/callback` in Instagram **Configure webhooks** (Section 2)
 - Do not use the WhatsApp verify token (`META_WEBHOOK_VERIFY_TOKEN`) for Instagram webhooks
 - Do not expect **Verify and save** in Section 2 to succeed — SocialAiDigital has no Instagram webhook handler
-- Do not use main App ID `1645663120309703` for Instagram Login — use `1102250409082500`
+- Do not use main App ID `1532499568646880` for Instagram Login — use `935884949135556`
 
 ## Checklist
 
 - [x] Instagram product added in Meta Dashboard
 - [ ] **Skip** Section 2 webhooks (ignore Verify error — expected)
 - [ ] OAuth redirect in **Section 3 Business login**
-- [ ] Server env: `META_INSTAGRAM_APP_ID=1102250409082500` + secret + redirect URI
+- [ ] Server env: `META_INSTAGRAM_APP_ID=935884949135556` + secret + redirect URI
 - [ ] Node.js app restarted in cPanel
-- [ ] Connect with Instagram tested from SocialAiDigital (`client_id=1102250409082500`)
+- [ ] Connect with Instagram tested from SocialAiDigital (`client_id=935884949135556`)
 - [ ] Sync comments tested

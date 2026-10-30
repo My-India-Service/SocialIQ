@@ -13,10 +13,15 @@ https://www.socialaidigital.com/api/auth/google/callback
 
 ## Meta Developer Console
 
-OAuth redirect URIs:
+**Facebook Login** (app `1532499568646880`) Valid OAuth Redirect URI:
 
 ```
 https://www.socialaidigital.com/api/connections/meta/callback
+```
+
+**Instagram Business login** (Instagram App ID `935884949135556`, Section 3 — not webhook Callback URL):
+
+```
 https://www.socialaidigital.com/api/connections/instagram/callback
 ```
 

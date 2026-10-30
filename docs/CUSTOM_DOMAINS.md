@@ -42,10 +42,17 @@ https://www.socialaidigital.com/api/auth/google/callback
 
 ## 3. Meta Developer Console
 
-**OAuth redirect URIs** (Facebook + Instagram login):
+**Facebook Login** (app `1532499568646880`) — Valid OAuth Redirect URI:
 
 ```
 https://www.socialaidigital.com/api/connections/meta/callback
+```
+
+If live users see “Facebook Login is currently unavailable… updating additional details”, complete Privacy Policy / Data Use Checkup / Advanced Access for `public_profile` + `email`. Until then, add the Page admin as a Tester. See [FACEBOOK_COMMENTS_SYNC.md](./FACEBOOK_COMMENTS_SYNC.md).
+
+**Instagram Business login** (Instagram App ID `935884949135556`, not the Facebook App ID) — OAuth redirect URIs in **Section 3 Business login**, not webhook Callback URL:
+
+```
 https://www.socialaidigital.com/api/connections/instagram/callback
 ```
 

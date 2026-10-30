@@ -53,6 +53,12 @@ function instagramAuthLabel(metaAuthType) {
   return '';
 }
 
+const OAUTH_TOKEN_MISSING = 'Login finished but no tokens were saved — reconnect.';
+
+function platformHasOAuth(rows, platform) {
+  return Boolean(rows?.find((c) => c.platform === platform)?.hasOAuth);
+}
+
 export default function Connections() {
   const { token, user } = useAuth();
   const whatsappEnabled = Boolean(user?.features?.whatsapp);
@@ -82,6 +88,7 @@ export default function Connections() {
     ]);
     setConnections(connData.connections);
     setIntegration(statusData);
+    return connData.connections || [];
   }
 
   useEffect(() => {
@@ -96,46 +103,80 @@ export default function Connections() {
     const tiktok = searchParams.get('tiktok');
     if (!yt && !meta && !instagram && !linkedin && !tiktok) return;
 
-    if (yt === 'connected') {
-      setMessage('YouTube connected. Click Sync comments to pull real comments.');
-      load().catch(() => {});
-    } else if (yt === 'error') {
-      setError(searchParams.get('reason') || 'YouTube connection failed');
+    const failReason = (fallback) => searchParams.get('reason') || fallback;
+    let cancelled = false;
+
+    async function applyOAuthReturn() {
+      const rows = await load();
+      if (cancelled) return;
+
+      if (yt === 'connected') {
+        if (platformHasOAuth(rows, 'youtube')) {
+          setMessage('YouTube connected. Click Sync comments to pull real comments.');
+        } else {
+          setError(OAUTH_TOKEN_MISSING);
+        }
+      } else if (yt === 'error') {
+        setError(failReason('YouTube connection failed'));
+      }
+
+      if (meta === 'connected') {
+        const platform = searchParams.get('platform') || 'facebook';
+        if (platformHasOAuth(rows, platform)) {
+          setMessage(
+            `${platform === 'instagram' ? 'Instagram (via Facebook Page)' : 'Facebook'} connected via Meta. Click Sync.`
+          );
+        } else {
+          setError(OAUTH_TOKEN_MISSING);
+        }
+      } else if (meta === 'error') {
+        setError(failReason('Meta connection failed'));
+      }
+
+      if (instagram === 'connected') {
+        if (platformHasOAuth(rows, 'instagram')) {
+          setMessage('Instagram connected via Instagram login. No Facebook Page required. Click Sync.');
+        } else {
+          setError(OAUTH_TOKEN_MISSING);
+        }
+      } else if (instagram === 'error') {
+        setError(failReason('Instagram connection failed'));
+      }
+
+      if (linkedin === 'connected') {
+        if (platformHasOAuth(rows, 'linkedin')) {
+          setMessage('LinkedIn connected. Click Sync comments to pull Company Page comments.');
+        } else {
+          setError(OAUTH_TOKEN_MISSING);
+        }
+      } else if (linkedin === 'error') {
+        setError(failReason('LinkedIn connection failed'));
+      }
+
+      if (tiktok === 'connected') {
+        if (platformHasOAuth(rows, 'tiktok')) {
+          setMessage('TikTok connected. Click Sync comments to pull video comments.');
+        } else {
+          setError(OAUTH_TOKEN_MISSING);
+        }
+      } else if (tiktok === 'error') {
+        setError(failReason('TikTok connection failed'));
+      }
+
+      setSearchParams({}, { replace: true });
     }
 
-    if (meta === 'connected') {
-      const platform = searchParams.get('platform') || 'facebook';
-      setMessage(
-        `${platform === 'instagram' ? 'Instagram (via Facebook Page)' : 'Facebook'} connected via Meta. Click Sync.`
-      );
-      load().catch(() => {});
-    } else if (meta === 'error') {
-      setError(searchParams.get('reason') || 'Meta connection failed');
-    }
+    applyOAuthReturn().catch((err) => {
+      if (!cancelled) {
+        setError(err.message || 'Could not verify connection');
+        setSearchParams({}, { replace: true });
+      }
+    });
 
-    if (instagram === 'connected') {
-      setMessage('Instagram connected via Instagram login. No Facebook Page required. Click Sync.');
-      load().catch(() => {});
-    } else if (instagram === 'error') {
-      setError(searchParams.get('reason') || 'Instagram connection failed');
-    }
-
-    if (linkedin === 'connected') {
-      setMessage('LinkedIn connected. Click Sync comments to pull Company Page comments.');
-      load().catch(() => {});
-    } else if (linkedin === 'error') {
-      setError(searchParams.get('reason') || 'LinkedIn connection failed');
-    }
-
-    if (tiktok === 'connected') {
-      setMessage('TikTok connected. Click Sync comments to pull video comments.');
-      load().catch(() => {});
-    } else if (tiktok === 'error') {
-      setError(searchParams.get('reason') || 'TikTok connection failed');
-    }
-
-    setSearchParams({}, { replace: true });
-  }, [searchParams, setSearchParams]);
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, setSearchParams, token]);
 
   async function connectYouTube() {
     setError('');
@@ -281,23 +322,23 @@ export default function Connections() {
 
       <div className="stat-row" style={{ marginBottom: '1rem' }}>
         <div className="stat">
-          <strong>{integration.youtubeOAuth ? 'On' : 'Off'}</strong>
+          <strong>{integration.youtubeOAuth ? 'Ready' : 'Not set'}</strong>
           <span>YouTube OAuth</span>
         </div>
         <div className="stat">
-          <strong>{integration.metaOAuth ? 'On' : 'Off'}</strong>
+          <strong>{integration.metaOAuth ? 'Ready' : 'Not set'}</strong>
           <span>Meta (Facebook Login)</span>
         </div>
         <div className="stat">
-          <strong>{integration.instagramDirectOAuth ? 'On' : 'Off'}</strong>
+          <strong>{integration.instagramDirectOAuth ? 'Ready' : 'Not set'}</strong>
           <span>Instagram Login</span>
         </div>
         <div className="stat">
-          <strong>{integration.linkedinOAuth ? 'On' : 'Off'}</strong>
+          <strong>{integration.linkedinOAuth ? 'Ready' : 'Not set'}</strong>
           <span>LinkedIn OAuth</span>
         </div>
         <div className="stat">
-          <strong>{integration.tiktokOAuth ? 'On' : 'Off'}</strong>
+          <strong>{integration.tiktokOAuth ? 'Ready' : 'Not set'}</strong>
           <span>TikTok OAuth</span>
         </div>
         <div className="stat">
@@ -305,6 +346,10 @@ export default function Connections() {
           <span>LLM categorization</span>
         </div>
       </div>
+      <p className="prob" style={{ marginTop: '-0.5rem' }}>
+        Ready / Not set is server credentials. Your accounts are in each panel and in Channels below
+        (OAuth · name when linked).
+      </p>
 
       {error && <div className="error-banner">{error}</div>}
       {message && <div className="success-banner">{message}</div>}
@@ -450,7 +495,8 @@ export default function Connections() {
           — that URL is for login return, not webhooks. See docs/META_INSTAGRAM_SETUP.md.
           <br />
           <strong>Alternative:</strong> Connect via Facebook Page if your IG is linked in Meta
-          Business Suite.
+          Business Suite (same Facebook Login as Connect Facebook — it fails if Meta Login is
+          blocked).
         </p>
         <ConnectedAs conn={ig}>
           {igAuthLabel && <span className="pill wa-pill-ready">{igAuthLabel}</span>}
@@ -519,7 +565,10 @@ export default function Connections() {
           role user, then Sync. (3) For public commenters: App Review for{' '}
           <code>pages_read_engagement</code> + <code>pages_read_user_content</code>, set App{' '}
           <strong>Live</strong>, Reconnect, Sync. Connecting Facebook also links Instagram if IG is
-          attached to that Page.
+          attached to that Page. If Facebook shows “Login is currently unavailable… updating
+          additional details”, finish Privacy Policy, Data Use Checkup, and Advanced Access for{' '}
+          <code>public_profile</code>/<code>email</code> in Meta; until Live, add the Page admin as
+          a Tester.
         </p>
         <ConnectedAs conn={fb} label="Connected Page">
           {fb?.channelId && (

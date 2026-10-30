@@ -96,8 +96,8 @@ Open `https://www.socialaidigital.com/login` in a private window and test login,
 
 - **Google** (client `618678023530-…`) → Authorized redirect URIs:
   `https://www.socialaidigital.com/api/connections/youtube/callback`, `https://www.socialaidigital.com/api/auth/google/callback`.
-- **Meta** (Facebook app): Valid OAuth Redirect URIs `https://www.socialaidigital.com/api/connections/meta/callback`.
-- **Meta** (Instagram app): redirect `https://www.socialaidigital.com/api/connections/instagram/callback`; webhook `https://www.socialaidigital.com/api/instagram/webhook` (verify token from `.env`).
+- **Meta** (Facebook app `1532499568646880`): Valid OAuth Redirect URI `https://www.socialaidigital.com/api/connections/meta/callback`. If live users see “Facebook Login is currently unavailable… updating additional details”, complete Settings → Basic (privacy + data deletion), Data Use Checkup, Advanced Access for `public_profile`/`email`, and add Page admins as Testers until Live. See `docs/FACEBOOK_COMMENTS_SYNC.md`.
+- **Meta** (Instagram app `935884949135556`): OAuth redirect in **Business login Section 3** (not webhooks): `https://www.socialaidigital.com/api/connections/instagram/callback`. Webhook: `https://www.socialaidigital.com/api/instagram/webhook` (verify token from `.env`).
 - **Razorpay** → Webhooks: `https://www.socialaidigital.com/api/checkout/razorpay/webhook`.
 
 ## 5. Cutover

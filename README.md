@@ -58,7 +58,7 @@ Copy `server/.env.example` → `server/.env` and fill keys:
 
 1. Create an app at [Meta for Developers](https://developers.facebook.com/)
 2. **Facebook Login** — Page comments: copy App ID + Secret → `META_APP_ID` / `META_APP_SECRET`
-3. **Instagram → API setup with Instagram login** — use **Instagram App ID** (`1102250409082500` for My India Service — may differ from `META_APP_ID`). See [`docs/META_INSTAGRAM_SETUP.md`](docs/META_INSTAGRAM_SETUP.md).
+3. **Instagram → API setup with Instagram login** — use **Instagram App ID** (`935884949135556` for My India Service — may differ from `META_APP_ID`). See [`docs/META_INSTAGRAM_SETUP.md`](docs/META_INSTAGRAM_SETUP.md).
 4. Valid OAuth redirect URIs:
    - `{SERVER_URL}/api/connections/meta/callback` (Facebook Login)
    - `{SERVER_URL}/api/connections/instagram/callback` (Instagram Login)
