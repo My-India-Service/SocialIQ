@@ -6,8 +6,17 @@ process.env.META_INSTAGRAM_APP_ID = '123456789';
 process.env.META_INSTAGRAM_APP_SECRET = 'test-instagram-secret';
 process.env.SERVER_URL = 'http://localhost:5001';
 
-const { getInstagramAuthUrl, getInstagramOAuthScopes, isInstagramDirectOAuthConfigured, resolveInstagramCredentials } =
-  await import('../services/instagramLogin.js');
+const {
+  getInstagramAuthUrl,
+  getInstagramOAuthScopes,
+  isInstagramDirectOAuthConfigured,
+  resolveInstagramCredentials,
+  exchangeLongLivedInstagramToken,
+  isInstagramAppRoleGraphError,
+  instagramAppRoleError,
+  IG_APP_ROLE_REQUIRED,
+  IG_APP_ROLE_MESSAGE,
+} = await import('../services/instagramLogin.js');
 const { resolveInstagramMetaAuthType, getInstagramGraphBase } = await import('../services/meta.js');
 
 test('isInstagramDirectOAuthConfigured when env vars set', () => {
@@ -76,4 +85,64 @@ test('getInstagramGraphBase picks host by auth type', () => {
     'https://graph.facebook.com/v21.0'
   );
   assert.equal(getInstagramGraphBase({ metaAuthType: '' }), 'https://graph.facebook.com/v21.0');
+});
+
+test('isInstagramAppRoleGraphError matches Meta method-type errors', () => {
+  assert.equal(
+    isInstagramAppRoleGraphError({
+      error: { message: 'Unsupported request - method type: get', type: 'IGApiException', code: 100 },
+    }),
+    true
+  );
+  assert.equal(
+    isInstagramAppRoleGraphError({
+      error: { message: 'Unsupported request - method type: post', type: 'IGApiException', code: 100 },
+    }),
+    true
+  );
+  assert.equal(
+    isInstagramAppRoleGraphError({ error: { message: 'Invalid OAuth access token', code: 190 } }),
+    false
+  );
+  const mapped = instagramAppRoleError();
+  assert.equal(mapped.code, IG_APP_ROLE_REQUIRED);
+  assert.equal(mapped.message, IG_APP_ROLE_MESSAGE);
+});
+
+test('exchangeLongLivedInstagramToken maps unsupported GET to IG_APP_ROLE_REQUIRED', async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    assert.match(String(url), /graph\.instagram\.com\/v21\.0\/access_token/);
+    return {
+      ok: false,
+      status: 400,
+      json: async () => ({
+        error: {
+          message: 'Unsupported request - method type: get',
+          type: 'IGApiException',
+          code: 100,
+        },
+      }),
+    };
+  };
+  try {
+    await assert.rejects(
+      () => exchangeLongLivedInstagramToken('short-token'),
+      (err) => {
+        assert.equal(err.code, IG_APP_ROLE_REQUIRED);
+        assert.equal(err.message, IG_APP_ROLE_MESSAGE);
+        return true;
+      }
+    );
+  } finally {
+    globalThis.fetch = orig;
+  }
+});
+
+test('logError keeps IG_APP_ROLE_REQUIRED so alerts can be skipped', async () => {
+  const { logError } = await import('../services/logger.js');
+  const err = instagramAppRoleError();
+  const entry = logError(err, { route: '/api/connections/instagram/callback', method: 'GET' });
+  assert.equal(entry.code, IG_APP_ROLE_REQUIRED);
+  assert.equal(entry.level, 'error');
 });

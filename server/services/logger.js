@@ -50,12 +50,14 @@ function normalizeError(errOrMessage) {
       message: errOrMessage.message || String(errOrMessage),
       stack: errOrMessage.stack || '',
       status: errOrMessage.status || errOrMessage.statusCode || null,
+      code: errOrMessage.code || null,
     };
   }
   return {
     message: String(errOrMessage || 'Unknown error'),
     stack: '',
     status: null,
+    code: null,
   };
 }
 
@@ -127,6 +129,7 @@ function write(level, errOrMessage, meta = {}) {
     userId,
     stack: metaStack,
     status: metaStatus,
+    code: metaCode,
     ...restMeta
   } = meta || {};
 
@@ -139,6 +142,7 @@ function write(level, errOrMessage, meta = {}) {
     method: method || undefined,
     userId: userId || undefined,
     status: metaStatus || normalized.status || undefined,
+    code: metaCode || normalized.code || undefined,
     meta: Object.keys(restMeta).length ? restMeta : undefined,
   };
 
@@ -153,7 +157,8 @@ function write(level, errOrMessage, meta = {}) {
     console.error('[logger] failed to write log file:', writeErr.message);
   }
 
-  if (level === 'error' || level === 'fatal') {
+  const skipAlert = entry.code === 'IG_APP_ROLE_REQUIRED';
+  if ((level === 'error' || level === 'fatal') && !skipAlert) {
     // Fire-and-forget; callers don't need to await
     void sendErrorAlert(entry);
   }

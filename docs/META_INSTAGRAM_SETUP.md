@@ -104,6 +104,18 @@ This URI must be saved on Instagram App ID `935884949135556` (the `client_id` in
 
 A real connect is **Connected as @username** plus Channels `OAuth · @username`. **Instagram Login: Ready** on Connect only means server credentials exist — not that this user is linked.
 
+### Instagram Testers vs App Review (required before live customers)
+
+Meta returns `Unsupported request - method type: get` (IGApiException code 100) when a **non-tester** account uses Instagram Login. That is **not** a broken GET — Graph rejects role-less users until App Review.
+
+**Until App Review:**
+
+1. Meta App Dashboard → app `935884949135556` → **App roles → Instagram Testers** (not Facebook Testers).
+2. Add the Instagram **username** of every account that will click **Connect with Instagram**.
+3. That person must **accept** the invite: Instagram app → Settings → Website permissions (or the email/in-app invite).
+
+**Live customers (e.g. Charu):** submit App Review for `instagram_business_basic`, `instagram_business_manage_comments`, and `instagram_business_manage_messages`, then set the app **Live**. Until that is approved, customer accounts cannot complete Instagram Login. **Connect via Facebook Page** is a different path and still needs Facebook Login unblocked (see [FACEBOOK_COMMENTS_SYNC.md](./FACEBOOK_COMMENTS_SYNC.md)).
+
 ### Scopes
 
 Enable for testing / App Review:
@@ -147,6 +159,7 @@ Expected: `appId: 935884949135556`
 | Error | Cause | Fix |
 |-------|--------|-----|
 | **Verify and save** fails on Instagram webhooks | OAuth URL used in Section 2 webhooks | Skip Section 2; add URL only in Section 3 Business login |
+| **Unsupported request - method type: get** on Connect / alert email | Instagram account is not an Instagram Tester and App Review is not approved | Add **Instagram Testers** (accept invite) for test accounts; App Review + Live for public customers. GET is the documented method — do not treat this as a server crash |
 | Invalid redirect URI on Connect | Redirect not in Business login settings | Add URI in Section 3 (not webhooks) |
 | Wrong client_id in URL | Using main App ID instead of Instagram App ID | Set `META_INSTAGRAM_APP_ID=935884949135556` |
 | Instagram Login Off on Connect | Missing env on API | Set `META_INSTAGRAM_*` in `server/.env` and Restart |
@@ -221,5 +234,7 @@ Inbound DMs continue the sales agent loop: qualify COD/city/pincode → handoff 
 - [ ] OAuth redirect in **Section 3 Business login**
 - [ ] Server env: `META_INSTAGRAM_APP_ID=935884949135556` + secret + redirect URI
 - [ ] Node.js app restarted in cPanel
+- [ ] Instagram Testers added (and invite accepted) for every test IG account
 - [ ] Connect with Instagram tested from SocialAiDigital (`client_id=935884949135556`)
+- [ ] App Review submitted for public customers (`instagram_business_basic` + comments + messages)
 - [ ] Sync comments tested

@@ -328,7 +328,11 @@ router.get('/instagram/callback', async (req, res) => {
 
     return res.redirect(await oauthSuccessRedirect(userId, 'instagram'));
   } catch (err) {
-    logError(err, { route: '/api/connections/instagram/callback', method: 'GET' });
+    logError(err, {
+      route: '/api/connections/instagram/callback',
+      method: 'GET',
+      code: err.code,
+    });
     return res.redirect(
       `${clientUrl}/app/connections?instagram=error&reason=${encodeURIComponent(err.message)}`
     );

@@ -9,6 +9,32 @@ const IG_SCOPES = [
 ].join(',');
 let warnedMissingInstagramAppId = false;
 
+export const IG_APP_ROLE_REQUIRED = 'IG_APP_ROLE_REQUIRED';
+export const IG_APP_ROLE_MESSAGE =
+  'Instagram Login only works for accounts added as Instagram Testers until App Review approves instagram_business_basic (and comments/messages). In Meta: App Roles → Instagram Testers, then accept the invite in Instagram → Settings → Website permissions.';
+
+export function isInstagramAppRoleGraphError(data) {
+  const msg = String(data?.error?.message || data?.error_message || data?.message || '');
+  const code = data?.error?.code;
+  const type = String(data?.error?.type || '');
+  if (/Unsupported request - method type:/i.test(msg)) return true;
+  if (type === 'IGApiException' && Number(code) === 100 && /unsupported request/i.test(msg)) {
+    return true;
+  }
+  return false;
+}
+
+export function instagramAppRoleError() {
+  const err = new Error(IG_APP_ROLE_MESSAGE);
+  err.code = IG_APP_ROLE_REQUIRED;
+  return err;
+}
+
+function throwInstagramGraphError(data, fallback) {
+  if (isInstagramAppRoleGraphError(data)) throw instagramAppRoleError();
+  throw new Error(data?.error?.message || data?.error_message || fallback);
+}
+
 export function resolveInstagramCredentials() {
   const appId = process.env.META_INSTAGRAM_APP_ID || process.env.META_APP_ID;
   const appSecret = process.env.META_INSTAGRAM_APP_SECRET || process.env.META_APP_SECRET;
@@ -88,7 +114,7 @@ async function exchangeInstagramCode(code) {
   });
   const data = await res.json();
   if (!res.ok || data.error_message || data.error) {
-    throw new Error(data.error_message || data.error?.message || `Instagram token exchange failed (${res.status})`);
+    throwInstagramGraphError(data, `Instagram token exchange failed (${res.status})`);
   }
 
   const row = Array.isArray(data.data) ? data.data[0] : data;
@@ -98,9 +124,9 @@ async function exchangeInstagramCode(code) {
   return { access_token: row.access_token, user_id: String(row.user_id) };
 }
 
-async function exchangeLongLivedInstagramToken(shortToken) {
+export async function exchangeLongLivedInstagramToken(shortToken) {
   const { appSecret } = getConfig();
-  const url = new URL('https://graph.instagram.com/access_token');
+  const url = new URL(`${IG_GRAPH}/access_token`);
   url.searchParams.set('grant_type', 'ig_exchange_token');
   url.searchParams.set('client_secret', appSecret);
   url.searchParams.set('access_token', shortToken);
@@ -108,20 +134,20 @@ async function exchangeLongLivedInstagramToken(shortToken) {
   const res = await fetch(url);
   const data = await res.json();
   if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `Instagram long-lived token exchange failed (${res.status})`);
+    throwInstagramGraphError(data, `Instagram long-lived token exchange failed (${res.status})`);
   }
   return data;
 }
 
 async function refreshInstagramLongLivedToken(longToken) {
-  const url = new URL('https://graph.instagram.com/refresh_access_token');
+  const url = new URL(`${IG_GRAPH}/refresh_access_token`);
   url.searchParams.set('grant_type', 'ig_refresh_token');
   url.searchParams.set('access_token', longToken);
 
   const res = await fetch(url);
   const data = await res.json();
   if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `Instagram token refresh failed (${res.status})`);
+    throwInstagramGraphError(data, `Instagram token refresh failed (${res.status})`);
   }
   return data;
 }
@@ -134,7 +160,7 @@ async function fetchInstagramProfile(accessToken) {
   const res = await fetch(url);
   const data = await res.json();
   if (!res.ok || data.error) {
-    throw new Error(data.error?.message || `Instagram profile fetch failed (${res.status})`);
+    throwInstagramGraphError(data, `Instagram profile fetch failed (${res.status})`);
   }
   return data;
 }
